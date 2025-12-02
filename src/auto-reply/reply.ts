@@ -280,8 +280,8 @@ export async function getReplyFromConfig(
         timeoutSeconds,
         commandRunner,
       });
-      if (meta.claudeMeta && isVerbose()) {
-        logVerbose(`Claude JSON meta: ${meta.claudeMeta}`);
+      if (meta.agentMeta && isVerbose()) {
+        logVerbose(`Agent meta: ${JSON.stringify(meta.agentMeta)}`);
       }
       return payload;
     } finally {

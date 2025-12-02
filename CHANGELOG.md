@@ -1,6 +1,19 @@
 # Changelog
 
-## 1.2.3 — Unreleased
+## Unreleased
+
+### Security
+- Hardened the relay IPC socket: now lives under `~/.warelay/ipc`, enforces 0700 dir / 0600 socket perms, rejects symlink or foreign-owned paths, and includes unit tests to lock in the behavior.
+- `warelay logout` now also prunes the shared session store (`~/.warelay/sessions.json`) alongside WhatsApp Web credentials, reducing leftover state after unlinking.
+- Logging now rolls daily to `/tmp/warelay/warelay-YYYY-MM-DD.log` (or custom dir) and prunes files older than 24h to reduce data retention.
+- Media server now rejects symlinked files and ensures resolved paths stay inside the media directory, closing traversal via symlinks; added regression test. (Thanks @joaohlisboa)
+
+## 1.3.0 — 2025-12-02
+
+### Highlights
+- **Pluggable agents (Claude, Pi, Codex, Opencode):** New `inbound.reply.agent` block chooses the CLI and parser per command reply; per-agent argv builders inject the right flags/identity/prompt handling and parse NDJSON streams, enabling Pi/Codex swaps without changing templates.
+- **Safety stop words for agents:** If an inbound message is exactly `stop`, `esc`, `abort`, `wait`, or `exit`, warelay immediately replies “Agent was aborted.”, kills the pending agent run, and marks the session so the next prompt is prefixed with a reminder that the previous run was aborted.
+- **Agent session reliability:** Only Claude currently returns a `session_id` that warelay persists; other agents (Gemini, Opencode, Codex, Pi) don’t emit stable session identifiers, so multi-turn continuity may reset between runs for those harnesses.
 
 ### Bug Fixes
 - **Empty result field handling:** Fixed bug where Claude CLI returning `result: ""` (empty string) would cause raw JSON to be sent to WhatsApp instead of being treated as valid empty output. Changed truthy check to explicit type check in `command-reply.ts`.
@@ -8,9 +21,11 @@
 - **User-visible error messages:** Command failures (non-zero exit, killed processes, exceptions) now return user-friendly error messages to WhatsApp instead of silently failing with empty responses.
 - **Test session isolation:** Fixed tests corrupting production `sessions.json` by mocking session persistence in all test files.
 - **Signal session corruption prevention:** Added IPC mechanism so `warelay send` and `warelay heartbeat` reuse the running relay's WhatsApp connection instead of creating new Baileys sockets. Previously, using these commands while the relay was running could corrupt the Signal session ratchet (both connections wrote to the same auth state), causing the relay's subsequent sends to fail silently.
+- **Web send media kinds:** `sendMessageWeb` now honors media kind when sending via WhatsApp Web: audio → PTT with correct opus mimetype, video → video, image → image, other → document with filename. Previously all media were sent as images, breaking audio/video/doc sends.
 
 ### Changes
 - **IPC server for relay:** The web relay now starts a Unix socket server at `~/.warelay/relay.sock`. Commands like `warelay send --provider web` automatically connect via IPC when the relay is running, falling back to direct connection otherwise.
+- **Batched inbound messaging with timestamps:** When multiple WhatsApp messages queue up, they’re sent to the agent in one combined batch, each line timestamped consistently to preserve ordering and context.
 - **Typing indicator after IPC send:** After sending a message via IPC (e.g., `warelay send`), the relay now automatically shows the typing indicator ("composing") to signal that more messages may be coming.
 - **Auto-recovery from stuck WhatsApp sessions:** Added watchdog timer that detects when WhatsApp event emitter stops firing (e.g., after Bad MAC decryption errors) and automatically restarts the connection after 30 minutes of no message activity. Heartbeat logging now includes `minutesSinceLastMessage` and warns when >30 minutes without messages. The 30-minute timeout is intentionally longer than typical `heartbeatMinutes` configs to avoid false positives.
 - **Early allowFrom filtering:** Unauthorized senders are now blocked in `inbound.ts` BEFORE encryption/decryption attempts, preventing Bad MAC errors from corrupting session state. Previously, messages from unauthorized senders would trigger decryption failures that could silently kill the event emitter.
