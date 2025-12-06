@@ -60,13 +60,14 @@ export async function convertTelegramMessage(
  * Extract sender identifier with telegram: prefix to prevent session ID collisions.
  *
  * Returns:
- * - telegram:@username (if username available)
+ * - telegram:@username (if username available, lowercase for case-insensitive matching)
  * - telegram:+phone (if phone available, normalized to E.164)
  * - telegram:id (numeric Telegram ID as fallback)
  */
 function extractSenderIdentifier(sender: Api.User | Api.Chat): string {
   if ("username" in sender && sender.username) {
-    return `telegram:@${sender.username}`;
+    // Lowercase username for case-insensitive matching (Telegram usernames are case-insensitive)
+    return `telegram:@${sender.username.toLowerCase()}`;
   }
   if ("phone" in sender && sender.phone) {
     // Ensure phone has + prefix for E.164 format to match normalized allowFrom entries
@@ -207,6 +208,10 @@ export function isAllowedSender(
 ): boolean {
   if (!allowFrom || allowFrom.length === 0) {
     return true; // No whitelist = allow all
+  }
+
+  if (allowFrom.includes("*")) {
+    return true; // Wildcard allows all senders
   }
 
   const normalizedFrom = normalizeAllowFromEntry(message.from, "telegram");

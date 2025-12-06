@@ -6,13 +6,17 @@ type Entity = Api.User | Api.Chat | Api.Channel;
 /**
  * Resolve Telegram entity (user/chat) from identifier.
  * Supports @username, phone number, or user ID.
+ * Also handles telegram: prefix (e.g., telegram:@username).
  */
 export async function resolveEntity(
   client: TelegramClient,
   identifier: string,
 ): Promise<Entity> {
-  // Clean identifier
-  const clean = identifier.trim();
+  // Clean identifier and strip telegram: prefix if present
+  let clean = identifier.trim();
+  if (clean.startsWith("telegram:")) {
+    clean = clean.slice("telegram:".length);
+  }
 
   // Try as-is first (handles @username, phone, user ID)
   try {

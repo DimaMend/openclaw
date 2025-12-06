@@ -170,11 +170,10 @@ async function handleInboundMessage(
         normalizeAllowFromEntry(e, "telegram"),
       );
       if (!normalizedAllowList.includes(normalizedFrom)) {
-        if (isVerbose()) {
-          logVerbose(
-            `Skipping auto-reply: sender ${message.from} not in allowFrom list`,
-          );
-        }
+        // Always log skipped messages (not just in verbose mode)
+        runtime.log(
+          `⏭️  Skipped message from ${message.from} (not in allowFrom list)`,
+        );
         return;
       }
     }
