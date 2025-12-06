@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { normalizeSessionId, denormalizeSessionId } from "./normalize.js";
+import { denormalizeSessionId, normalizeSessionId } from "./normalize.js";
 import * as storage from "./storage.js";
 
 vi.mock("./storage.js");
@@ -78,19 +78,12 @@ describe("normalizeSessionId", () => {
     };
 
     // First call for Telegram
-    vi.mocked(storage.findMappingByIdentity).mockResolvedValueOnce(
-      mockMapping,
-    );
+    vi.mocked(storage.findMappingByIdentity).mockResolvedValueOnce(mockMapping);
     const telegramResult = await normalizeSessionId("telegram", "987654321");
 
     // Second call for WhatsApp
-    vi.mocked(storage.findMappingByIdentity).mockResolvedValueOnce(
-      mockMapping,
-    );
-    const whatsappResult = await normalizeSessionId(
-      "whatsapp",
-      "+9876543210",
-    );
+    vi.mocked(storage.findMappingByIdentity).mockResolvedValueOnce(mockMapping);
+    const whatsappResult = await normalizeSessionId("whatsapp", "+9876543210");
 
     expect(telegramResult).toBe("shared-xyz-456");
     expect(whatsappResult).toBe("shared-xyz-456");

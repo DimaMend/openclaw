@@ -55,7 +55,8 @@ export const claudeSpec: AgentSpec = {
       beforeBody.push("-p");
     }
 
-    const shouldPrependIdentity = ctx.isNewSession || !(ctx.sendSystemOnce && ctx.systemSent);
+    const shouldPrependIdentity =
+      ctx.isNewSession || !(ctx.sendSystemOnce && ctx.systemSent);
     const bodyWithIdentity = shouldPrependIdentity
       ? [ctx.identityPrefix ?? CLAUDE_IDENTITY_PREFIX, body]
           .filter(Boolean)

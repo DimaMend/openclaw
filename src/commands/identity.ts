@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import chalk from "chalk";
-import type { RuntimeEnv } from "../runtime.js";
+import { danger, info, success, warn } from "../globals.js";
 import {
   deleteMapping,
   getMapping,
@@ -8,7 +8,7 @@ import {
   setMapping,
 } from "../identity/storage.js";
 import type { IdentityMapping } from "../identity/types.js";
-import { danger, info, success, warn } from "../globals.js";
+import type { RuntimeEnv } from "../runtime.js";
 
 type IdentityLinkOpts = {
   whatsapp?: string;
@@ -122,7 +122,9 @@ export async function identityLinkCommand(
   try {
     await setMapping(mapping);
     runtime.log(
-      success(`✓ Identity mapping created with shared ID: ${chalk.cyan(sharedId)}`),
+      success(
+        `✓ Identity mapping created with shared ID: ${chalk.cyan(sharedId)}`,
+      ),
     );
     runtime.log("");
     runtime.log(info("Linked identities:"));
@@ -179,9 +181,7 @@ export async function identityListCommand(
         );
       }
       if (mapping.identities.telegram) {
-        runtime.log(
-          `    Telegram: ${chalk.blue(mapping.identities.telegram)}`,
-        );
+        runtime.log(`    Telegram: ${chalk.blue(mapping.identities.telegram)}`);
       }
       if (mapping.identities.twilio) {
         runtime.log(`    Twilio:   ${chalk.yellow(mapping.identities.twilio)}`);
@@ -248,9 +248,7 @@ export async function identityShowCommand(
     }
     runtime.log("");
   } catch (err) {
-    runtime.error(
-      danger(`Failed to show identity mapping: ${String(err)}`),
-    );
+    runtime.error(danger(`Failed to show identity mapping: ${String(err)}`));
     runtime.exit(1);
   }
 }
@@ -304,9 +302,7 @@ export async function identityUnlinkCommand(
       runtime.exit(1);
     }
   } catch (err) {
-    runtime.error(
-      danger(`Failed to unlink identity mapping: ${String(err)}`),
-    );
+    runtime.error(danger(`Failed to unlink identity mapping: ${String(err)}`));
     runtime.exit(1);
   }
 }

@@ -10,6 +10,6 @@
  *   3. Unlink if needed: `warelay identity unlink <shared-id>`
  */
 
-export * from "./types.js";
-export * from "./storage.js";
 export * from "./normalize.js";
+export * from "./storage.js";
+export * from "./types.js";

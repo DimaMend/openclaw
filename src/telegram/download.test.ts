@@ -6,7 +6,15 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import {
   cleanOrphanedTempFiles,
   ensureTempDir,
@@ -23,6 +31,14 @@ describe("download", () => {
     `warelay-test-${process.pid}-download`,
   );
 
+  beforeAll(() => {
+    process.env.TELEGRAM_TEMP_DIR = testTempDir;
+  });
+
+  afterAll(() => {
+    delete process.env.TELEGRAM_TEMP_DIR;
+  });
+
   beforeEach(async () => {
     // Clean test directory before each test
     await fs.rm(testTempDir, { recursive: true, force: true }).catch(() => {});
@@ -32,11 +48,7 @@ describe("download", () => {
   describe("getTelegramTempDir", () => {
     it("returns correct path", () => {
       const dir = getTelegramTempDir();
-      // Should contain either .clawdis or .warelay (depending on which exists)
-      const hasCorrectDir =
-        dir.includes(".clawdis") || dir.includes(".warelay");
-      expect(hasCorrectDir).toBe(true);
-      expect(dir).toContain("telegram-temp");
+      expect(dir).toBe(testTempDir);
       expect(path.isAbsolute(dir)).toBe(true);
     });
   });
@@ -110,8 +122,8 @@ describe("download", () => {
         expect(result.contentType).toBe("text/plain");
 
         // Verify path is in temp directory
-        expect(result.tempPath).toContain("telegram-temp");
-        expect(result.tempPath).toMatch(/telegram-dl-.*\.tmp$/);
+        expect(result.tempPath.startsWith(testTempDir)).toBe(true);
+        expect(path.basename(result.tempPath)).toMatch(/telegram-dl-.*\.tmp$/);
       } finally {
         await result.cleanup();
       }

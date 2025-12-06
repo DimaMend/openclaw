@@ -4,8 +4,8 @@ import path from "node:path";
 
 import JSON5 from "json5";
 import type { MsgContext } from "../auto-reply/templating.js";
-import { CONFIG_DIR, normalizeE164 } from "../utils.js";
 import { normalizeSessionId } from "../identity/normalize.js";
+import { CONFIG_DIR, normalizeE164 } from "../utils.js";
 
 export type SessionScope = "per-sender" | "global";
 
@@ -83,7 +83,10 @@ function detectProvider(from: string): "whatsapp" | "telegram" | "twilio" {
 /**
  * Extract raw ID from message context based on provider.
  */
-function extractRawId(from: string, provider: "whatsapp" | "telegram" | "twilio"): string {
+function extractRawId(
+  from: string,
+  provider: "whatsapp" | "telegram" | "twilio",
+): string {
   if (provider === "telegram") {
     if (from.startsWith("telegram:")) {
       return from.slice("telegram:".length);
@@ -99,7 +102,10 @@ function extractRawId(from: string, provider: "whatsapp" | "telegram" | "twilio"
 
 // Decide which session bucket to use (per-sender vs global).
 // Now supports identity mapping for cross-provider session sharing.
-export async function deriveSessionKey(scope: SessionScope, ctx: MsgContext): Promise<string> {
+export async function deriveSessionKey(
+  scope: SessionScope,
+  ctx: MsgContext,
+): Promise<string> {
   if (scope === "global") return "global";
   const from = ctx.From ? ctx.From : "";
 

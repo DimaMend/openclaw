@@ -4,3 +4,4 @@ dist
 pnpm-lock.yaml
 coverage
 .pnpm-store
+.clawdis

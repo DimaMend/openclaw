@@ -25,7 +25,8 @@ vi.mock("telegram/sessions/index.js", () => ({
 }));
 
 const { createTelegramClient, isClientConnected } = await import("./client.js");
-const { StringSession } = await import("telegram/sessions/index.js");
+// StringSession is mocked above but we import it to verify the mock works
+await import("telegram/sessions/index.js");
 
 describe("telegram client", () => {
   const mockRuntime: RuntimeEnv = {

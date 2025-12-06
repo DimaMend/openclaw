@@ -7,7 +7,7 @@ import type {
   ProviderMedia,
   ProviderMessage,
 } from "../providers/base/types.js";
-import { normalizeAllowFromEntry } from "../utils.js";
+import { normalizeAllowFromEntry, TELEGRAM_PREFIX } from "../utils.js";
 
 /**
  * Convert Telegram message to ProviderMessage format.
@@ -67,17 +67,19 @@ export async function convertTelegramMessage(
 function extractSenderIdentifier(sender: Api.User | Api.Chat): string {
   if ("username" in sender && sender.username) {
     // Lowercase username for case-insensitive matching (Telegram usernames are case-insensitive)
-    return `telegram:@${sender.username.toLowerCase()}`;
+    return `${TELEGRAM_PREFIX}@${sender.username.toLowerCase()}`;
   }
   if ("phone" in sender && sender.phone) {
     // Ensure phone has + prefix for E.164 format to match normalized allowFrom entries
-    const phone = sender.phone.startsWith("+") ? sender.phone : `+${sender.phone}`;
-    return `telegram:${phone}`;
+    const phone = sender.phone.startsWith("+")
+      ? sender.phone
+      : `+${sender.phone}`;
+    return `${TELEGRAM_PREFIX}${phone}`;
   }
   if ("id" in sender && sender.id) {
-    return `telegram:${sender.id.toString()}`;
+    return `${TELEGRAM_PREFIX}${sender.id.toString()}`;
   }
-  return "telegram:unknown";
+  return `${TELEGRAM_PREFIX}unknown`;
 }
 
 /**

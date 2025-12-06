@@ -26,7 +26,10 @@ const TELEGRAM_TEXT_LIMIT = 4096; // Telegram's message length limit
  * Format timestamp in the same format as WhatsApp relay.
  * Example: [Dec 5 22:41]
  */
-function formatTimestamp(ts: number, config?: ReturnType<typeof loadConfig>): string {
+function formatTimestamp(
+  ts: number,
+  config?: ReturnType<typeof loadConfig>,
+): string {
   const tsCfg = config?.inbound?.timestampPrefix;
   const tsEnabled = tsCfg !== false; // default true
   if (!tsEnabled) return "";
@@ -52,7 +55,7 @@ async function providerMessageToContext(
     : message.body;
 
   // Handle media: if buffer exists but no URL, save the buffer and create a file path
-  let mediaUrl = message.media?.[0]?.url;
+  const mediaUrl = message.media?.[0]?.url;
   let mediaPath = message.media?.[0]?.fileName;
 
   if (!mediaUrl && message.media?.[0]?.buffer) {

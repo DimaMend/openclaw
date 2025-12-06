@@ -4,6 +4,8 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import * as agents from "../agents/index.js";
+import { CLAUDE_IDENTITY_PREFIX } from "./claude.js";
 import { runCommandReply, summarizeClaudeMetadata } from "./command-reply.js";
 import type { ReplyPayload } from "./types.js";
 
@@ -90,6 +92,43 @@ describe("runCommandReply", () => {
     expect(finalArgv).toContain("json");
     expect(finalArgv).toContain("-p");
     expect(finalArgv.at(-1)).toContain("You are Clawd (Claude)");
+  });
+
+  it("adds identity prefix when Claude buildArgs omits it", async () => {
+    const captures: ReplyPayload[] = [];
+    const runner = makeRunner({ stdout: "ok" }, captures);
+    const getAgentSpy = vi.spyOn(agents, "getAgentSpec");
+    getAgentSpy.mockReturnValue({
+      kind: "claude",
+      isInvocation: () => true,
+      buildArgs: ({ argv }) => argv, // Missing identity prefix on purpose
+      parseOutput: () => ({ texts: ["ok"] }),
+    });
+
+    try {
+      await runCommandReply({
+        reply: {
+          mode: "command",
+          command: ["claude", "{{Body}}"],
+          agent: { kind: "claude" },
+        },
+        templatingCtx: noopTemplateCtx,
+        sendSystemOnce: false,
+        isNewSession: true,
+        isFirstTurnInSession: true,
+        systemSent: false,
+        timeoutMs: 1000,
+        timeoutSeconds: 1,
+        commandRunner: runner,
+        enqueue: enqueueImmediate,
+      });
+    } finally {
+      getAgentSpy.mockRestore();
+    }
+
+    const finalArgv = captures[0].argv as string[];
+    const body = finalArgv.at(-1) ?? "";
+    expect(body.startsWith(CLAUDE_IDENTITY_PREFIX)).toBe(true);
   });
 
   it("omits identity prefix on resumed session when sendSystemOnce=true", async () => {

@@ -7,6 +7,20 @@ export async function ensureDir(dir: string) {
   await fs.promises.mkdir(dir, { recursive: true });
 }
 
+/**
+ * Best-effort check that a directory exists and is writable.
+ * Creates the directory if missing; returns false if creation or access fails.
+ */
+export function canUseDir(dir: string): boolean {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.accessSync(dir, fs.constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export type Provider = "twilio" | "web" | "telegram";
 
 export function assertProvider(input: string): asserts input is Provider {
@@ -17,6 +31,13 @@ export function assertProvider(input: string): asserts input is Provider {
 
 export type AllowFromProvider = "telegram" | "web" | "twilio";
 
+export const TELEGRAM_PREFIX = "telegram:";
+
+/**
+ * Normalize an allowFrom entry for a specific provider.
+ * - Telegram: ensure `telegram:` prefix and `@username` casing
+ * - WhatsApp/Web: return normalized E.164 without whatsapp: prefix
+ */
 export function normalizeAllowFromEntry(
   entry: string,
   provider: AllowFromProvider,
@@ -26,18 +47,18 @@ export function normalizeAllowFromEntry(
 
   if (provider === "telegram") {
     // Strip telegram: prefix if present (allowFrom entries may or may not have it)
-    const withoutPrefix = trimmed.startsWith("telegram:")
-      ? trimmed.slice("telegram:".length)
+    const withoutPrefix = trimmed.startsWith(TELEGRAM_PREFIX)
+      ? trimmed.slice(TELEGRAM_PREFIX.length)
       : trimmed;
 
     // Ensure @username format, then add telegram: prefix
     const username = withoutPrefix.startsWith("@")
       ? withoutPrefix
       : withoutPrefix.match(/^\d+$/)
-        ? withoutPrefix  // numeric ID, keep as-is
+        ? withoutPrefix // numeric ID, keep as-is
         : `@${withoutPrefix}`;
 
-    return `telegram:${username}`;
+    return `${TELEGRAM_PREFIX}${username}`;
   }
 
   // WhatsApp (both web and twilio) use E.164 phone numbers
@@ -102,8 +123,24 @@ export function sleep(ms: number) {
 
 // Prefer new branding directory; fall back to legacy for compatibility.
 export const CONFIG_DIR = (() => {
+  const override = process.env.WARELAY_CONFIG_DIR;
+
+  if (override) {
+    const resolved = path.resolve(override);
+    if (canUseDir(resolved)) return resolved;
+  }
+
   const clawdis = path.join(os.homedir(), ".clawdis");
   const legacy = path.join(os.homedir(), ".warelay");
-  if (fs.existsSync(clawdis)) return clawdis;
-  return legacy;
+  if (canUseDir(clawdis)) return clawdis;
+  if (canUseDir(legacy)) return legacy;
+
+  // Sandbox-safe fallback inside the workspace when home isn't writable
+  const fallback = path.join(process.cwd(), ".clawdis");
+  if (canUseDir(fallback)) return fallback;
+
+  // Last resort: OS tmp (should be writable)
+  const tmp = path.join(os.tmpdir(), "clawdis");
+  fs.mkdirSync(tmp, { recursive: true });
+  return tmp;
 })();

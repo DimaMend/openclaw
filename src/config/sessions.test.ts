@@ -4,9 +4,9 @@ import { deriveSessionKey } from "./sessions.js";
 
 describe("sessions", () => {
   it("returns normalized per-sender key", async () => {
-    expect(await deriveSessionKey("per-sender", { From: "whatsapp:+1555" })).toBe(
-      "+1555",
-    );
+    expect(
+      await deriveSessionKey("per-sender", { From: "whatsapp:+1555" }),
+    ).toBe("+1555");
   });
 
   it("falls back to unknown when sender missing", async () => {
@@ -18,8 +18,8 @@ describe("sessions", () => {
   });
 
   it("keeps group chats distinct", async () => {
-    expect(await deriveSessionKey("per-sender", { From: "12345-678@g.us" })).toBe(
-      "group:12345-678@g.us",
-    );
+    expect(
+      await deriveSessionKey("per-sender", { From: "12345-678@g.us" }),
+    ).toBe("group:12345-678@g.us");
   });
 });

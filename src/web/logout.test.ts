@@ -32,12 +32,12 @@ describe("web logout", () => {
   });
 
   it("deletes cached credentials when present", async () => {
-    const credsDir = path.join(tmpDir, ".warelay", "credentials");
+    const { logoutWeb, WA_WEB_AUTH_DIR } = await import("./session.js");
+    const credsDir = WA_WEB_AUTH_DIR;
     fs.mkdirSync(credsDir, { recursive: true });
     fs.writeFileSync(path.join(credsDir, "creds.json"), "{}");
-    const sessionsPath = path.join(tmpDir, ".warelay", "sessions.json");
+    const sessionsPath = path.join(path.dirname(credsDir), "sessions.json");
     fs.writeFileSync(sessionsPath, "{}");
-    const { logoutWeb, WA_WEB_AUTH_DIR } = await import("./session.js");
 
     expect(WA_WEB_AUTH_DIR.startsWith(tmpDir)).toBe(true);
     const result = await logoutWeb(runtime as never);

@@ -236,101 +236,101 @@ export async function pickProvider(pref: Provider | "auto"): Promise<Provider> {
  * Check if Twilio is configured via environment variables.
  */
 function isTwilioConfigured(): boolean {
-	const required = ["TWILIO_ACCOUNT_SID", "TWILIO_WHATSAPP_FROM"];
-	const hasRequired = required.every((k) => Boolean(process.env[k]));
-	const hasToken = Boolean(process.env.TWILIO_AUTH_TOKEN);
-	const hasKey = Boolean(
-		process.env.TWILIO_API_KEY && process.env.TWILIO_API_SECRET,
-	);
-	return hasRequired && (hasToken || hasKey);
+  const required = ["TWILIO_ACCOUNT_SID", "TWILIO_WHATSAPP_FROM"];
+  const hasRequired = required.every((k) => Boolean(process.env[k]));
+  const hasToken = Boolean(process.env.TWILIO_AUTH_TOKEN);
+  const hasKey = Boolean(
+    process.env.TWILIO_API_KEY && process.env.TWILIO_API_SECRET,
+  );
+  return hasRequired && (hasToken || hasKey);
 }
 
 export async function selectProviders(
-	prefs: (Provider | "auto")[],
+  prefs: (Provider | "auto")[],
 ): Promise<Provider[]> {
-	const skipped: string[] = [];
+  const skipped: string[] = [];
 
-	// If 'auto' in list, expand to all authenticated providers
-	if (prefs.includes("auto")) {
-		const available: Provider[] = [];
+  // If 'auto' in list, expand to all authenticated providers
+  if (prefs.includes("auto")) {
+    const available: Provider[] = [];
 
-		// Check web
-		if (await webAuthExists()) {
-			available.push("web");
-		} else {
-			skipped.push(
-				"web (not authenticated - run: warelay login --provider web)",
-			);
-		}
+    // Check web
+    if (await webAuthExists()) {
+      available.push("web");
+    } else {
+      skipped.push(
+        "web (not authenticated - run: warelay login --provider web)",
+      );
+    }
 
-		// Check telegram
-		if (await telegramAuthExists()) {
-			available.push("telegram");
-		} else {
-			skipped.push(
-				"telegram (not authenticated - run: warelay login --provider telegram)",
-			);
-		}
+    // Check telegram
+    if (await telegramAuthExists()) {
+      available.push("telegram");
+    } else {
+      skipped.push(
+        "telegram (not authenticated - run: warelay login --provider telegram)",
+      );
+    }
 
-		// Check twilio
-		if (isTwilioConfigured()) {
-			available.push("twilio");
-		} else {
-			skipped.push(
-				"twilio (not configured - set TWILIO_ACCOUNT_SID, TWILIO_WHATSAPP_FROM, and auth credentials in .env)",
-			);
-		}
+    // Check twilio
+    if (isTwilioConfigured()) {
+      available.push("twilio");
+    } else {
+      skipped.push(
+        "twilio (not configured - set TWILIO_ACCOUNT_SID, TWILIO_WHATSAPP_FROM, and auth credentials in .env)",
+      );
+    }
 
-		if (available.length > 0 && skipped.length > 0) {
-			console.log(
-				`ℹ️  Auto-selected ${available.length} provider(s), skipped ${skipped.length}:`,
-			);
-			for (const skip of skipped) {
-				console.log(`   • ${skip}`);
-			}
-		}
+    if (available.length > 0 && skipped.length > 0) {
+      console.log(
+        `ℹ️  Auto-selected ${available.length} provider(s), skipped ${skipped.length}:`,
+      );
+      for (const skip of skipped) {
+        console.log(`   • ${skip}`);
+      }
+    }
 
-		return available;
-	}
+    return available;
+  }
 
-	// Explicit provider list - validate each one
-	const available: Provider[] = [];
-	for (const pref of prefs) {
-		if (pref === "auto") continue; // Already handled above
+  // Explicit provider list - validate each one
+  const available: Provider[] = [];
+  for (const pref of prefs) {
+    if (pref === "auto") continue; // Already handled above
 
-		if (pref === "web") {
-			if (await webAuthExists()) {
-				available.push("web");
-			} else {
-				skipped.push(
-					"web (not authenticated - run: warelay login --provider web)",
-				);
-			}
-		} else if (pref === "telegram") {
-			if (await telegramAuthExists()) {
-				available.push("telegram");
-			} else {
-				skipped.push(
-					"telegram (not authenticated - run: warelay login --provider telegram)",
-				);
-			}
-		} else if (pref === "twilio") {
-			if (isTwilioConfigured()) {
-				available.push("twilio");
-			} else {
-				skipped.push(
-					"twilio (not configured - set TWILIO_ACCOUNT_SID, TWILIO_WHATSAPP_FROM, and auth credentials in .env)",
-				);
-			}
-		}
-	}
+    if (pref === "web") {
+      if (await webAuthExists()) {
+        available.push("web");
+      } else {
+        skipped.push(
+          "web (not authenticated - run: warelay login --provider web)",
+        );
+      }
+    } else if (pref === "telegram") {
+      if (await telegramAuthExists()) {
+        available.push("telegram");
+      } else {
+        skipped.push(
+          "telegram (not authenticated - run: warelay login --provider telegram)",
+        );
+      }
+    } else if (pref === "twilio") {
+      if (isTwilioConfigured()) {
+        available.push("twilio");
+      } else {
+        skipped.push(
+          "twilio (not configured - set TWILIO_ACCOUNT_SID, TWILIO_WHATSAPP_FROM, and auth credentials in .env)",
+        );
+      }
+    }
+  }
 
-	if (skipped.length > 0) {
-		console.log(`ℹ️  Skipped ${skipped.length} provider(s):`);
-		for (const skip of skipped) {
-			console.log(`   • ${skip}`);
-		}
-	}
+  if (skipped.length > 0) {
+    console.log(`ℹ️  Skipped ${skipped.length} provider(s):`);
+    for (const skip of skipped) {
+      console.log(`   • ${skip}`);
+    }
+  }
 
-	return available;
+  return available;
 }

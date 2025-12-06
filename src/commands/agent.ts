@@ -22,12 +22,14 @@ import {
   type SessionEntry,
   saveSessionStore,
 } from "../config/sessions.js";
-import { readEnv } from "../env.js";
-import { ensureTwilioEnv } from "../env.js";
+import { ensureTwilioEnv, readEnv } from "../env.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { pickProvider } from "../provider-web.js";
+import type {
+  ProviderMedia,
+  TelegramProviderConfig,
+} from "../providers/base/types.js";
 import { createInitializedProvider } from "../providers/factory.js";
-import type { TelegramProviderConfig, ProviderMedia } from "../providers/base/types.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
 import type { Provider } from "../utils.js";
 import { sendViaIpc } from "../web/ipc.js";
@@ -442,8 +444,10 @@ export async function agentCommand(
           sessionDir: undefined,
           verbose: false,
         };
-        const telegramProvider =
-          await createInitializedProvider("telegram", telegramConfig);
+        const telegramProvider = await createInitializedProvider(
+          "telegram",
+          telegramConfig,
+        );
 
         try {
           const chunks = chunkText(text, 4096);
@@ -451,7 +455,9 @@ export async function agentCommand(
             const firstChunk = chunks.length > 0 ? chunks[0] : "";
             const firstMedia = media[0];
             await telegramProvider.send(opts.to, firstChunk, {
-              media: firstMedia ? [{ type: detectMediaType(firstMedia), url: firstMedia }] : undefined,
+              media: firstMedia
+                ? [{ type: detectMediaType(firstMedia), url: firstMedia }]
+                : undefined,
             });
           }
           for (let i = 1; i < chunks.length; i++) {

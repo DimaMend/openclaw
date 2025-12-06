@@ -1,4 +1,5 @@
 import type { Api, TelegramClient } from "telegram";
+import { TELEGRAM_PREFIX } from "../utils.js";
 
 // Entity type - can be User, Chat, Channel, or their empty variants
 type Entity = Api.User | Api.Chat | Api.Channel;
@@ -14,8 +15,8 @@ export async function resolveEntity(
 ): Promise<Entity> {
   // Clean identifier and strip telegram: prefix if present
   let clean = identifier.trim();
-  if (clean.startsWith("telegram:")) {
-    clean = clean.slice("telegram:".length);
+  if (clean.startsWith(TELEGRAM_PREFIX)) {
+    clean = clean.slice(TELEGRAM_PREFIX.length);
   }
 
   // Try as-is first (handles @username, phone, user ID)

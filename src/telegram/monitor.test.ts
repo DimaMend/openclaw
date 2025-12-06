@@ -27,7 +27,8 @@ vi.mock("../env.js", () => ({
 vi.mock("../config/config.js", () => ({
   loadConfig: vi.fn(() => ({
     inbound: {
-      allowFrom: ["@testuser"],
+      allowFrom: ["telegram:@testuser"],
+      timestampPrefix: false,
       reply: {
         mode: "text",
         text: "Auto-reply test",
@@ -141,7 +142,7 @@ describe("monitorTelegramProvider", () => {
       apiId: 12345,
       apiHash: "test-hash",
       sessionDir: undefined,
-      allowFrom: ["@testuser"],
+      allowFrom: ["telegram:@testuser"],
       verbose: true,
     });
 
@@ -160,8 +161,8 @@ describe("monitorTelegramProvider", () => {
       if (messageHandler) {
         const testMessage: ProviderMessage = {
           id: "test-msg-123",
-          from: "@testuser",
-          to: "@botuser",
+          from: "telegram:@testuser",
+          to: "telegram:@botuser",
           body: "Hello bot",
           timestamp: Date.now(),
           provider: "telegram",
@@ -180,8 +181,8 @@ describe("monitorTelegramProvider", () => {
     expect(getReplyFromConfig).toHaveBeenCalledWith(
       expect.objectContaining({
         Body: "Hello bot",
-        From: "@testuser",
-        To: "@botuser",
+        From: "telegram:@testuser",
+        To: "telegram:@botuser",
       }),
       expect.objectContaining({
         onReplyStart: expect.any(Function),
@@ -191,7 +192,7 @@ describe("monitorTelegramProvider", () => {
 
     // Verify reply was sent
     expect(mockProvider.send).toHaveBeenCalledWith(
-      "@testuser",
+      "telegram:@testuser",
       "Test reply",
       expect.anything(),
     );
@@ -206,7 +207,8 @@ describe("monitorTelegramProvider", () => {
     // Set allowFrom filter
     (loadConfig as Mock).mockReturnValueOnce({
       inbound: {
-        allowFrom: ["@alloweduser"],
+        allowFrom: ["telegram:@alloweduser"],
+        timestampPrefix: false,
         reply: {
           mode: "text",
           text: "Auto-reply test",
@@ -219,8 +221,8 @@ describe("monitorTelegramProvider", () => {
       if (messageHandler) {
         const testMessage: ProviderMessage = {
           id: "test-msg-123",
-          from: "@notallowed",
-          to: "@botuser",
+          from: "telegram:@notallowed",
+          to: "telegram:@botuser",
           body: "Hello",
           timestamp: Date.now(),
           provider: "telegram",
@@ -254,8 +256,8 @@ describe("monitorTelegramProvider", () => {
       if (messageHandler) {
         const testMessage: ProviderMessage = {
           id: "test-msg-456",
-          from: "@testuser",
-          to: "@botuser",
+          from: "telegram:@testuser",
+          to: "telegram:@botuser",
           body: "Send me a picture",
           timestamp: Date.now(),
           provider: "telegram",
@@ -279,7 +281,7 @@ describe("monitorTelegramProvider", () => {
 
     // Verify reply with media was sent
     expect(mockProvider.send).toHaveBeenCalledWith(
-      "@testuser",
+      "telegram:@testuser",
       "Here's an image",
       expect.objectContaining({
         media: expect.arrayContaining([
@@ -307,8 +309,8 @@ describe("monitorTelegramProvider", () => {
       if (messageHandler) {
         const testMessage: ProviderMessage = {
           id: "test-msg-789",
-          from: "@testuser",
-          to: "@botuser",
+          from: "telegram:@testuser",
+          to: "telegram:@botuser",
           body: "Hello",
           timestamp: Date.now(),
           provider: "telegram",
@@ -329,6 +331,6 @@ describe("monitorTelegramProvider", () => {
     }
 
     // Verify typing indicator was sent
-    expect(mockProvider.sendTyping).toHaveBeenCalledWith("@testuser");
+    expect(mockProvider.sendTyping).toHaveBeenCalledWith("telegram:@testuser");
   });
 });

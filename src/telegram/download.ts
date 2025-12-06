@@ -1,25 +1,43 @@
 import crypto from "node:crypto";
-import { createWriteStream } from "node:fs";
-import fsSync from "node:fs";
+import fsSync, { createWriteStream } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { canUseDir } from "../utils.js";
 
 // Prefer ~/.clawdis/telegram-temp, but fall back to ~/.warelay for compatibility
 const TEMP_DIR_CLAWDIS = path.join(os.homedir(), ".clawdis", "telegram-temp");
 const TEMP_DIR_LEGACY = path.join(os.homedir(), ".warelay", "telegram-temp");
 
 function resolveTempDir(): string {
+  // Allow override for tests/sandboxes
+  const override =
+    process.env.TELEGRAM_TEMP_DIR || process.env.WARELAY_TEMP_DIR;
+  if (override) {
+    return path.resolve(override);
+  }
+
   // Use CLAWDIS path if the main config directory exists, otherwise legacy
   const clawdisConfigExists = fsSync.existsSync(
     path.join(os.homedir(), ".clawdis"),
   );
-  return clawdisConfigExists ? TEMP_DIR_CLAWDIS : TEMP_DIR_LEGACY;
+  const preferred = clawdisConfigExists ? TEMP_DIR_CLAWDIS : TEMP_DIR_LEGACY;
+  if (canUseDir(preferred)) return preferred;
+  if (canUseDir(TEMP_DIR_LEGACY)) return TEMP_DIR_LEGACY;
+
+  // Sandbox-safe fallback inside workspace
+  const fallback = path.join(process.cwd(), ".clawdis", "telegram-temp");
+  if (canUseDir(fallback)) return fallback;
+
+  // Last resort: OS tmp
+  return path.join(os.tmpdir(), "warelay-telegram-temp");
 }
 
-const TEMP_DIR = resolveTempDir();
+function getTempDir(): string {
+  return resolveTempDir();
+}
 const DEFAULT_ORPHAN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /**
@@ -45,15 +63,16 @@ export interface DownloadResult {
  * Uses ~/.clawdis/telegram-temp for consistency with media store.
  */
 export function getTelegramTempDir(): string {
-  return TEMP_DIR;
+  return getTempDir();
 }
 
 /**
  * Ensure temp directory exists.
  */
 export async function ensureTempDir(): Promise<string> {
-  await fs.mkdir(TEMP_DIR, { recursive: true });
-  return TEMP_DIR;
+  const dir = getTempDir();
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
 }
 
 /**
@@ -84,7 +103,7 @@ export async function streamDownloadToTemp(
 
   // Generate unique temp file name
   const filename = `telegram-dl-${crypto.randomUUID()}.tmp`;
-  const tempPath = path.join(TEMP_DIR, filename);
+  const tempPath = path.join(getTempDir(), filename);
 
   // Fetch response
   const response = await fetch(url);
@@ -153,12 +172,13 @@ export async function cleanOrphanedTempFiles(
 ): Promise<void> {
   try {
     await ensureTempDir();
-    const entries = await fs.readdir(TEMP_DIR).catch(() => []);
+    const tempDir = getTempDir();
+    const entries = await fs.readdir(tempDir).catch(() => []);
     const now = Date.now();
 
     await Promise.all(
       entries.map(async (file) => {
-        const fullPath = path.join(TEMP_DIR, file);
+        const fullPath = path.join(tempDir, file);
         const stat = await fs.stat(fullPath).catch(() => null);
         if (!stat) return;
 

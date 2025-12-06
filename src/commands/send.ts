@@ -188,7 +188,9 @@ export async function sendCommand(
         );
       } else {
         runtime.log(
-          success(`✅ Sent to ${opts.to} via Telegram (id ${result.messageId})`),
+          success(
+            `✅ Sent to ${opts.to} via Telegram (id ${result.messageId})`,
+          ),
         );
       }
     } finally {

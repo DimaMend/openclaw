@@ -40,7 +40,8 @@ export const geminiSpec: AgentSpec = {
       }
     }
 
-    const shouldPrependIdentity = ctx.isNewSession || !(ctx.sendSystemOnce && ctx.systemSent);
+    const shouldPrependIdentity =
+      ctx.isNewSession || !(ctx.sendSystemOnce && ctx.systemSent);
     const bodyWithIdentity =
       shouldPrependIdentity && body
         ? [ctx.identityPrefix ?? GEMINI_IDENTITY_PREFIX, body]

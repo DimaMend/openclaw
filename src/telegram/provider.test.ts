@@ -345,7 +345,7 @@ describe("TelegramProvider", () => {
         kind: "telegram",
         apiId: 12345,
         apiHash: "test-hash",
-        allowFrom: ["@testuser", "+1234567890"],
+        allowFrom: ["telegram:@testuser", "telegram:+1234567890"],
       };
 
       vi.mocked(sessionModule.loadSession).mockResolvedValue({} as any);
@@ -369,7 +369,7 @@ describe("TelegramProvider", () => {
       expect(inboundModule.startMessageListener).toHaveBeenCalledWith(
         mockClient,
         handler,
-        ["@testuser", "+1234567890"],
+        ["telegram:@testuser", "telegram:+1234567890"],
       );
     });
 

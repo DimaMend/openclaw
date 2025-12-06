@@ -124,7 +124,9 @@ export function buildProgram() {
 
   program
     .command("login")
-    .description("Link your personal WhatsApp via QR (web provider) or Telegram")
+    .description(
+      "Link your personal WhatsApp via QR (web provider) or Telegram",
+    )
     .option("--provider <provider>", "Provider: web | telegram", "web")
     .option("--verbose", "Verbose connection logs", false)
     .action(async (opts) => {
@@ -141,7 +143,9 @@ export function buildProgram() {
         }
         await loginWeb(Boolean(opts.verbose));
       } catch (err) {
-        defaultRuntime.error(danger(`${provider} login failed: ${String(err)}`));
+        defaultRuntime.error(
+          danger(`${provider} login failed: ${String(err)}`),
+        );
         defaultRuntime.exit(1);
       }
     });
@@ -192,7 +196,11 @@ export function buildProgram() {
       "20",
     )
     .option("-p, --poll <seconds>", "Polling interval while waiting", "2")
-    .option("--provider <provider>", "Provider: twilio | web | telegram", "twilio")
+    .option(
+      "--provider <provider>",
+      "Provider: twilio | web | telegram",
+      "twilio",
+    )
     .option("--dry-run", "Print payload and skip sending", false)
     .option("--json", "Output result as JSON", false)
     .option("--verbose", "Verbose logging", false)
@@ -383,7 +391,10 @@ Examples:
     .command("relay")
     .description("Auto-reply to inbound messages (auto-selects web or twilio)")
     .option("--provider <provider>", "auto | web | twilio | telegram", "auto")
-    .option("--providers <providers>", "Comma-separated list: web,telegram,twilio")
+    .option(
+      "--providers <providers>",
+      "Comma-separated list: web,telegram,twilio",
+    )
     .option("-i, --interval <seconds>", "Polling interval for twilio mode", "5")
     .option(
       "-l, --lookback <minutes>",
@@ -538,7 +549,9 @@ Examples:
       // Single-provider relay logic
       const providerPref = String(opts.provider ?? "auto");
       if (!["auto", "web", "twilio", "telegram"].includes(providerPref)) {
-        defaultRuntime.error("--provider must be auto, web, twilio, or telegram");
+        defaultRuntime.error(
+          "--provider must be auto, web, twilio, or telegram",
+        );
         defaultRuntime.exit(1);
       }
 
@@ -825,7 +838,9 @@ Examples:
   // Identity management commands
   const identity = program
     .command("identity")
-    .description("Manage cross-provider identity mappings for shared Claude sessions");
+    .description(
+      "Manage cross-provider identity mappings for shared Claude sessions",
+    );
 
   identity
     .command("link")
@@ -893,7 +908,9 @@ Examples:
 
   identity
     .command("unlink <id>")
-    .description("Unlink an identity mapping (providers will have separate sessions)")
+    .description(
+      "Unlink an identity mapping (providers will have separate sessions)",
+    )
     .addHelpText(
       "after",
       `

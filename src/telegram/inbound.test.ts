@@ -57,7 +57,7 @@ describe("convertTelegramMessage", () => {
 
     expect(result).toEqual({
       id: "999",
-      from: "@testuser",
+      from: "telegram:@testuser",
       to: "me",
       body: "Hello, world!",
       timestamp: 1234567890000,
@@ -121,7 +121,7 @@ describe("convertTelegramMessage", () => {
     };
 
     const result = await convertTelegramMessage(mockEvent as NewMessageEvent);
-    expect(result?.from).toBe("+1234567890");
+    expect(result?.from).toBe("telegram:+1234567890");
   });
 
   it("uses ID when neither username nor phone available", async () => {
@@ -145,7 +145,7 @@ describe("convertTelegramMessage", () => {
     };
 
     const result = await convertTelegramMessage(mockEvent as NewMessageEvent);
-    expect(result?.from).toBe("12345");
+    expect(result?.from).toBe("telegram:12345");
   });
 
   it("uses Unknown when no identifiable info available", async () => {
@@ -166,7 +166,7 @@ describe("convertTelegramMessage", () => {
     };
 
     const result = await convertTelegramMessage(mockEvent as NewMessageEvent);
-    expect(result?.from).toBe("unknown");
+    expect(result?.from).toBe("telegram:unknown");
     expect(result?.displayName).toBe("Unknown");
   });
 
@@ -501,7 +501,7 @@ describe("isAllowedSender", () => {
   it("allows all senders when no whitelist provided", () => {
     const message: ProviderMessage = {
       id: "1",
-      from: "@testuser",
+      from: "telegram:@testuser",
       to: "me",
       body: "Hello",
       timestamp: Date.now(),
@@ -515,83 +515,102 @@ describe("isAllowedSender", () => {
   it("allows sender with matching username", () => {
     const message: ProviderMessage = {
       id: "1",
-      from: "@testuser",
+      from: "telegram:@testuser",
       to: "me",
       body: "Hello",
       timestamp: Date.now(),
       provider: "telegram",
     };
 
-    expect(isAllowedSender(message, ["@testuser"])).toBe(true);
-    expect(isAllowedSender(message, ["testuser"])).toBe(true); // Without @
+    expect(isAllowedSender(message, ["telegram:@testuser"])).toBe(true);
+    expect(isAllowedSender(message, ["telegram:testuser"])).toBe(true); // Without @
   });
 
   it("allows sender with matching phone", () => {
     const message: ProviderMessage = {
       id: "1",
-      from: "+1234567890",
+      from: "telegram:+1234567890",
       to: "me",
       body: "Hello",
       timestamp: Date.now(),
       provider: "telegram",
     };
 
-    expect(isAllowedSender(message, ["+1234567890"])).toBe(true);
+    expect(isAllowedSender(message, ["telegram:+1234567890"])).toBe(true);
   });
 
   it("rejects sender not in whitelist", () => {
     const message: ProviderMessage = {
       id: "1",
-      from: "@unauthorized",
+      from: "telegram:@unauthorized",
       to: "me",
       body: "Hello",
       timestamp: Date.now(),
       provider: "telegram",
     };
 
-    expect(isAllowedSender(message, ["@testuser", "+1234567890"])).toBe(false);
+    expect(
+      isAllowedSender(message, ["telegram:@testuser", "telegram:+1234567890"]),
+    ).toBe(false);
   });
 
   it("is case insensitive", () => {
     const message: ProviderMessage = {
       id: "1",
-      from: "@TestUser",
+      from: "telegram:@TestUser",
       to: "me",
       body: "Hello",
       timestamp: Date.now(),
       provider: "telegram",
     };
 
-    expect(isAllowedSender(message, ["@testuser"])).toBe(true);
-    expect(isAllowedSender(message, ["TESTUSER"])).toBe(true);
+    expect(isAllowedSender(message, ["telegram:@testuser"])).toBe(true);
+    expect(isAllowedSender(message, ["telegram:TESTUSER"])).toBe(true);
   });
 
   it("trims whitespace from whitelist entries", () => {
     const message: ProviderMessage = {
       id: "1",
-      from: "@testuser",
+      from: "telegram:@testuser",
       to: "me",
       body: "Hello",
       timestamp: Date.now(),
       provider: "telegram",
     };
 
-    expect(isAllowedSender(message, ["  @testuser  "])).toBe(true);
+    expect(isAllowedSender(message, ["  telegram:@testuser  "])).toBe(true);
   });
 
   it("allows sender in multi-entry whitelist", () => {
     const message: ProviderMessage = {
       id: "1",
-      from: "@user2",
+      from: "telegram:@user2",
       to: "me",
       body: "Hello",
       timestamp: Date.now(),
       provider: "telegram",
     };
 
-    expect(isAllowedSender(message, ["@user1", "@user2", "+1234567890"])).toBe(
-      true,
-    );
+    expect(
+      isAllowedSender(message, [
+        "telegram:@user1",
+        "telegram:@user2",
+        "telegram:+1234567890",
+      ]),
+    ).toBe(true);
+  });
+
+  it("allows all senders when allowFrom contains wildcard", () => {
+    const message: ProviderMessage = {
+      id: "1",
+      from: "telegram:@anyone",
+      to: "me",
+      body: "Hello",
+      timestamp: Date.now(),
+      provider: "telegram",
+    };
+
+    expect(isAllowedSender(message, ["*"])).toBe(true);
   });
 });
 
@@ -671,7 +690,7 @@ describe("startMessageListener", () => {
     expect(mockHandler).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "999",
-        from: "@testuser",
+        from: "telegram:@testuser",
         body: "Hello!",
       }),
     );
@@ -715,7 +734,7 @@ describe("startMessageListener", () => {
     const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     await startMessageListener(mockClient as TelegramClient, mockHandler, [
-      "@allowed",
+      "telegram:@allowed",
     ]);
 
     // Simulate message from non-whitelisted user
@@ -743,7 +762,7 @@ describe("startMessageListener", () => {
 
     expect(mockHandler).not.toHaveBeenCalled();
     expect(consoleLogSpy).toHaveBeenCalledWith(
-      "Ignored message from @unauthorized (not in allowFrom list)",
+      "Ignored message from telegram:@unauthorized (not in allowFrom list)",
     );
 
     consoleLogSpy.mockRestore();
@@ -758,7 +777,7 @@ describe("startMessageListener", () => {
     });
 
     await startMessageListener(mockClient as TelegramClient, mockHandler, [
-      "@testuser",
+      "telegram:@testuser",
     ]);
 
     // Simulate message from whitelisted user

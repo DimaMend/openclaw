@@ -17,6 +17,11 @@ import { runCommandWithTimeout } from "../process/exec.js";
 import { defaultRuntime, type RuntimeEnv } from "../runtime.js";
 import type { TwilioRequester } from "../twilio/types.js";
 import { sendTypingIndicator } from "../twilio/typing.js";
+import {
+  normalizeAllowFromEntry,
+  normalizeE164,
+  TELEGRAM_PREFIX,
+} from "../utils.js";
 import { chunkText } from "./chunk.js";
 import { runCommandReply } from "./command-reply.js";
 import {
@@ -409,10 +414,26 @@ export async function getReplyFromConfig(
     return { text: ack };
   }
 
-  // Optional allowlist by origin number (E.164 without whatsapp: prefix)
+  // Optional allowlist by origin number (E.164 for WhatsApp, telegram: prefix for Telegram)
   const allowFrom = cfg.inbound?.allowFrom;
-  const from = (ctx.From ?? "").replace(/^whatsapp:/, "");
-  const to = (ctx.To ?? "").replace(/^whatsapp:/, "");
+  const rawFrom = ctx.From ?? "";
+  const rawTo = ctx.To ?? "";
+  const from = rawFrom.replace(/^whatsapp:/, "");
+  const to = rawTo.replace(/^whatsapp:/, "");
+  const isTelegramSender = rawFrom.startsWith(TELEGRAM_PREFIX);
+  const normalizedFrom = isTelegramSender
+    ? normalizeAllowFromEntry(rawFrom, "telegram")
+    : normalizeE164(from);
+  const normalizedAllowFrom =
+    Array.isArray(allowFrom) && allowFrom.length > 0
+      ? allowFrom.map((entry) => {
+          if (entry === "*") return "*";
+          if (isTelegramSender) {
+            return normalizeAllowFromEntry(entry, "telegram");
+          }
+          return normalizeE164(entry.replace(/^whatsapp:/, ""));
+        })
+      : [];
   const isSamePhone = from && to && from === to;
   const abortKey = sessionKey ?? (from || undefined) ?? (to || undefined);
   const rawBodyNormalized = (sessionCtx.BodyStripped ?? sessionCtx.Body ?? "")
@@ -428,9 +449,11 @@ export async function getReplyFromConfig(
     logVerbose(`Allowing same-phone mode: from === to (${from})`);
   } else if (!isGroup && Array.isArray(allowFrom) && allowFrom.length > 0) {
     // Support "*" as wildcard to allow all senders
-    if (!allowFrom.includes("*") && !allowFrom.includes(from)) {
+    const allowAll = normalizedAllowFrom.includes("*");
+    if (!allowAll && !normalizedAllowFrom.includes(normalizedFrom)) {
+      const displayFrom = normalizedFrom || rawFrom || "<unknown>";
       logVerbose(
-        `Skipping auto-reply: sender ${from || "<unknown>"} not in allowFrom list`,
+        `Skipping auto-reply: sender ${displayFrom} not in allowFrom list`,
       );
       cleanupTyping();
       return undefined;

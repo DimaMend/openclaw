@@ -11,6 +11,7 @@ import { splitMediaFromOutput } from "../media/parse.js";
 import { enqueueCommand } from "../process/command-queue.js";
 import type { runCommandWithTimeout } from "../process/exec.js";
 import { runPiRpc } from "../process/tau-rpc.js";
+import { CLAUDE_IDENTITY_PREFIX } from "./claude.js";
 import { applyTemplate, type TemplateContext } from "./templating.js";
 import {
   formatToolAggregate,
@@ -398,6 +399,21 @@ export async function runCommandReply(
         format: agentCfg.format,
       })
     : argv;
+
+  // Safety net: ensure Claude invocations include the identity prefix on turns where it should apply.
+  if (
+    agentKind === "claude" &&
+    shouldApplyAgent &&
+    (!sendSystemOnce || !systemSent || isNewSession)
+  ) {
+    const idx = finalArgv.length > 0 ? finalArgv.length - 1 : 0;
+    const body = finalArgv[idx];
+    if (typeof body === "string" && !body.includes(CLAUDE_IDENTITY_PREFIX)) {
+      finalArgv[idx] = [CLAUDE_IDENTITY_PREFIX, body]
+        .filter(Boolean)
+        .join("\n\n");
+    }
+  }
 
   logVerbose(
     `Running command auto-reply: ${finalArgv.join(" ")}${reply.cwd ? ` (cwd: ${reply.cwd})` : ""}`,
