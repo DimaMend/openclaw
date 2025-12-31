@@ -4,7 +4,7 @@ read_when:
   - Changing audio transcription or media handling
 ---
 <!-- {% raw %} -->
-# Audio / Voice Notes — 2025-12-05
+# Audio / Voice Notes - 2025-12-05
 
 ## What works
 - **Optional transcription**: If `routing.transcribeAudio.command` is set in `~/.clawdis/clawdis.json`, CLAWDIS will:
@@ -37,10 +37,31 @@ Requires `OPENAI_API_KEY` in env and `openai` CLI installed:
 }
 ```
 
+## Config example (GigaAM via scripts/transcribe-giga.sh)
+Requires `~/TOOLS/vtt_giga_sh/giga.sh` and the wrapper script in `scripts/`:
+```json5
+{
+  routing: {
+    transcribeAudio: {
+      command: ["/path/to/clawdis/scripts/transcribe-giga.sh", "{{MediaPath}}"],
+      timeoutSeconds: 120
+    }
+  }
+}
+```
+
+Optional environment variables:
+```
+GIGA_SH=~/TOOLS/vtt_giga_sh/giga.sh
+GIGA_TRANSCODE=1  # requires ffmpeg, forces WAV conversion
+GIGA_MODEL=e2e_ctc
+GIGA_DEVICE=cpu
+```
+
 ## Notes & limits
-- We don’t ship a transcriber; you opt in with any CLI that prints text to stdout (Whisper cloud, whisper.cpp, vosk, Deepgram, etc.).
-- Size guard: inbound audio must be ≤5 MB (matches the temp media store and transcript pipeline).
-- Outbound caps: web send supports audio/voice up to 16 MB (sent as a voice note with `ptt: true`).
+- We don't ship a transcriber; you opt in with any CLI that prints text to stdout (Whisper cloud, whisper.cpp, vosk, Deepgram, etc.).
+- Size guard: inbound audio must be <= 5 MB (matches the temp media store and transcript pipeline).
+- Outbound caps: web send supports audio/voice up to 16 MB (sent as a voice note with `ptt: true`).
 - If transcription fails, we fall back to the original body/media note; replies still go through.
 - Transcript is available to templates as `{{Transcript}}`; models get both the media path and a `Transcript:` block in the prompt when using command mode.
 
