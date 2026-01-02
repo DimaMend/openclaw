@@ -1,7 +1,7 @@
 ---
 name: atlas
 description: Query the user's ATLAS personal knowledge base for search, concepts, insights, actions, and stats.
-homepage: https://github.com/filipdam/atlas
+homepage: local
 metadata: {"clawdis":{"emoji":"🧠"}}
 ---
 
