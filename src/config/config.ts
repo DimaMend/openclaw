@@ -653,12 +653,7 @@ function resolveHomeDir(): string {
 
 export function getDefaultDeepResearchCliPath(): string {
   const homeDir = resolveHomeDir();
-  return path.join(
-    homeDir,
-    "TOOLS",
-    "gemini_deep_research",
-    "gdr.sh",
-  );
+  return path.join(homeDir, "TOOLS", "gemini_deep_research", "gdr.sh");
 }
 
 // Deep Research configuration schema
@@ -975,24 +970,28 @@ export function loadConfig(): ClawdisConfig {
   // Read config file (JSON5) if present.
   const configPath = CONFIG_PATH_CLAWDIS;
   try {
-    if (!fs.existsSync(configPath)) return {};
+    if (!fs.existsSync(configPath)) {
+      return applyDeepResearchEnvOverrides(applyIdentityDefaults({}));
+    }
     const raw = fs.readFileSync(configPath, "utf-8");
     const parsed = JSON5.parse(raw);
-    if (typeof parsed !== "object" || parsed === null) return {};
+    if (typeof parsed !== "object" || parsed === null) {
+      return applyDeepResearchEnvOverrides(applyIdentityDefaults({}));
+    }
     const validated = ClawdisSchema.safeParse(parsed);
     if (!validated.success) {
       console.error("Invalid config:");
       for (const iss of validated.error.issues) {
         console.error(`- ${iss.path.join(".")}: ${iss.message}`);
       }
-      return {};
+      return applyDeepResearchEnvOverrides(applyIdentityDefaults({}));
     }
     return applyDeepResearchEnvOverrides(
       applyIdentityDefaults(validated.data as ClawdisConfig),
     );
   } catch (err) {
     console.error(`Failed to read config at ${configPath}`, err);
-    return {};
+    return applyDeepResearchEnvOverrides(applyIdentityDefaults({}));
   }
 }
 
@@ -1075,7 +1074,8 @@ function applyDeepResearchEnvOverrides(config: ClawdisConfig): ClawdisConfig {
   const outputLanguage = process.env.DEEP_RESEARCH_OUTPUT_LANGUAGE;
   const hasOutputLanguage = outputLanguage !== undefined;
 
-  if (!hasEnabled && !hasDryRun && !cliPath && !hasOutputLanguage) return config;
+  if (!hasEnabled && !hasDryRun && !cliPath && !hasOutputLanguage)
+    return config;
 
   const deepResearch: DeepResearchConfig = {
     enabled: config.deepResearch?.enabled ?? DEEP_RESEARCH_DEFAULTS.enabled,
