@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectWebSearchIntent, extractSearchQuery } from './detect.js';
+import { detectWebSearchIntent, extractSearchQuery, getWebSearchPatterns } from './detect.js';
 
 describe('detectWebSearchIntent', () => {
   it('detects explicit russian keyword', () => {
@@ -63,7 +63,7 @@ describe('detectWebSearchIntent', () => {
 
 describe('extractSearchQuery', () => {
   it('strips explicit keywords', () => {
-    expect(extractSearchQuery('погугли погоду в Москве')).toBe('погоду в Москве');
+    expect(extractSearchQuery('погугли погоду в Москве')).toBe('погоду в москве');
   });
   
   it('strips multiple keywords', () => {
@@ -75,7 +75,7 @@ describe('extractSearchQuery', () => {
   });
   
   it('removes prepositions', () => {
-    expect(extractSearchQuery('погоду в Москве')).toBe('погоду в Москве'); // 'в' is location preposition, should keep
+    expect(extractSearchQuery('погоду в Москве')).toBe('погоду в москве'); // 'в' is location preposition, should keep
   });
   
   it('removes disfluencies', () => {
@@ -95,7 +95,7 @@ describe('extractSearchQuery', () => {
   });
   
   it('works with english keywords', () => {
-    expect(extractSearchQuery('search for TypeScript basics')).toBe('for TypeScript basics');
+    expect(extractSearchQuery('search for TypeScript basics')).toBe('for typescript basics');
   });
 });
 

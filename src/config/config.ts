@@ -1157,6 +1157,64 @@ function applyDeepResearchEnvOverrides(config: ClawdisConfig): ClawdisConfig {
   };
 }
 
+function applyWebSearchEnvOverrides(config: ClawdisConfig): ClawdisConfig {
+  const hasEnabled = process.env.WEB_SEARCH_ENABLED !== undefined;
+  const hasRequireConfirmation = process.env.WEB_SEARCH_REQUIRE_CONFIRMATION !== undefined;
+  const cliPath = process.env.WEB_SEARCH_CLI_PATH;
+  const timeoutMsEnv = process.env.WEB_SEARCH_TIMEOUT_MS;
+  const hasTimeout = timeoutMsEnv !== undefined;
+  const customPatterns = process.env.WEB_SEARCH_CUSTOM_PATTERNS;
+
+  if (!hasEnabled && !hasRequireConfirmation && !cliPath && !hasTimeout && !customPatterns)
+    return config;
+
+  const webSearch: WebSearchConfig = {
+    enabled: config.webSearch?.enabled ?? WEB_SEARCH_DEFAULTS.enabled,
+    cliPath: config.webSearch?.cliPath ?? WEB_SEARCH_DEFAULTS.cliPath,
+    timeoutMs: config.webSearch?.timeoutMs ?? WEB_SEARCH_DEFAULTS.timeoutMs,
+    requireConfirmation: config.webSearch?.requireConfirmation ?? WEB_SEARCH_DEFAULTS.requireConfirmation,
+    customPatterns: config.webSearch?.customPatterns,
+  };
+  
+  if (hasEnabled) {
+    webSearch.enabled = process.env.WEB_SEARCH_ENABLED === "true";
+  }
+  if (hasRequireConfirmation) {
+    webSearch.requireConfirmation = process.env.WEB_SEARCH_REQUIRE_CONFIRMATION === "true";
+  }
+  if (cliPath) {
+    const normalizedPath = cliPath.trim();
+    if (normalizedPath) {
+      webSearch.cliPath = normalizedPath;
+    }
+  }
+  if (hasTimeout) {
+    const parsed = Number.parseInt(timeoutMsEnv!, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      webSearch.timeoutMs = parsed;
+    } else {
+      console.warn(`[web-search] Invalid timeout value: ${timeoutMsEnv}`);
+    }
+  }
+  if (customPatterns) {
+    try {
+      webSearch.customPatterns = JSON.parse(customPatterns);
+      if (!Array.isArray(webSearch.customPatterns)) {
+        console.warn("[web-search] WEB_SEARCH_CUSTOM_PATTERNS must be a JSON array");
+        webSearch.customPatterns = undefined;
+      }
+    } catch {
+      console.warn("[web-search] Failed to parse WEB_SEARCH_CUSTOM_PATTERNS as JSON");
+      webSearch.customPatterns = undefined;
+    }
+  }
+
+  return {
+    ...config,
+    webSearch,
+  };
+}
+
 export async function readConfigFileSnapshot(): Promise<ConfigFileSnapshot> {
   const configPath = CONFIG_PATH_CLAWDIS;
   const exists = fs.existsSync(configPath);
