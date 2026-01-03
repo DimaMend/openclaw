@@ -117,7 +117,7 @@ describe("acp integration", () => {
         clientInfo: { name: "test", version: "1.0" },
       });
       expect(initResult.protocolVersion).toBe(1);
-      expect(initResult.agentInfo?.name).toBe("clawd-gw");
+      expect(initResult.agentInfo?.name).toBe("clawdis-acp");
 
       // Create session
       const sessionResult = await agent.newSession({

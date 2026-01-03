@@ -1,7 +1,17 @@
 /**
- * ACP-GW Translator
+ * ACP Translator
  *
- * Implements ACP Agent interface, translating to Gateway RPC calls.
+ * Implements the ACP Agent interface by translating protocol messages
+ * to Clawdis Gateway RPC calls. This is the core bridge between IDE clients
+ * (via ACP) and the Clawdis agent runtime (via Gateway WebSocket).
+ *
+ * Key responsibilities:
+ * - Handle ACP lifecycle (initialize, newSession, authenticate)
+ * - Translate prompt requests to Gateway chat.send calls
+ * - Stream Gateway responses back as ACP session updates
+ * - Handle tool call events and cancellation
+ *
+ * @module acp/translator
  */
 
 import type {
@@ -28,7 +38,10 @@ import { PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 
 import type { EventFrame } from "../gateway/protocol/index.js";
 
-// ACP StopReason type (inlined to avoid subpath import issues)
+/**
+ * ACP StopReason type.
+ * Inlined to avoid subpath import issues with the ACP SDK.
+ */
 type StopReason =
   | "end_turn"
   | "max_tokens"
@@ -48,24 +61,80 @@ import {
 import { ACP_GW_AGENT_INFO, type AcpGwOptions } from "./types.js";
 
 /**
- * Gateway-backed ACP Agent.
+ * Tracks state for an in-flight prompt request.
+ *
+ * When a prompt is sent to the Gateway, we store metadata here to:
+ * - Correlate Gateway events back to the ACP session
+ * - Track cumulative text for delta streaming
+ * - Detect and skip duplicate text from Gateway bugs
+ */
+type PendingPrompt = {
+  /** ACP session ID */
+  sessionId: string;
+  /** Unique key for this prompt (used as Gateway runId) */
+  idempotencyKey: string;
+  /** Resolves the prompt Promise when complete */
+  resolve: (response: PromptResponse) => void;
+  /** Rejects the prompt Promise on error */
+  reject: (err: Error) => void;
+  /** Cumulative length of text sent to client (for delta calculation) */
+  sentTextLength?: number;
+  /** Actual text sent so far (for duplicate detection) */
+  sentText?: string;
+};
+
+/**
+ * Gateway-backed ACP Agent implementation.
+ *
+ * This class implements the ACP Agent interface, allowing IDE clients
+ * to interact with Clawdis via the standardized Agent Client Protocol.
+ *
+ * Architecture:
+ * ```
+ * IDE Client <--ACP/stdio--> AcpGwAgent <--WebSocket--> Gateway <---> Agent Runtime
+ * ```
+ *
+ * The translator handles:
+ * - Protocol negotiation (initialize)
+ * - Session creation with isolated namespacing (acp:<uuid>)
+ * - Prompt/response with streaming text deltas
+ * - Tool call event streaming
+ * - Cancellation
+ *
+ * @example
+ * ```ts
+ * const agent = new AcpGwAgent(connection, gateway, { verbose: true });
+ * agent.start();
+ *
+ * // ACP SDK handles the rest via the connection
+ * ```
  */
 export class AcpGwAgent implements Agent {
+  /** ACP connection for sending updates to the client */
   private connection: AgentSideConnection;
-  private gateway: GatewayClient;
-  private log: (msg: string) => void;
-  private pendingPrompts = new Map<
-    string,
-    {
-      sessionId: string;
-      idempotencyKey: string;
-      resolve: (response: PromptResponse) => void;
-      reject: (err: Error) => void;
-      sentTextLength?: number; // Track cumulative text length for delta diffing
-      sentText?: string; // Track actual sent text for duplicate detection
-    }
-  >();
 
+  /** Gateway client for RPC calls */
+  private gateway: GatewayClient;
+
+  /** Configuration options */
+  private opts: AcpGwOptions;
+
+  /** Whether the Gateway connection is active */
+  private connected = false;
+
+  /** Logger function (no-op if verbose=false) */
+  private log: (msg: string) => void;
+
+  /** Map of sessionId -> pending prompt state */
+  private pendingPrompts = new Map<string, PendingPrompt>();
+
+  /**
+   * Create a new ACP-Gateway translator.
+   *
+   * @param connection - ACP connection to the IDE client
+   * @param gateway - Gateway client for backend communication
+   * @param opts - Configuration options
+   */
   constructor(
     connection: AgentSideConnection,
     gateway: GatewayClient,
@@ -80,16 +149,23 @@ export class AcpGwAgent implements Agent {
   }
 
   /**
-   * Start listening for Gateway events.
+   * Start the translator.
+   *
+   * Marks the translator as connected and ready to handle events.
+   * The Gateway client should already be started before calling this.
    */
   start(): void {
-    // Gateway client already started; we handle events via onEvent callback
     this.connected = true;
     this.log("translator started");
   }
 
   /**
-   * Update the Gateway client (used for reconnection).
+   * Update the Gateway client reference.
+   *
+   * Used during reconnection to swap in a new Gateway client
+   * without disrupting session state.
+   *
+   * @param gateway - New Gateway client instance
    */
   updateGateway(gateway: GatewayClient): void {
     this.gateway = gateway;
@@ -97,7 +173,10 @@ export class AcpGwAgent implements Agent {
   }
 
   /**
-   * Handle Gateway reconnect.
+   * Handle Gateway reconnection.
+   *
+   * Called when the Gateway WebSocket reconnects after a disconnect.
+   * Marks the translator as connected again.
    */
   handleGatewayReconnect(): void {
     this.connected = true;
@@ -105,13 +184,18 @@ export class AcpGwAgent implements Agent {
   }
 
   /**
-   * Handle Gateway disconnect — reject all pending prompts.
+   * Handle Gateway disconnection.
+   *
+   * Called when the Gateway WebSocket closes unexpectedly.
+   * Rejects all pending prompts with a disconnect error.
+   *
+   * @param reason - Human-readable disconnect reason
    */
   handleGatewayDisconnect(reason: string): void {
     this.connected = false;
     this.log(`gateway disconnected: ${reason}`);
 
-    // Reject all pending prompts
+    // Reject all pending prompts so the IDE client gets an error
     for (const [sessionId, pending] of this.pendingPrompts) {
       this.log(`rejecting pending prompt for session ${sessionId}`);
       pending.reject(new Error(`Gateway disconnected: ${reason}`));
@@ -121,23 +205,36 @@ export class AcpGwAgent implements Agent {
   }
 
   /**
-   * Handle Gateway events, mapping to ACP session updates.
+   * Handle Gateway events and translate to ACP session updates.
+   *
+   * The Gateway emits two types of events we care about:
+   * - `agent`: Tool call lifecycle events (start, result)
+   * - `chat`: Response streaming and completion events
+   *
+   * @param evt - Gateway event frame
    */
   async handleGatewayEvent(evt: EventFrame): Promise<void> {
     this.log(
       `event: ${evt.event} payload=${JSON.stringify(evt.payload).slice(0, 200)}`,
     );
 
-    // Agent events contain streaming data
     if (evt.event === "agent") {
       await this.handleAgentEvent(evt);
     }
-    // Chat events contain state changes
     if (evt.event === "chat") {
       await this.handleChatEvent(evt);
     }
   }
 
+  /**
+   * Handle agent events (tool calls).
+   *
+   * Translates Gateway tool lifecycle events to ACP tool_call updates:
+   * - phase=start -> tool_call with status=running
+   * - phase=result -> tool_call_update with status=completed/error
+   *
+   * @param evt - Gateway agent event
+   */
   private async handleAgentEvent(evt: EventFrame): Promise<void> {
     const payload = evt.payload as Record<string, unknown> | undefined;
     if (!payload) return;
@@ -148,7 +245,7 @@ export class AcpGwAgent implements Agent {
 
     if (!runId || !data) return;
 
-    // Find session by runId
+    // Find session by runId (set during prompt)
     const session = getSessionByRunId(runId);
     if (!session) return;
 
@@ -161,7 +258,6 @@ export class AcpGwAgent implements Agent {
       if (!toolCallId) return;
 
       if (phase === "start") {
-        // Tool call started
         await this.connection.sessionUpdate({
           sessionId: session.sessionId,
           update: {
@@ -172,7 +268,6 @@ export class AcpGwAgent implements Agent {
           },
         });
       } else if (phase === "result") {
-        // Tool call completed
         const isError = data.isError as boolean | undefined;
         await this.connection.sessionUpdate({
           sessionId: session.sessionId,
@@ -186,6 +281,21 @@ export class AcpGwAgent implements Agent {
     }
   }
 
+  /**
+   * Handle chat events (streaming and completion).
+   *
+   * The Gateway sends chat events with different states:
+   * - delta: Streaming text (cumulative, we diff it)
+   * - final/done: Prompt completed successfully
+   * - error: Prompt failed
+   * - aborted: Prompt was cancelled
+   *
+   * For delta events, we calculate the diff between cumulative text
+   * and what we've already sent, then stream only the new portion.
+   * This handles the Gateway's cumulative streaming model.
+   *
+   * @param evt - Gateway chat event
+   */
   private async handleChatEvent(evt: EventFrame): Promise<void> {
     const payload = evt.payload as Record<string, unknown> | undefined;
     if (!payload) return;
@@ -198,7 +308,7 @@ export class AcpGwAgent implements Agent {
 
     if (!sessionKey) return;
 
-    // Find the pending prompt for this sessionKey
+    // Find the pending prompt for this session
     const pending = this.findPendingBySessionKey(sessionKey);
     if (!pending) {
       this.log(`handleChatEvent: no pending for sessionKey=${sessionKey}`);
@@ -207,59 +317,24 @@ export class AcpGwAgent implements Agent {
 
     const { sessionId } = pending;
 
-    // Handle streaming text (delta state)
-    // Gateway sends cumulative text, so we track what we've sent and only send the diff
+    // Handle streaming text deltas
     if (state === "delta" && messageData) {
-      const content = messageData.content as
-        | Array<{ type: string; text?: string }>
-        | undefined;
-      const fullText = content?.find((c) => c.type === "text")?.text ?? "";
-      // Get the actual pending from the map to ensure we're modifying the right object
-      const actualPending = this.pendingPrompts.get(sessionId);
-      const sentSoFar = actualPending?.sentTextLength ?? 0;
-      const sentText = actualPending?.sentText ?? "";
-
-      if (fullText.length > sentSoFar && actualPending) {
-        const newText = fullText.slice(sentSoFar);
-
-        // Workaround: Gateway sometimes sends duplicated text (full response appears twice)
-        // Detect if the "new" text is actually a repeat of what we already sent
-        if (
-          sentText.length > 0 &&
-          newText.startsWith(sentText.slice(0, Math.min(20, sentText.length)))
-        ) {
-          this.log(
-            `skipping duplicate: newText starts with already-sent content`,
-          );
-          return;
-        }
-
-        actualPending.sentTextLength = fullText.length;
-        actualPending.sentText = fullText;
-        this.log(`streaming delta: +${newText.length} chars`);
-        await this.connection.sessionUpdate({
-          sessionId,
-          update: {
-            sessionUpdate: "agent_message_chunk",
-            content: { type: "text", text: newText },
-          },
-        });
-      }
+      await this.handleDeltaEvent(sessionId, messageData);
       return;
     }
 
+    // Handle completion states
     if (
       state === "final" ||
       state === "done" ||
       state === "error" ||
       state === "aborted"
     ) {
-      // Prompt completed
       this.log(`chat completed: state=${state} sessionId=${sessionId}`);
       this.pendingPrompts.delete(sessionId);
       clearActiveRun(sessionId);
 
-      // Map state to ACP StopReason (error maps to refusal since ACP doesn't have "error")
+      // Map Gateway state to ACP StopReason
       const stopReason: StopReason =
         state === "final" || state === "done"
           ? "end_turn"
@@ -271,13 +346,70 @@ export class AcpGwAgent implements Agent {
     }
   }
 
-  private findPendingBySessionKey(sessionKey: string):
-    | {
-        sessionId: string;
-        resolve: (r: PromptResponse) => void;
-        sentTextLength?: number;
+  /**
+   * Handle a delta (streaming) event.
+   *
+   * Gateway sends cumulative text in each delta event. We track how much
+   * we've sent and only forward the new portion to the client. This also
+   * includes duplicate detection for a Gateway bug where the full response
+   * sometimes appears twice.
+   *
+   * @param sessionId - ACP session ID
+   * @param messageData - Message payload with content array
+   */
+  private async handleDeltaEvent(
+    sessionId: string,
+    messageData: Record<string, unknown>,
+  ): Promise<void> {
+    const content = messageData.content as
+      | Array<{ type: string; text?: string }>
+      | undefined;
+    const fullText = content?.find((c) => c.type === "text")?.text ?? "";
+
+    const actualPending = this.pendingPrompts.get(sessionId);
+    if (!actualPending) return;
+
+    const sentSoFar = actualPending.sentTextLength ?? 0;
+    const sentText = actualPending.sentText ?? "";
+
+    // Only send new text
+    if (fullText.length > sentSoFar) {
+      const newText = fullText.slice(sentSoFar);
+
+      // Workaround: Detect and skip duplicate text (Gateway bug)
+      // If the "new" text starts with what we already sent, it's a duplicate
+      if (
+        sentText.length > 0 &&
+        newText.startsWith(sentText.slice(0, Math.min(20, sentText.length)))
+      ) {
+        this.log(`skipping duplicate: newText starts with already-sent content`);
+        return;
       }
-    | undefined {
+
+      // Update tracking state
+      actualPending.sentTextLength = fullText.length;
+      actualPending.sentText = fullText;
+
+      this.log(`streaming delta: +${newText.length} chars`);
+
+      // Send the delta to the client
+      await this.connection.sessionUpdate({
+        sessionId,
+        update: {
+          sessionUpdate: "agent_message_chunk",
+          content: { type: "text", text: newText },
+        },
+      });
+    }
+  }
+
+  /**
+   * Find a pending prompt by Gateway session key.
+   *
+   * @param sessionKey - Gateway session key (acp:<uuid>)
+   * @returns Pending prompt state if found
+   */
+  private findPendingBySessionKey(sessionKey: string): PendingPrompt | undefined {
     this.log(
       `findPending: looking for sessionKey=${sessionKey}, pendingCount=${this.pendingPrompts.size}`,
     );
@@ -293,8 +425,18 @@ export class AcpGwAgent implements Agent {
     return undefined;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ACP Agent Interface Methods
+  // ─────────────────────────────────────────────────────────────────────────────
+
   /**
-   * Initialize the agent.
+   * Initialize the agent (ACP lifecycle).
+   *
+   * Returns agent capabilities and info. Called once when the
+   * IDE client connects.
+   *
+   * @param _params - Initialize request (unused, capabilities are fixed)
+   * @returns Agent capabilities, protocol version, and agent info
    */
   async initialize(_params: InitializeRequest): Promise<InitializeResponse> {
     this.log("initialize");
@@ -318,7 +460,17 @@ export class AcpGwAgent implements Agent {
   }
 
   /**
-   * Create a new session.
+   * Create a new session (ACP lifecycle).
+   *
+   * Creates a local session record and returns a unique session ID.
+   * The session is namespaced as "acp:<uuid>" in the Gateway to avoid
+   * conflicts with other clients.
+   *
+   * Note: MCP servers from the request are ignored — the Gateway handles
+   * tool availability.
+   *
+   * @param params - Session parameters including working directory
+   * @returns New session ID
    */
   async newSession(params: NewSessionRequest): Promise<NewSessionResponse> {
     const session = createSession(params.cwd);
@@ -327,7 +479,12 @@ export class AcpGwAgent implements Agent {
   }
 
   /**
-   * Handle authentication (no-op).
+   * Handle authentication (ACP lifecycle).
+   *
+   * No authentication required — the Gateway handles auth separately.
+   *
+   * @param _params - Auth request (unused)
+   * @returns Empty response (success)
    */
   async authenticate(
     _params: AuthenticateRequest,
@@ -337,6 +494,13 @@ export class AcpGwAgent implements Agent {
 
   /**
    * Handle session mode changes.
+   *
+   * Maps the ACP modeId to a Gateway thinking level (e.g., "high" for
+   * extended thinking). This is best-effort — errors are logged but
+   * don't fail the request.
+   *
+   * @param params - Mode change request with sessionId and modeId
+   * @returns Empty response (success)
    */
   async setSessionMode(
     params: SetSessionModeRequest,
@@ -346,7 +510,6 @@ export class AcpGwAgent implements Agent {
       throw new Error(`Session ${params.sessionId} not found`);
     }
 
-    // Map ACP modeId to thinking level if applicable
     const modeId = params.modeId;
     if (modeId) {
       try {
@@ -365,6 +528,17 @@ export class AcpGwAgent implements Agent {
 
   /**
    * Handle a prompt request.
+   *
+   * Sends the user's message to the Gateway and waits for completion.
+   * Text is streamed back via handleChatEvent as delta updates.
+   *
+   * The prompt includes:
+   * - Working directory context prefix
+   * - Extracted text from content blocks
+   * - Image attachments (base64)
+   *
+   * @param params - Prompt request with session ID and content
+   * @returns Promise that resolves when the agent finishes responding
    */
   async prompt(params: PromptRequest): Promise<PromptResponse> {
     const session = getSession(params.sessionId);
@@ -372,19 +546,21 @@ export class AcpGwAgent implements Agent {
       throw new Error(`Session ${params.sessionId} not found`);
     }
 
-    // Cancel any existing prompt
+    // Cancel any existing prompt for this session
     if (session.abortController) {
       cancelActiveRun(params.sessionId);
     }
 
+    // Set up abort handling
     const abortController = new AbortController();
     const runId = crypto.randomUUID();
     setActiveRun(params.sessionId, runId, abortController);
 
+    // Extract content from the prompt
     const userText = this.extractTextFromPrompt(params.prompt);
     const attachments = this.extractAttachmentsFromPrompt(params.prompt);
 
-    // Prepend working directory context
+    // Prepend working directory for context
     const cwdContext = `[Working directory: ${session.cwd}]\n\n`;
     const message = cwdContext + userText;
 
@@ -393,6 +569,7 @@ export class AcpGwAgent implements Agent {
     );
 
     return new Promise<PromptResponse>((resolve, reject) => {
+      // Track this prompt for event correlation
       this.pendingPrompts.set(params.sessionId, {
         sessionId: params.sessionId,
         idempotencyKey: runId,
@@ -413,6 +590,7 @@ export class AcpGwAgent implements Agent {
           { expectFinal: true },
         )
         .catch((err) => {
+          // Clean up on error
           this.pendingPrompts.delete(params.sessionId);
           clearActiveRun(params.sessionId);
           reject(err);
@@ -422,6 +600,13 @@ export class AcpGwAgent implements Agent {
 
   /**
    * Cancel an in-progress prompt.
+   *
+   * Aborts the local AbortController and sends a chat.abort to the Gateway.
+   * The pending promise is resolved with stopReason="cancelled".
+   *
+   * Safe to call even if no prompt is active.
+   *
+   * @param params - Cancel notification with session ID
    */
   async cancel(params: CancelNotification): Promise<void> {
     const session = getSession(params.sessionId);
@@ -429,8 +614,10 @@ export class AcpGwAgent implements Agent {
 
     this.log(`cancel: ${params.sessionId}`);
 
+    // Abort locally
     cancelActiveRun(params.sessionId);
 
+    // Tell Gateway to abort
     try {
       await this.gateway.request("chat.abort", {
         sessionKey: session.sessionKey,
@@ -439,7 +626,7 @@ export class AcpGwAgent implements Agent {
       this.log(`cancel error: ${String(err)}`);
     }
 
-    // Resolve pending promise as cancelled
+    // Resolve the pending promise
     const pending = this.pendingPrompts.get(params.sessionId);
     if (pending) {
       this.pendingPrompts.delete(params.sessionId);
@@ -449,13 +636,27 @@ export class AcpGwAgent implements Agent {
 
   /**
    * Load a persisted session (not implemented).
+   *
+   * Session persistence is handled at the session store level,
+   * not through this ACP method.
+   *
+   * @throws Always throws "not implemented" error
    */
   async loadSession(_params: LoadSessionRequest): Promise<LoadSessionResponse> {
     throw new Error("Session loading not implemented");
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Content Extraction Helpers
+  // ─────────────────────────────────────────────────────────────────────────────
+
   /**
    * Extract text from ACP prompt content blocks.
+   *
+   * Joins all text blocks with newlines.
+   *
+   * @param prompt - Array of content blocks
+   * @returns Combined text content
    */
   private extractTextFromPrompt(prompt: ContentBlock[]): string {
     return prompt
@@ -469,6 +670,11 @@ export class AcpGwAgent implements Agent {
 
   /**
    * Extract image attachments from ACP prompt content blocks.
+   *
+   * Converts ACP ImageContent blocks to Gateway attachment format.
+   *
+   * @param prompt - Array of content blocks
+   * @returns Array of image attachments for Gateway
    */
   private extractAttachmentsFromPrompt(
     prompt: ContentBlock[],

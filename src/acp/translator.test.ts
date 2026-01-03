@@ -44,7 +44,7 @@ describe("AcpGwAgent", () => {
 
       expect(result.protocolVersion).toBe(1);
       expect(result.agentCapabilities).toBeDefined();
-      expect(result.agentInfo?.name).toBe("clawd-gw");
+      expect(result.agentInfo?.name).toBe("clawdis-acp");
     });
 
     it("includes prompt capabilities", async () => {
