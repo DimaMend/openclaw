@@ -11,6 +11,7 @@ import type {
   AuthenticateResponse,
   CancelNotification,
   ContentBlock,
+  ImageContent,
   InitializeRequest,
   InitializeResponse,
   LoadSessionRequest,
@@ -282,12 +283,13 @@ export class AcpGwAgent implements Agent {
     setActiveRun(params.sessionId, runId, abortController);
 
     const userText = this.extractTextFromPrompt(params.prompt);
+    const attachments = this.extractAttachmentsFromPrompt(params.prompt);
     
     // Prepend working directory context
     const cwdContext = `[Working directory: ${session.cwd}]\n\n`;
     const message = cwdContext + userText;
 
-    this.log(`prompt: ${session.sessionId} -> "${userText.slice(0, 50)}..."`);
+    this.log(`prompt: ${session.sessionId} -> "${userText.slice(0, 50)}..." (${attachments.length} attachments)`);
 
     return new Promise<PromptResponse>((resolve, reject) => {
       this.pendingPrompts.set(params.sessionId, {
@@ -304,6 +306,7 @@ export class AcpGwAgent implements Agent {
           {
             sessionKey: session.sessionKey,
             message,
+            attachments: attachments.length > 0 ? attachments : undefined,
             idempotencyKey: runId,
           },
           { expectFinal: true },
@@ -361,5 +364,29 @@ export class AcpGwAgent implements Agent {
       )
       .map((block) => block.text)
       .join("\n");
+  }
+
+  /**
+   * Extract image attachments from ACP prompt content blocks.
+   */
+  private extractAttachmentsFromPrompt(
+    prompt: ContentBlock[],
+  ): Array<{ type: string; mimeType: string; content: string }> {
+    const attachments: Array<{ type: string; mimeType: string; content: string }> = [];
+    
+    for (const block of prompt) {
+      if ("type" in block && block.type === "image") {
+        const imageBlock = block as ImageContent & { type: "image" };
+        if (imageBlock.data && imageBlock.mimeType) {
+          attachments.push({
+            type: "image",
+            mimeType: imageBlock.mimeType,
+            content: imageBlock.data, // Already base64 encoded
+          });
+        }
+      }
+    }
+    
+    return attachments;
   }
 }
