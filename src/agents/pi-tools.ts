@@ -362,6 +362,7 @@ function createClawdisReadTool(base: AnyAgentTool): AnyAgentTool {
 
 export function createClawdisCodingTools(options?: {
   bash?: BashToolDefaults & ProcessToolDefaults;
+  provider?: string;
 }): AnyAgentTool[] {
   const bashToolName = "bash";
   const base = (codingTools as unknown as AnyAgentTool[]).flatMap((tool) => {
@@ -380,5 +381,9 @@ export function createClawdisCodingTools(options?: {
     createWhatsAppLoginTool(),
     ...createClawdisTools(),
   ];
-  return tools.map(normalizeToolParameters).map(sanitizeToolParameters);
+  const normalized = tools.map(normalizeToolParameters);
+  if (options?.provider === "google-antigravity") {
+    return normalized.map(sanitizeToolParameters);
+  }
+  return normalized;
 }
