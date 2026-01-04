@@ -2,11 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 
 import type { AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
-import {
-  type Api,
-  type AssistantMessage,
-  type Model,
-} from "@mariozechner/pi-ai";
+import type { Api, AssistantMessage, Model } from "@mariozechner/pi-ai";
 import {
   buildSystemPrompt,
   createAgentSession,
@@ -368,6 +364,8 @@ export async function runEmbeddedPiAgent(params: {
           await loadWorkspaceBootstrapFiles(resolvedWorkspace);
         const contextFiles = buildBootstrapContextFiles(bootstrapFiles);
         const promptSkills = resolvePromptSkills(skillsSnapshot, skillEntries);
+        // Tool schemas must be provider-compatible (OpenAI requires top-level `type: "object"`).
+        // `createClawdbotCodingTools()` normalizes schemas so the session can pass them through unchanged.
         const tools = createClawdbotCodingTools({
           bash: {
             ...params.config?.agent?.bash,

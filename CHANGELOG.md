@@ -12,6 +12,18 @@
 - Android: tapping the foreground service notification brings the app to the front. (#179) — thanks @Syhids
 - Cron tool passes `id` to the gateway for update/remove/run/runs (keeps `jobId` input). (#180) — thanks @adamgall
 - macOS: treat location permission as always-only to avoid iOS-only enums. (#165) — thanks @Nachx639
+- macOS: make generated gateway protocol models `Sendable` for Swift 6 strict concurrency. (#195) — thanks @andranik-sahakyan
+- WhatsApp: suppress typing indicator during heartbeat background tasks. (#190) — thanks @mcinteerj
+- Agent tools: OpenAI-compatible tool JSON Schemas (fix `browser`, normalize union schemas).
+- Onboarding: when running from source, auto-build missing Control UI assets (`pnpm ui:build`).
+- Discord/Slack: route reaction + system notifications to the correct session (no main-session bleed).
+- Agent tools: honor `agent.tools` allow/deny policy even when sandbox is off.
+- Discord: avoid duplicate replies when OpenAI emits repeated `message_end` events.
+
+## 2026.1.5
+
+### Fixes
+- Control UI: render Markdown in chat messages (sanitized).
 
 
 ## 2026.1.4
