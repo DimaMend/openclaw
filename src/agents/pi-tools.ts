@@ -358,86 +358,59 @@ export function createWebSearchTool(): AnyAgentTool {
       }),
     }),
     execute: async ({ query }: { query: string }) => {
-      const { exec } = await import("node:child_process");
-      const { promisify } = await import("node:util");
-      const execAsync = promisify(exec);
-      const logger = console; // Simple logger for debugging
+      console.log('[DEBUG] web_search called with query:', JSON.stringify(query), 'type:', typeof query);
       
+      // Validate query parameter
+      if (!query || query.trim() === '') {
+        console.error('[web_search] ERROR: Query is empty or undefined');
+        console.error('[web_search] This usually means the AI agent failed to extract the search terms from the message');
+        return {
+          content: [
+            { type: "text", text: "❌ Ошибка: не удалось извлечь поисковый запрос из сообщения. Убедитесь, что указали что искать после /web" },
+          ],
+        };
+      }
       try {
         // Loop protection
         if (!checkAndIncrementToolCall('web_search')) {
-          logger.error(`[web_search] Loop detected: called >${MAX_TOOL_CALLS_PER_MINUTE} times in ${TOOL_CALL_WINDOW_MS/1000}s`);
           return {
             content: [
-              { type: "text", text: "❌ Превышен лимит вызовов web_search (защита от бесконечного цикла)" },
+              { type: "text", text: "✂︎ Превышен лимит вызовов web_search (защита от бесконечного цикла)" },
             ],
           };
         }
         
-        // Validate query
-        if (!query || query === 'undefined') {
-          logger.error(`[web_search] Invalid query: "${query}"`);
+        // Use the fixed executor instead of CLI
+        const { executeWebSearch } = await import("../web-search/executor.js");
+        
+        const result = await executeWebSearch(query, { timeoutMs: 90000 }); // 90s for deep research
+        
+        if (result.success && result.result?.response) {
           return {
             content: [
-              { type: "text", text: "❌ Ошибка: пустой запрос для поиска" },
+              { type: "text", text: `○ Результат поиска:\n${result.result.response}` },
             ],
           };
         }
         
-        logger.log(`[web_search] Executing search for: "${query}"`);
-        
-        // Use the project's google_web CLI
-        const cliPath = "/home/almaz/zoo_flow/clawdis/google_web";
-        const command = `${cliPath} ${JSON.stringify(query)}`;
-        logger.log(`[web_search] Command: ${command}`);
-        
-        const { stdout, stderr } = await execAsync(command, {
-          timeout: 60000, // Increased from 30s to 60s
-          env: process.env,
-        });
-        
-        if (stderr) {
-          logger.warn(`[web_search] CLI stderr: ${stderr}`);
-        }
-        
-        const trimmed = stdout.trim();
-        logger.log(`[web_search] Raw output length: ${trimmed.length}`);
-        
-        const result = JSON.parse(trimmed);
-        logger.log(`[web_search] Parsed result, has response: ${!!result.response}`);
-        
-        if (result.response) {
+        // Handle errors from executor
+        if (!result.success) {
           return {
             content: [
-              { type: "text", text: `🌐 Результат поиска:\n${result.response}` },
+              { type: "text", text: result.error || "✂︎ Поиск не удался" },
             ],
           };
         }
         
         return {
           content: [
-            { type: "text", text: "❌ Поиск не дал результатов" },
+            { type: "text", text: "✂︎ Поиск не дал результатов" },
           ],
         };
       } catch (error) {
-        const errorStr = String(error);
-        logger.error(`[web_search] Error: ${errorStr}`);
-        
-        if (errorStr.includes("timeout")) {
-          return {
-            content: [
-              { type: "text", text: "⏱️ Поиск занял слишком много времени" },
-            ],
-          };
-        }
-        
-        // Include more error details for debugging
-        const details = error instanceof Error && 'stdout' in error ? 
-          ` (stdout: ${String((error as any).stdout).substring(0, 200)})` : '';
-        
         return {
           content: [
-            { type: "text", text: `❌ Ошибка при поиске: ${errorStr}${details}` },
+            { type: "text", text: `✂︎ Ошибка: ${String(error)}` },
           ],
         };
       }
