@@ -87,6 +87,11 @@ export function createTelegramBot(opts: TelegramBotOptions) {
       { command: "stop", description: "Stop current generation" },
       { command: "model", description: "Show or change the model" },
       { command: "thinking", description: "Set thinking level" },
+      { command: "verbose", description: "Toggle verbose mode" },
+      { command: "queue", description: "Show or manage command queue" },
+      { command: "elevated", description: "Set elevated access mode" },
+      { command: "reset", description: "Reset the conversation" },
+      { command: "activation", description: "Manage agent activation" },
     ];
     try {
       await bot.api.setMyCommands(commands, {
