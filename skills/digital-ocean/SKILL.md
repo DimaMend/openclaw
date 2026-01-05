@@ -9,26 +9,17 @@ metadata: {"clawdis":{"emoji":"🌊","requires":{"bins":["uv","curl"],"env":["DO
 
 Control DO droplets, domains, and infrastructure.
 
-## Configuration
+## Setup
 
-- **API Token**: `DO_API_TOKEN` environment variable
-- **API Base**: `https://api.digitalocean.com/v2`
-
-## Infrastructure Overview
-
-### ppl.gift Droplet
-- **Purpose**: Hosts Monica CRM (ppl.gift)
-- **Stack**: 
-  - Nginx (SSL termination, reverse proxy)
-  - PHP/Laravel (Monica CRM)
-  - MySQL/PostgreSQL
-- **Deployment**: GitHub webhook auto-deploys on commit
-- **Domain**: ppl.gift (managed via Nginx)
-- **Access**: SSH key-based (can switch to root/password if needed)
+Set environment variable:
+- `DO_API_TOKEN`: Your Digital Ocean API token (create at cloud.digitalocean.com/account/api/tokens)
 
 ## CLI Commands
 
 ```bash
+# Account info
+uv run {baseDir}/scripts/do.py account
+
 # List all droplets
 uv run {baseDir}/scripts/do.py droplets
 
@@ -45,9 +36,6 @@ uv run {baseDir}/scripts/do.py records <domain>
 uv run {baseDir}/scripts/do.py power-off <droplet_id>
 uv run {baseDir}/scripts/do.py power-on <droplet_id>
 uv run {baseDir}/scripts/do.py reboot <droplet_id>
-
-# SSH into droplet
-uv run {baseDir}/scripts/do.py ssh <droplet_id>
 ```
 
 ## Direct API (curl)
@@ -70,6 +58,19 @@ curl -s -H "Authorization: Bearer $DO_API_TOKEN" \
   "https://api.digitalocean.com/v2/domains" | jq '.domains[].name'
 ```
 
+### Create Droplet
+```bash
+curl -s -X POST -H "Authorization: Bearer $DO_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-droplet",
+    "region": "nyc1",
+    "size": "s-1vcpu-1gb",
+    "image": "ubuntu-22-04-x64"
+  }' \
+  "https://api.digitalocean.com/v2/droplets"
+```
+
 ### Reboot Droplet
 ```bash
 curl -s -X POST -H "Authorization: Bearer $DO_API_TOKEN" \
@@ -78,8 +79,16 @@ curl -s -X POST -H "Authorization: Bearer $DO_API_TOKEN" \
   "https://api.digitalocean.com/v2/droplets/<DROPLET_ID>/actions"
 ```
 
+### Add Domain
+```bash
+curl -s -X POST -H "Authorization: Bearer $DO_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "example.com"}' \
+  "https://api.digitalocean.com/v2/domains"
+```
+
 ## Notes
 
 - Always confirm before destructive actions (power-off, destroy)
-- ppl.gift auto-deploys from GitHub - manual intervention rarely needed
-- For Monica updates, just push to the repo and webhook handles it
+- Token requires read/write scope for management actions
+- API docs: https://docs.digitalocean.com/reference/api/api-reference/
