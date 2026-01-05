@@ -141,7 +141,8 @@ IMPLEMENTATION*.md
 test_*.py
 test_*.sh
 test-*.sh
-test_*.md
+test-*.md
+test-*.md
 *-test.py
 *-test.sh
 *-test.md
