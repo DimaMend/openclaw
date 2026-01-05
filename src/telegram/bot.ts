@@ -79,6 +79,107 @@ export function createTelegramBot(opts: TelegramBotOptions) {
     return true;
   };
 
+  const workingMessages = new Map<
+    string,
+    {
+      messageId: number;
+      text: string;
+      lastEdit: number;
+      editQueue: Promise<void>;
+    }
+  >();
+  const EDIT_THROTTLE_MS = 250;
+  const TELEGRAM_MAX_LENGTH = 4096;
+
+  const editWorkingMessage = async (
+    chatId: string,
+    text: string,
+    opts?: { force?: boolean },
+  ) => {
+    const state = workingMessages.get(chatId);
+
+    let truncatedText = text;
+    if (truncatedText.length > TELEGRAM_MAX_LENGTH - 50) {
+      truncatedText =
+        truncatedText.slice(0, TELEGRAM_MAX_LENGTH - 50) +
+        "\n\n_(truncated)_";
+    }
+
+    const displayText = truncatedText || "_..._";
+
+    if (!state) {
+      try {
+        let result;
+        try {
+          result = await bot.api.sendMessage(Number(chatId), displayText, {
+            parse_mode: "Markdown",
+          });
+        } catch {
+          result = await bot.api.sendMessage(
+            Number(chatId),
+            displayText.replace(/_/g, ""),
+          );
+        }
+        workingMessages.set(chatId, {
+          messageId: result.message_id,
+          text: displayText,
+          lastEdit: Date.now(),
+          editQueue: Promise.resolve(),
+        });
+      } catch (err) {
+        logVerbose(`Failed to send working message: ${String(err)}`);
+      }
+      return;
+    }
+
+    if (state.text === displayText) return;
+
+    const now = Date.now();
+    if (!opts?.force && now - state.lastEdit < EDIT_THROTTLE_MS) return;
+
+    state.editQueue = state.editQueue.then(async () => {
+      try {
+        try {
+          await bot.api.editMessageText(
+            Number(chatId),
+            state.messageId,
+            displayText,
+            { parse_mode: "Markdown" },
+          );
+        } catch (err) {
+          const errStr = String(err);
+          if (PARSE_ERR_RE.test(errStr)) {
+            await bot.api.editMessageText(
+              Number(chatId),
+              state.messageId,
+              displayText.replace(/_/g, ""),
+            );
+          } else if (
+            !errStr.includes("message is not modified") &&
+            !errStr.includes("MESSAGE_NOT_MODIFIED")
+          ) {
+            throw err;
+          }
+        }
+        state.text = displayText;
+        state.lastEdit = Date.now();
+      } catch (err) {
+        const errStr = String(err);
+        if (
+          !errStr.includes("message is not modified") &&
+          !errStr.includes("MESSAGE_NOT_MODIFIED")
+        ) {
+          logVerbose(`Failed to edit working message: ${errStr}`);
+        }
+      }
+    });
+    await state.editQueue;
+  };
+
+  const clearWorkingMessage = (chatId: string) => {
+    workingMessages.delete(chatId);
+  };
+
   bot.on("message", async (ctx) => {
     try {
       const msg = ctx.message;
@@ -229,12 +330,67 @@ export function createTelegramBot(opts: TelegramBotOptions) {
         );
       }
 
+      const statusLines: string[] = [];
+      let streamedText = "";
+      const chatIdStr = String(chatId);
+
+      const buildDisplayText = (content: string) => {
+        if (!content) return statusLines.join("\n");
+        if (statusLines.length === 0) return content;
+        return `${statusLines.join("\n")}\n\n${content}`;
+      };
+
+      const updateWorkingMessage = async (
+        content: string,
+        opts?: { force?: boolean },
+      ) => {
+        const displayText = buildDisplayText(content);
+        if (!displayText) return;
+        await editWorkingMessage(chatIdStr, displayText, opts);
+      };
+
+      const onPartialReply = async (payload: ReplyPayload) => {
+        if (!payload.text) return;
+        streamedText = payload.text;
+        await updateWorkingMessage(streamedText);
+      };
+
+      const onToolResult = async (payload: ReplyPayload) => {
+        if (!payload.text) return;
+        statusLines.push(`_${payload.text}_`);
+        await updateWorkingMessage(streamedText);
+      };
+
       const dispatcher = createReplyDispatcher({
         responsePrefix: cfg.messages?.responsePrefix,
-        deliver: async (payload) => {
+        deliver: async (payload, info) => {
+          if (info.kind !== "final") return;
+          const hasMedia =
+            Boolean(payload.mediaUrl) || (payload.mediaUrls?.length ?? 0) > 0;
+
+          if (!hasMedia && payload.text) {
+            streamedText = payload.text;
+            await editWorkingMessage(chatIdStr, payload.text, { force: true });
+            clearWorkingMessage(chatIdStr);
+            return;
+          }
+
+          const workingState = workingMessages.get(chatIdStr);
+          if (workingState) {
+            try {
+              await bot.api.deleteMessage(
+                Number(chatIdStr),
+                workingState.messageId,
+              );
+            } catch {
+              // ignore delete errors
+            }
+            clearWorkingMessage(chatIdStr);
+          }
+
           await deliverReplies({
             replies: [payload],
-            chatId: String(chatId),
+            chatId: chatIdStr,
             token: opts.token,
             runtime,
             bot,
@@ -253,8 +409,8 @@ export function createTelegramBot(opts: TelegramBotOptions) {
         ctxPayload,
         {
           onReplyStart: sendTyping,
-          onToolResult: dispatcher.sendToolResult,
-          onBlockReply: dispatcher.sendBlockReply,
+          onPartialReply,
+          onToolResult,
         },
         cfg,
       );
@@ -268,7 +424,21 @@ export function createTelegramBot(opts: TelegramBotOptions) {
         queuedFinal = dispatcher.sendFinalReply(reply) || queuedFinal;
       }
       await dispatcher.waitForIdle();
-      if (!queuedFinal) return;
+      if (!queuedFinal) {
+        const workingState = workingMessages.get(chatIdStr);
+        if (workingState) {
+          try {
+            await bot.api.deleteMessage(
+              Number(chatIdStr),
+              workingState.messageId,
+            );
+          } catch {
+            // ignore delete errors
+          }
+          clearWorkingMessage(chatIdStr);
+        }
+        return;
+      }
     } catch (err) {
       runtime.error?.(danger(`handler failed: ${String(err)}`));
     }
