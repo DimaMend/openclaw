@@ -79,11 +79,12 @@ export function createTelegramBot(opts: TelegramBotOptions) {
   };
 
   // Pre-compute normalized allowlist for filtering (used by both group and DM checks)
-  // Strip telegram: prefix so users can use either "123456789" or "telegram:123456789"
-  const normalizedAllowFrom = (allowFrom ?? []).map((v) => {
-    const s = String(v);
-    return s.startsWith("telegram:") ? s.slice(9) : s;
-  });
+  // Strip telegram/tg prefixes (case-insensitive) so users can use "123456789",
+  // "telegram:123456789", or "tg:123456789" interchangeably.
+  const normalizedAllowFrom = (allowFrom ?? [])
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+    .map((v) => v.replace(/^(telegram|tg):/i, ""));
   const normalizedAllowFromLower = normalizedAllowFrom.map((v) =>
     v.toLowerCase(),
   );
@@ -144,11 +145,8 @@ export function createTelegramBot(opts: TelegramBotOptions) {
       // allowFrom for direct chats
       if (!isGroup && normalizedAllowFrom.length > 0) {
         const candidate = String(chatId);
-        const candidateWithPrefix = `telegram:${candidate}`;
         const permitted =
-          hasWildcard ||
-          normalizedAllowFrom.includes(candidate) ||
-          normalizedAllowFrom.some((v) => v === candidateWithPrefix);
+          hasWildcard || normalizedAllowFrom.includes(candidate);
         if (!permitted) {
           logVerbose(
             `Blocked unauthorized telegram sender ${candidate} (not in allowFrom)`,
