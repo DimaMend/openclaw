@@ -701,7 +701,7 @@ export class ClawdbotApp extends LitElement {
     this.chatOnlyLocked = false;
     this.uiMode = "full";
     this.setTab("overview");
-    this.observeTopbar();
+    void this.updateComplete.then(() => this.observeTopbar());
   }
 
   setTheme(next: ThemeMode, context?: ThemeTransitionContext) {
