@@ -909,7 +909,14 @@ export async function runEmbeddedPiAgent(params: {
                 `embedded run prompt end: runId=${params.runId} sessionId=${params.sessionId} durationMs=${Date.now() - promptStartedAt}`,
               );
             }
-            await waitForCompactionRetry();
+            // Wrap compaction retry to capture any AbortError thrown during abort.
+            // Without this, AbortError from compaction escapes and bypasses model fallback.
+            // See: https://github.com/clawdbot/clawdbot/issues/313
+            try {
+              await waitForCompactionRetry();
+            } catch (err) {
+              if (!promptError) promptError = err;
+            }
             messagesSnapshot = session.messages.slice();
             sessionIdUsed = session.sessionId;
           } finally {
