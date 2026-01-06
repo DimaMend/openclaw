@@ -20,10 +20,11 @@ It answers you on the providers you already use (WhatsApp, Telegram, Slack, Disc
 
 If you want a personal, single-user assistant that feels local, fast, and always-on, this is it.
 
-[Website](https://clawdbot.com) · [Docs](https://docs.clawd.bot) · Updating: [https://docs.clawd.bot/updating](https://docs.clawd.bot/updating) · Showcase: [https://docs.clawd.bot/showcase](https://docs.clawd.bot/showcase) · FAQ: [https://docs.clawd.bot/faq](https://docs.clawd.bot/faq) · Wizard: [https://docs.clawd.bot/wizard](https://docs.clawd.bot/wizard) · Nix: [https://github.com/clawdbot/nix-clawdbot](https://github.com/clawdbot/nix-clawdbot) · Docker: [https://docs.clawd.bot/docker](https://docs.clawd.bot/docker) · Discord: [https://discord.gg/clawd](https://discord.gg/clawd)
+[Website](https://clawdbot.com) · [Docs](https://docs.clawd.bot) · Getting Started: [https://docs.clawd.bot/getting-started](https://docs.clawd.bot/getting-started) · Updating: [https://docs.clawd.bot/updating](https://docs.clawd.bot/updating) · Showcase: [https://docs.clawd.bot/showcase](https://docs.clawd.bot/showcase) · FAQ: [https://docs.clawd.bot/faq](https://docs.clawd.bot/faq) · Wizard: [https://docs.clawd.bot/wizard](https://docs.clawd.bot/wizard) · Nix: [https://github.com/clawdbot/nix-clawdbot](https://github.com/clawdbot/nix-clawdbot) · Docker: [https://docs.clawd.bot/docker](https://docs.clawd.bot/docker) · Discord: [https://discord.gg/clawd](https://discord.gg/clawd)
 
 Preferred setup: run the onboarding wizard (`clawdbot onboard`). It walks through gateway, workspace, providers, and skills. The CLI wizard is the recommended path and works on **macOS, Windows, and Linux**.
 Works with npm, pnpm, or bun.
+New install? Start here: https://docs.clawd.bot/getting-started
 
 **Subscriptions (OAuth):**
 - **Anthropic** (Claude Pro/Max)
@@ -31,9 +32,16 @@ Works with npm, pnpm, or bun.
 
 Model note: while any model is supported, I strongly recommend **Anthropic Pro/Max (100/200) + Opus 4.5** for long‑context strength and better prompt‑injection resistance. See [Onboarding](https://docs.clawd.bot/onboarding).
 
+## Models (selection + auth)
+
+- Models config + CLI: https://docs.clawd.bot/models
+- Auth profile rotation (OAuth vs API keys) + fallbacks: https://docs.clawd.bot/model-failover
+
 ## Recommended setup (from source)
 
 Do **not** download prebuilt binaries. Run from source.
+
+Prefer **Bun**. `pnpm` is also supported (see https://docs.clawd.bot/getting-started).
 
 ```bash
 # Clone this repo
@@ -43,35 +51,21 @@ cd clawdbot
 bun install
 bun run ui:install
 bun run ui:build
+bun run build
 bun run clawdbot onboard
 ```
 
-Note: `bun run build` is optional here (it produces `dist/` for running via Node / the packaged `clawdbot` binary). `bun run clawdbot ...` runs TypeScript directly.
+Note: `bun run clawdbot ...` runs TypeScript directly. `bun run build` produces `dist/` for running via Node / the packaged `clawdbot` binary.
 
-## Quick start (from source)
+## Quick start (TL;DR)
 
 Runtime: **Node ≥22**.
 
-From source, **pnpm** is the default workflow. Bun is supported as an optional local workflow; see [Bun](https://docs.clawd.bot/bun).
+Full beginner guide (auth, pairing, providers): https://docs.clawd.bot/getting-started
 
 ```bash
-# Install deps (no Bun lockfile)
-bun install --no-save
-
-# Build TypeScript
-bun run build
-
-# Build Control UI
-bun install --cwd ui --no-save
-bun run --cwd ui build
-
-# Recommended: run the onboarding wizard
 bun run clawdbot onboard
 
-# Link WhatsApp (stores creds in ~/.clawdbot/credentials)
-bun run clawdbot login
-
-# Start the gateway
 bun run clawdbot gateway --port 18789 --verbose
 
 # Dev loop (auto-reload on TS changes)
@@ -105,7 +99,7 @@ Run `clawdbot doctor` to surface risky/misconfigured DM policies.
 
 - **[Local-first Gateway](https://docs.clawd.bot/gateway)** — single control plane for sessions, providers, tools, and events.
 - **[Multi-provider inbox](https://docs.clawd.bot/surface)** — WhatsApp, Telegram, Slack, Discord, Signal, iMessage, WebChat, macOS, iOS/Android.
-- **[Multi-agent routing](docs/configuration.md)** — route inbound providers/accounts/peers to isolated agents (workspaces + per-agent sessions).
+- **[Multi-agent routing](https://docs.clawd.bot/configuration)** — route inbound providers/accounts/peers to isolated agents (workspaces + per-agent sessions).
 - **[Voice Wake](https://docs.clawd.bot/voicewake) + [Talk Mode](https://docs.clawd.bot/talk)** — always-on speech for macOS/iOS/Android with ElevenLabs.
 - **[Live Canvas](https://docs.clawd.bot/mac/canvas)** — agent-driven visual workspace with [A2UI](https://docs.clawd.bot/mac/canvas#canvas-a2ui).
 - **[First-class tools](https://docs.clawd.bot/tools)** — browser, canvas, nodes, cron, sessions, and Discord/Slack actions.
@@ -327,7 +321,7 @@ Details: [Security guide](https://docs.clawd.bot/security) · [Docker + sandboxi
 ### [Discord](https://docs.clawd.bot/discord)
 
 - Set `DISCORD_BOT_TOKEN` or `discord.token` (env wins).
-- Optional: set `discord.slashCommand`, `discord.dm.allowFrom`, `discord.guilds`, or `discord.mediaMaxMb` as needed.
+- Optional: set `commands.native`, `commands.text`, or `commands.useAccessGroups`, plus `discord.dm.allowFrom`, `discord.guilds`, or `discord.mediaMaxMb` as needed.
 
 ```json5
 {

@@ -23,6 +23,7 @@
 - Telegram: stop typing after tool results. Thanks @AbhisekBasu1 for PR #322.
 - Messages: stop defaulting ack reactions to 👀 when identity emoji is missing.
 - Auto-reply: require slash for control commands to avoid false triggers in normal text.
+- Commands: unify native + text chat commands behind `commands.*` config (Discord/Slack/Telegram). Thanks @thewilloftheshadow for PR #275.
 - Auto-reply: treat steer during compaction as a follow-up, queued until compaction completes.
 - Auth: lock auth profile refreshes to avoid multi-instance OAuth logouts; keep credentials on refresh failure.
 - Gateway/CLI: stop forcing localhost URL in remote mode so remote gateway config works. Thanks @oswalpalash for PR #293.
@@ -87,6 +88,7 @@
 - Skills: emit MEDIA token after Nano Banana Pro image generation. Thanks @Iamadig for PR #271.
 - WhatsApp: set sender E.164 for direct chats so owner commands work in DMs.
 - Slack: keep auto-replies in the original thread when responding to thread messages. Thanks @scald for PR #251.
+- Slack: send typing status updates via assistant threads. Thanks @thewilloftheshadow for PR #320.
 - Slack: fix Slack provider startup under Bun by using a named import for Bolt `App`. Thanks @snopoke for PR #299.
 - Discord: surface missing-permission hints (muted/role overrides) when replies fail.
 - Discord: use channel IDs for DMs instead of user IDs. Thanks @VACInc for PR #261.
@@ -105,6 +107,8 @@
 - Telegram: send GIF media as animations (auto-play) and improve filename sniffing.
 - Bash tool: inherit gateway PATH so Nix-provided tools resolve during commands. Thanks @joshp123 for PR #202.
 - Delivery chunking: keep Markdown fenced code blocks valid when splitting long replies (close + reopen fences).
+- Auth: prefer OAuth profiles over API keys during round-robin selection (prevents OAuth “lost after one message” when both are configured).
+- Models: extend `clawdbot models` status output with a masked auth overview (profiles, env sources, and OAuth counts).
 
 ### Maintenance
 - Agent: add `skipBootstrap` config option. Thanks @onutc for PR #292.

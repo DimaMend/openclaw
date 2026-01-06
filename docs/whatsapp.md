@@ -80,7 +80,7 @@ WhatsApp requires a real mobile number for verification. VoIP and virtual number
 - Activation modes:
   - `mention` (default): requires @mention or regex match.
   - `always`: always triggers.
-- `/activation mention|always` is owner-only.
+- `/activation mention|always` is owner-only and must be sent as a standalone message.
 - Owner = `whatsapp.allowFrom` (or self E.164 if unset).
 - **History injection**:
   - Recent messages (default 50) inserted under:
@@ -151,6 +151,6 @@ WhatsApp requires a real mobile number for verification. VoIP and virtual number
 - Troubleshooting guide: [`docs/troubleshooting.md`](https://docs.clawd.bot/troubleshooting).
 
 ## Tests
-- `src/web/auto-reply.test.ts` (mention gating, history injection, reply flow)
-- `src/web/monitor-inbox.test.ts` (inbound parsing + reply context)
-- `src/web/outbound.test.ts` (send mapping + media)
+- [`src/web/auto-reply.test.ts`](https://github.com/clawdbot/clawdbot/blob/main/src/web/auto-reply.test.ts) (mention gating, history injection, reply flow)
+- [`src/web/monitor-inbox.test.ts`](https://github.com/clawdbot/clawdbot/blob/main/src/web/monitor-inbox.test.ts) (inbound parsing + reply context)
+- [`src/web/outbound.test.ts`](https://github.com/clawdbot/clawdbot/blob/main/src/web/outbound.test.ts) (send mapping + media)
