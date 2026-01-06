@@ -246,7 +246,10 @@ export function renderApp(state: AppViewState) {
                 state.resetToolStream();
                 state.applySettings({ ...state.settings, sessionKey: next });
               },
-              onRefresh: () => state.loadOverview(),
+              onRefresh: () => {
+                // Reconnect with current token/password settings
+                state.connect();
+              },
             })
           : nothing}
 
