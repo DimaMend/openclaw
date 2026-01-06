@@ -29,6 +29,7 @@ Status: ready for bot-mode use with grammY (long-polling by default; webhook sup
    - Direct chats: `telegram.allowFrom` by chat id (`123456789`, `telegram:123456789`, or `tg:123456789`; prefixes are case-insensitive).
    - Groups: set `telegram.groupPolicy = "allowlist"` and list senders in `telegram.groupAllowFrom` (fallback: explicit `telegram.allowFrom`).
    - Commands respect group allowlists/policies by default; set `commands.useAccessGroups: false` to bypass.
+7) Native commands: set `commands.native: true` to register `/` commands; set `commands.native: false` to clear previously registered commands.
 
 ## Capabilities & limits (Bot API)
 - Sees only messages sent after it’s added to a chat; no pre-history access.

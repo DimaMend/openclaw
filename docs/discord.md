@@ -25,10 +25,9 @@ Status: ready for DM and guild text channels via the official Discord bot gatewa
 6. Guild channels: use `channel:<channelId>` for delivery. Mentions are required by default and can be set per guild or per channel.
 7. Optional DM control: set `discord.dm.enabled = false` to ignore all DMs, or `discord.dm.allowFrom` to allow specific users (ids or names). Use `discord.dm.groupEnabled` + `discord.dm.groupChannels` to allow group DMs.
 8. Optional guild rules: set `discord.guilds` keyed by guild id (preferred) or slug, with per-channel rules.
-9. Optional native commands: set `commands.native: true` to register native commands in Discord. Text commands are controlled by `commands.text` and must be sent as standalone `/...` messages. Use `commands.useAccessGroups: false` to bypass access-group checks for commands.
-10. Optional native commands: set `commands.native: true` to register native commands in Discord.
-11. Optional guild context history: set `discord.historyLimit` (default 20) to include the last N guild messages as context when replying to a mention. Set `0` to disable.
-12. Reactions: the agent can trigger reactions via the `discord` tool (gated by `discord.actions.*`).
+9. Optional native commands: set `commands.native: true` to register native commands in Discord; set `commands.native: false` to clear previously registered native commands. Text commands are controlled by `commands.text` and must be sent as standalone `/...` messages. Use `commands.useAccessGroups: false` to bypass access-group checks for commands.
+10. Optional guild context history: set `discord.historyLimit` (default 20) to include the last N guild messages as context when replying to a mention. Set `0` to disable.
+11. Reactions: the agent can trigger reactions via the `discord` tool (gated by `discord.actions.*`).
     - The `discord` tool is only exposed when the current surface is Discord.
 13. Native commands use isolated session keys (`discord:slash:${userId}`) rather than the shared `main` session.
 

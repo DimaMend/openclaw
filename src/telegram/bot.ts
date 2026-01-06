@@ -157,6 +157,8 @@ export function createTelegramBot(opts: TelegramBotOptions) {
   const dmAllow = normalizeAllowFrom(allowFrom);
   const groupAllow = normalizeAllowFrom(groupAllowFrom);
   const replyToMode = opts.replyToMode ?? cfg.telegram?.replyToMode ?? "off";
+  const nativeEnabled = cfg.commands?.native === true;
+  const nativeDisabledExplicit = cfg.commands?.native === false;
   const useAccessGroups = cfg.commands?.useAccessGroups !== false;
   const ackReaction = (cfg.messages?.ackReaction ?? "").trim();
   const ackReactionScope = cfg.messages?.ackReactionScope ?? "group-mentions";
@@ -404,8 +406,7 @@ export function createTelegramBot(opts: TelegramBotOptions) {
     if (!queuedFinal) return;
   };
 
-  const nativeCommands =
-    cfg.commands?.native === true ? listNativeCommandSpecs() : [];
+  const nativeCommands = nativeEnabled ? listNativeCommandSpecs() : [];
   if (nativeCommands.length > 0) {
     bot.api
       .setMyCommands(
@@ -532,6 +533,12 @@ export function createTelegramBot(opts: TelegramBotOptions) {
         });
       });
     }
+  } else if (nativeDisabledExplicit) {
+    bot.api.setMyCommands([]).catch((err) => {
+      runtime.error?.(
+        danger(`telegram clear commands failed: ${String(err)}`),
+      );
+    });
   }
 
   bot.on("message", async (ctx) => {

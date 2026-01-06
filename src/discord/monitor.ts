@@ -15,7 +15,7 @@ import {
 } from "@buape/carbon";
 import { GatewayIntents, GatewayPlugin } from "@buape/carbon/gateway";
 import type { APIAttachment } from "discord-api-types/v10";
-import { ApplicationCommandOptionType } from "discord-api-types/v10";
+import { ApplicationCommandOptionType, Routes } from "discord-api-types/v10";
 
 import { chunkText, resolveTextChunkLimit } from "../auto-reply/chunk.js";
 import { hasControlCommand } from "../auto-reply/command-detection.js";
@@ -172,6 +172,7 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
   const groupDmEnabled = dmConfig?.groupEnabled ?? false;
   const groupDmChannels = dmConfig?.groupChannels;
   const nativeEnabled = cfg.commands?.native === true;
+  const nativeDisabledExplicit = cfg.commands?.native === false;
   const useAccessGroups = cfg.commands?.useAccessGroups !== false;
   const sessionPrefix = "discord:slash";
   const ephemeralDefault = true;
@@ -227,6 +228,14 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
   const logger = getChildLogger({ module: "discord-auto-reply" });
   const guildHistories = new Map<string, DiscordHistoryEntry[]>();
   let botUserId: string | undefined;
+
+  if (nativeDisabledExplicit) {
+    await clearDiscordNativeCommands({
+      client,
+      applicationId,
+      runtime,
+    });
+  }
 
   try {
     const botUser = await client.fetchUser("@me");
@@ -287,6 +296,26 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
       void onAbort();
     });
   });
+}
+
+async function clearDiscordNativeCommands(params: {
+  client: Client;
+  applicationId: string;
+  runtime: RuntimeEnv;
+}) {
+  try {
+    await params.client.rest.put(
+      Routes.applicationCommands(params.applicationId),
+      {
+        body: [],
+      },
+    );
+    logVerbose("discord: cleared native commands (commands.native=false)");
+  } catch (err) {
+    params.runtime.error?.(
+      danger(`discord: failed to clear native commands: ${String(err)}`),
+    );
+  }
 }
 
 export function createDiscordMessageHandler(params: {

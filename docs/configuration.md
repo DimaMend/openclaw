@@ -325,6 +325,7 @@ Notes:
 - Text commands must be sent as a **standalone** message and use the leading `/` (no plain-text aliases).
 - `commands.text: false` disables parsing chat messages for commands.
 - `commands.native: true` registers native commands on supported connectors (Discord/Slack/Telegram). Platforms without native commands still rely on text commands.
+- `commands.native: false` skips native registration; Discord/Telegram clear previously registered commands on startup. Slack commands are managed in the Slack app.
 - `commands.useAccessGroups: false` allows commands to bypass access-group allowlists/policies.
 
 ### `web` (WhatsApp web provider)
