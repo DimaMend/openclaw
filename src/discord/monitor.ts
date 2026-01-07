@@ -593,7 +593,10 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
       let typingController: TypingController | undefined;
       const dispatcher = createReplyDispatcher({
         responsePrefix: cfg.messages?.responsePrefix,
-        deliver: async (payload) => {
+        deliver: async (payload, info) => {
+          if (info.kind === "tool" && cfg.messages?.toolMessageLogging === false) {
+            return;
+          }
           await deliverReplies({
             replies: [payload],
             target: replyTarget,

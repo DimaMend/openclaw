@@ -58,6 +58,13 @@ export type MonitorIMessageOpts = {
   requireMention?: boolean;
 };
 
+function sanitizeIMessageText(text: string): string {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replaceAll("\u0000", "")
+    .replaceAll("\uFFFC", "");
+}
+
 function resolveRuntime(opts: MonitorIMessageOpts): RuntimeEnv {
   return (
     opts.runtime ?? {
@@ -204,7 +211,7 @@ export async function monitorIMessageProvider(
       return;
     }
 
-    const messageText = (message.text ?? "").trim();
+    const messageText = sanitizeIMessageText(message.text ?? "").trim();
     const mentioned = isGroup
       ? matchesMentionPatterns(messageText, mentionRegexes)
       : true;
@@ -318,7 +325,10 @@ export async function monitorIMessageProvider(
 
     const dispatcher = createReplyDispatcher({
       responsePrefix: cfg.messages?.responsePrefix,
-      deliver: async (payload) => {
+      deliver: async (payload, info) => {
+        if (info.kind === "tool" && cfg.messages?.toolMessageLogging === false) {
+          return;
+        }
         await deliverReplies({
           replies: [payload],
           target: ctxPayload.To,

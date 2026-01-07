@@ -554,6 +554,8 @@ export type MessagesConfig = {
   ackReaction?: string;
   /** When to send ack reactions. Default: "group-mentions". */
   ackReactionScope?: "group-mentions" | "group-all" | "direct" | "all";
+  /** When false, suppress intermediate tool-result/status messages; only send final replies. Default: true. */
+  toolMessageLogging?: boolean;
 };
 
 export type BridgeBindMode = "auto" | "lan" | "tailnet" | "loopback";

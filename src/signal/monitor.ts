@@ -430,7 +430,10 @@ export async function monitorSignalProvider(
 
       const dispatcher = createReplyDispatcher({
         responsePrefix: cfg.messages?.responsePrefix,
-        deliver: async (payload) => {
+        deliver: async (payload, info) => {
+          if (info.kind === "tool" && cfg.messages?.toolMessageLogging === false) {
+            return;
+          }
           await deliverReplies({
             replies: [payload],
             target: ctxPayload.To,

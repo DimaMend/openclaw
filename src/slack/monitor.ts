@@ -72,6 +72,7 @@ type SlackAppMentionEvent = {
   bot_id?: string;
   text?: string;
   ts?: string;
+  event_ts?: string;
   thread_ts?: string;
   channel: string;
   channel_type?: "im" | "mpim" | "channel" | "group";
@@ -752,7 +753,10 @@ export async function monitorSlackProvider(opts: MonitorSlackOpts = {}) {
     const incomingThreadTs = message.thread_ts;
     const dispatcher = createReplyDispatcher({
       responsePrefix: cfg.messages?.responsePrefix,
-      deliver: async (payload) => {
+      deliver: async (payload, info) => {
+        if (info.kind === "tool" && cfg.messages?.toolMessageLogging === false) {
+          return;
+        }
         await deliverReplies({
           replies: [payload],
           target: replyTarget,
@@ -891,8 +895,12 @@ export async function monitorSlackProvider(opts: MonitorSlackOpts = {}) {
     "app_mention",
     async ({ event }: SlackEventMiddlewareArgs<"app_mention">) => {
       try {
-        const mention = event as SlackAppMentionEvent;
-        await handleSlackMessage(mention as unknown as SlackMessageEvent, {
+        const mention = event as SlackAppMentionEvent & { ts?: string };
+        const asMessage = {
+          ...mention,
+          ts: mention.ts ?? mention.event_ts,
+        } as unknown as SlackMessageEvent;
+        await handleSlackMessage(asMessage, {
           source: "app_mention",
           wasMentioned: true,
         });

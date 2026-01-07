@@ -99,6 +99,7 @@ const FIELD_LABELS: Record<string, string> = {
   "session.agentToAgent.maxPingPongTurns": "Agent-to-Agent Ping-Pong Turns",
   "messages.ackReaction": "Ack Reaction Emoji",
   "messages.ackReactionScope": "Ack Reaction Scope",
+  "messages.toolMessageLogging": "Tool Message Logging",
   "talk.apiKey": "Talk API Key",
   "telegram.botToken": "Telegram Bot Token",
   "discord.token": "Discord Bot Token",
@@ -137,6 +138,8 @@ const FIELD_HELP: Record<string, string> = {
     "Emoji reaction used to acknowledge inbound messages (empty disables).",
   "messages.ackReactionScope":
     'When to send ack reactions ("group-mentions", "group-all", "direct", "all").',
+  "messages.toolMessageLogging":
+    "When enabled, providers may send intermediate tool-result/status messages.",
 };
 
 const FIELD_PLACEHOLDERS: Record<string, string> = {

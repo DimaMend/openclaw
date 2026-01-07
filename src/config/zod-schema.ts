@@ -160,6 +160,7 @@ const MessagesSchema = z
     ackReactionScope: z
       .enum(["group-mentions", "group-all", "direct", "all"])
       .optional(),
+    toolMessageLogging: z.boolean().optional(),
   })
   .optional();
 
