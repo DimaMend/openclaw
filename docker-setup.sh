@@ -101,8 +101,14 @@ echo ""
 docker compose -f "$COMPOSE_FILE" run --rm clawdbot-cli onboard
 
 echo ""
-echo "==> WhatsApp login (QR will print in this terminal)"
-docker compose -f "$COMPOSE_FILE" run --rm clawdbot-cli login
+read -p "==> Do you want to pair WhatsApp now? (y/N) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  echo "==> WhatsApp login (QR will print in this terminal)"
+  docker compose -f "$COMPOSE_FILE" run --rm clawdbot-cli login
+else
+  echo "Skipping WhatsApp login."
+fi
 
 echo ""
 echo "==> Starting gateway"
