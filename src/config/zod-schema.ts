@@ -355,6 +355,11 @@ const SlackConfigSchema = SlackAccountSchema.extend({
   accounts: z.record(z.string(), SlackAccountSchema.optional()).optional(),
 });
 
+const SignalGroupSchema = z.object({
+  /** If true, bot only responds when mentioned (via @mention, quote-reply, or pattern). */
+  requireMention: z.boolean().optional(),
+});
+
 const SignalAccountSchemaBase = z.object({
   name: z.string().optional(),
   enabled: z.boolean().optional(),
@@ -372,6 +377,7 @@ const SignalAccountSchemaBase = z.object({
   allowFrom: z.array(z.union([z.string(), z.number()])).optional(),
   groupAllowFrom: z.array(z.union([z.string(), z.number()])).optional(),
   groupPolicy: GroupPolicySchema.optional().default("open"),
+  groups: z.record(z.string(), SignalGroupSchema.optional()).optional(),
   textChunkLimit: z.number().int().positive().optional(),
   mediaMaxMb: z.number().int().positive().optional(),
 });

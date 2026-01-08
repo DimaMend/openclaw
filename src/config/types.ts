@@ -559,6 +559,14 @@ export type SignalAccountConfig = {
    * - "allowlist": only allow group messages from senders in groupAllowFrom/allowFrom
    */
   groupPolicy?: GroupPolicy;
+  /** Per-group config (keyed by group ID or "*" for all groups). */
+  groups?: Record<
+    string,
+    {
+      /** If true, bot only responds when mentioned (via @mention, quote-reply, or pattern). */
+      requireMention?: boolean;
+    }
+  >;
   /** Outbound text chunk size (chars). Default: 4000. */
   textChunkLimit?: number;
   mediaMaxMb?: number;

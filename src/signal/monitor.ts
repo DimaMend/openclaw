@@ -1,5 +1,10 @@
 import { chunkText, resolveTextChunkLimit } from "../auto-reply/chunk.js";
+import { hasControlCommand } from "../auto-reply/command-detection.js";
 import { formatAgentEnvelope } from "../auto-reply/envelope.js";
+import {
+  buildMentionRegexes,
+  matchesMentionPatterns,
+} from "../auto-reply/reply/mentions.js";
 import { dispatchReplyFromConfig } from "../auto-reply/reply/dispatch-from-config.js";
 import { createReplyDispatcher } from "../auto-reply/reply/reply-dispatcher.js";
 import type { ReplyPayload } from "../auto-reply/types.js";
@@ -31,6 +36,23 @@ type SignalEnvelope = {
   syncMessage?: unknown;
 };
 
+type SignalMention = {
+  name?: string | null;
+  number?: string | null;
+  uuid?: string | null;
+  start: number;
+  length: number;
+};
+
+type SignalQuote = {
+  id?: number | null;
+  author?: string | null;
+  authorNumber?: string | null;
+  authorUuid?: string | null;
+  text?: string | null;
+  mentions?: Array<SignalMention> | null;
+};
+
 type SignalDataMessage = {
   timestamp?: number;
   message?: string | null;
@@ -39,7 +61,8 @@ type SignalDataMessage = {
     groupId?: string | null;
     groupName?: string | null;
   } | null;
-  quote?: { text?: string | null } | null;
+  quote?: SignalQuote | null;
+  mentions?: Array<SignalMention> | null;
 };
 
 type SignalAttachment = {
@@ -99,6 +122,34 @@ function isAllowedSender(sender: string, allowFrom: string[]): boolean {
     .map((entry) => normalizeE164(entry));
   const normalizedSender = normalizeE164(sender);
   return normalizedAllow.includes(normalizedSender);
+}
+
+/**
+ * Check if the bot was @-mentioned in the message via Signal's native mentions.
+ */
+function wasBotMentioned(
+  mentions: Array<SignalMention> | null | undefined,
+  botAccount?: string,
+): boolean {
+  if (!botAccount || !mentions?.length) return false;
+  const normalized = normalizeE164(botAccount);
+  return mentions.some((m) => {
+    const mentionNumber = m.number ? normalizeE164(m.number) : null;
+    return mentionNumber === normalized;
+  });
+}
+
+/**
+ * Check if the message is a reply to a message from the bot.
+ */
+function isReplyingToBot(
+  quote: SignalQuote | null | undefined,
+  botAccount?: string,
+): boolean {
+  if (!botAccount || !quote) return false;
+  const quotedAuthor = quote.authorNumber ?? quote.author;
+  if (!quotedAuthor) return false;
+  return normalizeE164(quotedAuthor) === normalizeE164(botAccount);
 }
 
 export function isSignalGroupAllowed(params: {
@@ -400,12 +451,43 @@ export async function monitorSignalProvider(
         }
       }
 
+      // Remove U+FFFC (Object Replacement Character) that Signal inserts for @mentions
+      const messageText = (dataMessage.message ?? "")
+        .replace(/\uFFFC/g, "")
+        .trim();
+
+      // Mention detection for groups
+      const mentionRegexes = buildMentionRegexes(cfg);
+      let wasMentioned = false;
+      if (isGroup) {
+        const mentionedByAt = wasBotMentioned(dataMessage.mentions, account);
+        const isQuoteReply = isReplyingToBot(dataMessage.quote, account);
+        const mentionedByPattern = matchesMentionPatterns(
+          messageText,
+          mentionRegexes,
+        );
+        wasMentioned = mentionedByAt || isQuoteReply || mentionedByPattern;
+
+        // Mention gating (opt-in via config: signal.groups.<groupId>.requireMention)
+        const groupConfig =
+          cfg.signal?.groups?.[groupId!] ?? cfg.signal?.groups?.["*"];
+        const requireMention = groupConfig?.requireMention === true;
+
+        if (requireMention && !wasMentioned) {
+          // Allow control commands through even without mention
+          const shouldBypassMention = hasControlCommand(messageText);
+          if (!shouldBypassMention) {
+            logVerbose(`signal: skipping group message (no mention)`);
+            return;
+          }
+        }
+      }
+
       const commandAuthorized = isGroup
         ? effectiveGroupAllow.length > 0
           ? isAllowedSender(sender, effectiveGroupAllow)
           : true
         : dmAllowed;
-      const messageText = (dataMessage.message ?? "").trim();
 
       let mediaPath: string | undefined;
       let mediaType: string | undefined;
@@ -445,11 +527,12 @@ export async function monitorSignalProvider(
       const fromLabel = isGroup
         ? `${groupName ?? "Signal Group"} id:${groupId}`
         : `${envelope.sourceName ?? sender} id:${sender}`;
+      const mentionIndicator = wasMentioned ? " (mentioned)" : "";
       const body = formatAgentEnvelope({
         provider: "Signal",
         from: fromLabel,
         timestamp: envelope.timestamp ?? undefined,
-        body: bodyText,
+        body: `${bodyText}${mentionIndicator}`,
       });
 
       const route = resolveAgentRoute({
@@ -480,6 +563,7 @@ export async function monitorSignalProvider(
         MediaType: mediaType,
         MediaUrl: mediaPath,
         CommandAuthorized: commandAuthorized,
+        WasMentioned: wasMentioned,
         // Originating channel for reply routing.
         OriginatingChannel: "signal" as const,
         OriginatingTo: signalTo,
