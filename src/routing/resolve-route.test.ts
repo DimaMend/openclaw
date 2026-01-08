@@ -175,4 +175,153 @@ describe("resolveAgentRoute", () => {
     expect(route.agentId).toBe("home");
     expect(route.sessionKey).toBe("agent:home:main");
   });
+
+  test("topic binding wins over peer binding", () => {
+    const cfg: ClawdbotConfig = {
+      routing: {
+        bindings: [
+          {
+            agentId: "ideas",
+            match: {
+              provider: "telegram",
+              peer: { kind: "group", id: "-1001234567890" },
+              topicId: "40",
+            },
+          },
+          {
+            agentId: "general",
+            match: {
+              provider: "telegram",
+              peer: { kind: "group", id: "-1001234567890" },
+            },
+          },
+        ],
+      },
+    };
+    const route = resolveAgentRoute({
+      cfg,
+      provider: "telegram",
+      accountId: "default",
+      peer: { kind: "group", id: "-1001234567890" },
+      topicId: "40",
+    });
+    expect(route.agentId).toBe("ideas");
+    expect(route.matchedBy).toBe("binding.topic");
+  });
+
+  test("topic binding with numeric topicId", () => {
+    const cfg: ClawdbotConfig = {
+      routing: {
+        bindings: [
+          {
+            agentId: "ideas",
+            match: {
+              provider: "telegram",
+              peer: { kind: "group", id: "-1001234567890" },
+              topicId: 40,
+            },
+          },
+        ],
+      },
+    };
+    const route = resolveAgentRoute({
+      cfg,
+      provider: "telegram",
+      accountId: "default",
+      peer: { kind: "group", id: "-1001234567890" },
+      topicId: 40,
+    });
+    expect(route.agentId).toBe("ideas");
+    expect(route.matchedBy).toBe("binding.topic");
+  });
+
+  test("topic binding without peer matches any group with that topic", () => {
+    const cfg: ClawdbotConfig = {
+      routing: {
+        bindings: [
+          {
+            agentId: "ideas",
+            match: {
+              provider: "telegram",
+              topicId: "40",
+            },
+          },
+        ],
+      },
+    };
+    const route = resolveAgentRoute({
+      cfg,
+      provider: "telegram",
+      accountId: "default",
+      peer: { kind: "group", id: "-1009999999999" },
+      topicId: "40",
+    });
+    expect(route.agentId).toBe("ideas");
+    expect(route.matchedBy).toBe("binding.topic");
+  });
+
+  test("topic binding does not match when topicId differs", () => {
+    const cfg: ClawdbotConfig = {
+      routing: {
+        bindings: [
+          {
+            agentId: "ideas",
+            match: {
+              provider: "telegram",
+              peer: { kind: "group", id: "-1001234567890" },
+              topicId: "40",
+            },
+          },
+          {
+            agentId: "general",
+            match: {
+              provider: "telegram",
+              peer: { kind: "group", id: "-1001234567890" },
+            },
+          },
+        ],
+      },
+    };
+    const route = resolveAgentRoute({
+      cfg,
+      provider: "telegram",
+      accountId: "default",
+      peer: { kind: "group", id: "-1001234567890" },
+      topicId: "99",
+    });
+    expect(route.agentId).toBe("general");
+    expect(route.matchedBy).toBe("binding.peer");
+  });
+
+  test("topic binding falls back to peer when no topic provided", () => {
+    const cfg: ClawdbotConfig = {
+      routing: {
+        bindings: [
+          {
+            agentId: "ideas",
+            match: {
+              provider: "telegram",
+              peer: { kind: "group", id: "-1001234567890" },
+              topicId: "40",
+            },
+          },
+          {
+            agentId: "general",
+            match: {
+              provider: "telegram",
+              peer: { kind: "group", id: "-1001234567890" },
+            },
+          },
+        ],
+      },
+    };
+    const route = resolveAgentRoute({
+      cfg,
+      provider: "telegram",
+      accountId: "default",
+      peer: { kind: "group", id: "-1001234567890" },
+    });
+    expect(route.agentId).toBe("general");
+    expect(route.matchedBy).toBe("binding.peer");
+  });
 });

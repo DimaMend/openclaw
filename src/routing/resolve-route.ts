@@ -22,6 +22,7 @@ export type ResolveAgentRouteInput = {
   peer?: RoutePeer | null;
   guildId?: string | null;
   teamId?: string | null;
+  topicId?: string | number | null;
 };
 
 export type ResolvedAgentRoute = {
@@ -34,6 +35,7 @@ export type ResolvedAgentRoute = {
   mainSessionKey: string;
   /** Match description for debugging/logging. */
   matchedBy:
+    | "binding.topic"
     | "binding.peer"
     | "binding.guild"
     | "binding.team"
@@ -146,6 +148,27 @@ function matchesTeam(
   return id === teamId;
 }
 
+function matchesTopic(
+  match:
+    | { topicId?: string | number | undefined; peer?: { kind?: string; id?: string } | undefined }
+    | undefined,
+  topicId: string,
+  peer: RoutePeer | null,
+): boolean {
+  const matchTopicId = normalizeId(String(match?.topicId ?? ""));
+  if (!matchTopicId) return false;
+  if (matchTopicId !== topicId) return false;
+  // If binding specifies a peer, it must also match
+  if (match?.peer) {
+    if (!peer) return false;
+    const kind = normalizeToken(match.peer.kind);
+    const id = normalizeId(match.peer.id);
+    if (!kind || !id) return false;
+    if (kind !== peer.kind || id !== peer.id) return false;
+  }
+  return true;
+}
+
 export function resolveAgentRoute(
   input: ResolveAgentRouteInput,
 ): ResolvedAgentRoute {
@@ -156,6 +179,7 @@ export function resolveAgentRoute(
     : null;
   const guildId = normalizeId(input.guildId);
   const teamId = normalizeId(input.teamId);
+  const topicId = normalizeId(String(input.topicId ?? ""));
 
   const bindings = listBindings(input.cfg).filter((binding) => {
     if (!binding || typeof binding !== "object") return false;
@@ -185,8 +209,15 @@ export function resolveAgentRoute(
     };
   };
 
+  // Topic binding is most specific (e.g., Telegram forum topics, Discord threads)
+  if (topicId) {
+    const topicMatch = bindings.find((b) => matchesTopic(b.match, topicId, peer));
+    if (topicMatch) return choose(topicMatch.agentId, "binding.topic");
+  }
+
   if (peer) {
-    const peerMatch = bindings.find((b) => matchesPeer(b.match, peer));
+    // Exclude bindings that specify topicId (they should only match via topic)
+    const peerMatch = bindings.find((b) => !b.match?.topicId && matchesPeer(b.match, peer));
     if (peerMatch) return choose(peerMatch.agentId, "binding.peer");
   }
 
@@ -205,7 +236,8 @@ export function resolveAgentRoute(
       b.match?.accountId?.trim() !== "*" &&
       !b.match?.peer &&
       !b.match?.guildId &&
-      !b.match?.teamId,
+      !b.match?.teamId &&
+      !b.match?.topicId,
   );
   if (accountMatch) return choose(accountMatch.agentId, "binding.account");
 
@@ -214,7 +246,8 @@ export function resolveAgentRoute(
       b.match?.accountId?.trim() === "*" &&
       !b.match?.peer &&
       !b.match?.guildId &&
-      !b.match?.teamId,
+      !b.match?.teamId &&
+      !b.match?.topicId,
   );
   if (anyAccountMatch)
     return choose(anyAccountMatch.agentId, "binding.provider");

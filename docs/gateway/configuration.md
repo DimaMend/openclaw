@@ -406,16 +406,18 @@ Run multiple isolated agents (separate workspace, `agentDir`, sessions) inside o
 - `routing.bindings[]`: routes inbound messages to an `agentId`.
   - `match.provider` (required)
   - `match.accountId` (optional; `*` = any account; omitted = default account)
+  - `match.topicId` (optional; Telegram forum topic or Discord thread id)
   - `match.peer` (optional; `{ kind: dm|group|channel, id }`)
   - `match.guildId` / `match.teamId` (optional; provider-specific)
 
 Deterministic match order:
-1) `match.peer`
-2) `match.guildId`
-3) `match.teamId`
-4) `match.accountId` (exact, no peer/guild/team)
-5) `match.accountId: "*"` (provider-wide, no peer/guild/team)
-6) `routing.defaultAgentId`
+1) `match.topicId` (most specific; for Telegram forum topics, Discord threads)
+2) `match.peer`
+3) `match.guildId`
+4) `match.teamId`
+5) `match.accountId` (exact, no topic/peer/guild/team)
+6) `match.accountId: "*"` (provider-wide, no topic/peer/guild/team)
+7) `routing.defaultAgentId`
 
 Within each match tier, the first matching entry in `routing.bindings` wins.
 
@@ -509,6 +511,31 @@ Example: two WhatsApp accounts → two agents:
       biz: {},
     }
   }
+}
+```
+
+Example: Telegram forum topic → dedicated agent with separate workspace:
+
+```json5
+{
+  routing: {
+    defaultAgentId: "main",
+    agents: {
+      main: { workspace: "~/clawd" },
+      ideas: { workspace: "~/clawd-ideas" },
+    },
+    bindings: [
+      // Route topic 40 in the "Frank forums" group to the ideas agent
+      {
+        agentId: "ideas",
+        match: {
+          provider: "telegram",
+          peer: { kind: "group", id: "-1003388222141" },
+          topicId: "40",
+        },
+      },
+    ],
+  },
 }
 ```
 
