@@ -48,10 +48,12 @@ import {
 import { theme } from "../terminal/theme.js";
 import { resolveUserPath, sleep } from "../utils.js";
 import { createClackPrompter } from "../wizard/clack-prompter.js";
+import type { WizardPrompter } from "../wizard/prompts.js";
 import {
   isRemoteEnvironment,
   loginAntigravityVpsAware,
 } from "./antigravity-oauth.js";
+import { resolvePreferredProviderForAuthChoice } from "./auth-choice.js";
 import { buildAuthChoiceOptions } from "./auth-choice-options.js";
 import {
   buildTokenProfileId,
@@ -68,6 +70,7 @@ import {
 } from "./google-gemini-model-default.js";
 import { healthCommand } from "./health.js";
 import { formatHealthCheckFailure } from "./health-format.js";
+import { applyPrimaryModel, promptDefaultModel } from "./model-picker.js";
 import {
   applyAuthProfileConfig,
   applyMinimaxConfig,
@@ -94,6 +97,7 @@ import {
 import { setupProviders } from "./onboard-providers.js";
 import { promptRemoteGatewayConfig } from "./onboard-remote.js";
 import { setupSkills } from "./onboard-skills.js";
+import type { AuthChoice } from "./onboard-types.js";
 import {
   applyOpenAICodexModelDefault,
   OPENAI_CODEX_DEFAULT_MODEL,
@@ -344,6 +348,7 @@ async function promptGatewayConfig(
 async function promptAuthConfig(
   cfg: ClawdbotConfig,
   runtime: RuntimeEnv,
+  prompter: WizardPrompter,
 ): Promise<ClawdbotConfig> {
   const authChoice = guardCancel(
     await select({
@@ -357,21 +362,7 @@ async function promptAuthConfig(
       }),
     }),
     runtime,
-  ) as
-    | "oauth"
-    | "setup-token"
-    | "claude-cli"
-    | "token"
-    | "openai-codex"
-    | "openai-api-key"
-    | "codex-cli"
-    | "antigravity"
-    | "gemini-api-key"
-    | "apiKey"
-    | "minimax-cloud"
-    | "minimax"
-    | "opencode-zen"
-    | "skip";
+  ) as AuthChoice;
 
   let next = cfg;
 
@@ -816,56 +807,15 @@ async function promptAuthConfig(
     );
   }
 
-  const currentModel =
-    typeof next.agents?.defaults?.model === "string"
-      ? next.agents?.defaults?.model
-      : (next.agents?.defaults?.model?.primary ?? "");
-  const preferAnthropic =
-    authChoice === "claude-cli" ||
-    authChoice === "setup-token" ||
-    authChoice === "token" ||
-    authChoice === "oauth" ||
-    authChoice === "apiKey";
-  const modelInitialValue =
-    preferAnthropic && !currentModel.startsWith("anthropic/")
-      ? "anthropic/claude-opus-4-5"
-      : currentModel;
-
-  const modelInput = guardCancel(
-    await text({
-      message: "Default model (blank to keep)",
-      initialValue: modelInitialValue,
-    }),
-    runtime,
-  );
-  const model = String(modelInput ?? "").trim();
-  if (model) {
-    const existingDefaults = next.agents?.defaults;
-    const existingModel = existingDefaults?.model;
-    const existingModels = existingDefaults?.models;
-    next = {
-      ...next,
-      agents: {
-        ...next.agents,
-        defaults: {
-          ...existingDefaults,
-          model: {
-            ...(existingModel &&
-            "fallbacks" in (existingModel as Record<string, unknown>)
-              ? {
-                  fallbacks: (existingModel as { fallbacks?: string[] })
-                    .fallbacks,
-                }
-              : undefined),
-            primary: model,
-          },
-          models: {
-            ...existingModels,
-            [model]: existingModels?.[model] ?? {},
-          },
-        },
-      },
-    };
+  const modelSelection = await promptDefaultModel({
+    config: next,
+    prompter,
+    allowKeep: true,
+    ignoreAllowlist: true,
+    preferredProvider: resolvePreferredProviderForAuthChoice(authChoice),
+  });
+  if (modelSelection.model) {
+    next = applyPrimaryModel(next, modelSelection.model);
   }
 
   return next;
@@ -1208,7 +1158,7 @@ export async function runConfigureWizard(
   }
 
   if (selected.includes("model")) {
-    nextConfig = await promptAuthConfig(nextConfig, runtime);
+    nextConfig = await promptAuthConfig(nextConfig, runtime, prompter);
   }
 
   if (selected.includes("gateway")) {
