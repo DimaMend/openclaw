@@ -16,6 +16,12 @@ export type OutboundRetryConfig = {
   jitter?: number;
 };
 
+export type BlockStreamingCoalesceConfig = {
+  minChars?: number;
+  maxChars?: number;
+  idleMs?: number;
+};
+
 export type SessionSendPolicyAction = "allow" | "deny";
 export type SessionSendPolicyMatch = {
   provider?: string;
@@ -125,6 +131,12 @@ export type WhatsAppConfig = {
   groupPolicy?: GroupPolicy;
   /** Outbound text chunk size (chars). Default: 4000. */
   textChunkLimit?: number;
+  /** Maximum media file size in MB. Default: 50. */
+  mediaMaxMb?: number;
+  /** Disable block streaming for this account. */
+  blockStreaming?: boolean;
+  /** Merge streamed block replies before sending. */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   /** Per-action tool gating (default: true for all). */
   actions?: WhatsAppActionConfig;
   groups?: Record<
@@ -150,6 +162,10 @@ export type WhatsAppAccountConfig = {
   groupAllowFrom?: string[];
   groupPolicy?: GroupPolicy;
   textChunkLimit?: number;
+  mediaMaxMb?: number;
+  blockStreaming?: boolean;
+  /** Merge streamed block replies before sending. */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   groups?: Record<
     string,
     {
@@ -301,6 +317,10 @@ export type TelegramAccountConfig = {
   groupPolicy?: GroupPolicy;
   /** Outbound text chunk size (chars). Default: 4000. */
   textChunkLimit?: number;
+  /** Disable block streaming for this account. */
+  blockStreaming?: boolean;
+  /** Merge streamed block replies before sending. */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   /** Draft streaming mode for Telegram (off|partial|block). Default: partial. */
   streamMode?: "off" | "partial" | "block";
   mediaMaxMb?: number;
@@ -404,6 +424,7 @@ export type DiscordActionConfig = {
   moderation?: boolean;
   emojiUploads?: boolean;
   stickerUploads?: boolean;
+  channels?: boolean;
 };
 
 export type DiscordAccountConfig = {
@@ -421,6 +442,10 @@ export type DiscordAccountConfig = {
   groupPolicy?: GroupPolicy;
   /** Outbound text chunk size (chars). Default: 2000. */
   textChunkLimit?: number;
+  /** Disable block streaming for this account. */
+  blockStreaming?: boolean;
+  /** Merge streamed block replies before sending. */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   /**
    * Soft max line count per Discord message.
    * Discord clients can clip/collapse very tall messages; splitting by lines
@@ -516,6 +541,9 @@ export type SlackAccountConfig = {
    */
   groupPolicy?: GroupPolicy;
   textChunkLimit?: number;
+  blockStreaming?: boolean;
+  /** Merge streamed block replies before sending. */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   mediaMaxMb?: number;
   /** Reaction notification mode (off|own|all|allowlist). Default: own. */
   reactionNotifications?: SlackReactionNotificationMode;
@@ -569,6 +597,9 @@ export type SignalAccountConfig = {
   groupPolicy?: GroupPolicy;
   /** Outbound text chunk size (chars). Default: 4000. */
   textChunkLimit?: number;
+  blockStreaming?: boolean;
+  /** Merge streamed block replies before sending. */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   mediaMaxMb?: number;
 };
 
@@ -622,6 +653,8 @@ export type MSTeamsConfig = {
   allowFrom?: Array<string>;
   /** Outbound text chunk size (chars). Default: 4000. */
   textChunkLimit?: number;
+  /** Merge streamed block replies before sending. */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   /**
    * Allowed host suffixes for inbound attachment downloads.
    * Use ["*"] to allow any host (not recommended).
@@ -667,6 +700,9 @@ export type IMessageAccountConfig = {
   mediaMaxMb?: number;
   /** Outbound text chunk size (chars). Default: 4000. */
   textChunkLimit?: number;
+  blockStreaming?: boolean;
+  /** Merge streamed block replies before sending. */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   groups?: Record<
     string,
     {
@@ -1190,6 +1226,11 @@ export type AgentDefaultsConfig = {
     maxChars?: number;
     breakPreference?: "paragraph" | "newline" | "sentence";
   };
+  /**
+   * Block reply coalescing (merge streamed chunks before send).
+   * idleMs: wait time before flushing when idle.
+   */
+  blockStreamingCoalesce?: BlockStreamingCoalesceConfig;
   timeoutSeconds?: number;
   /** Max inbound media size in MB for agent-visible attachments (text note or future image attach). */
   mediaMaxMb?: number;

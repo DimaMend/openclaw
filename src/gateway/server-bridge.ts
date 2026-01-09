@@ -24,7 +24,6 @@ import { buildConfigSchema } from "../config/schema.js";
 import {
   loadSessionStore,
   resolveMainSessionKey,
-  resolveStorePath,
   type SessionEntry,
   saveSessionStore,
 } from "../config/sessions.js";
@@ -45,6 +44,7 @@ import {
   type SessionsListParams,
   type SessionsPatchParams,
   type SessionsResetParams,
+  type SessionsResolveParams,
   validateChatAbortParams,
   validateChatHistoryParams,
   validateChatSendParams,
@@ -57,6 +57,7 @@ import {
   validateSessionsListParams,
   validateSessionsPatchParams,
   validateSessionsResetParams,
+  validateSessionsResolveParams,
   validateTalkModeParams,
 } from "./protocol/index.js";
 import type { ChatRunEntry } from "./server-chat.js";
@@ -70,13 +71,16 @@ import {
   archiveFileOnDisk,
   capArrayByJsonBytes,
   listSessionsFromStore,
+  loadCombinedSessionStoreForGateway,
   loadSessionEntry,
   readSessionMessages,
+  resolveGatewaySessionStoreTarget,
   resolveSessionModelRef,
   resolveSessionTranscriptCandidates,
   type SessionsPatchResult,
 } from "./session-utils.js";
 import { applySessionsPatchToStore } from "./sessions-patch.js";
+import { resolveSessionKeyFromResolveParams } from "./sessions-resolve.js";
 import { formatForLog } from "./ws-log.js";
 
 export type BridgeHandlersContext = {
@@ -288,8 +292,7 @@ export function createBridgeHandlers(ctx: BridgeHandlersContext) {
           }
           const p = params as SessionsListParams;
           const cfg = loadConfig();
-          const storePath = resolveStorePath(cfg.session?.store);
-          const store = loadSessionStore(storePath);
+          const { storePath, store } = loadCombinedSessionStoreForGateway(cfg);
           const result = listSessionsFromStore({
             cfg,
             storePath,
@@ -297,6 +300,36 @@ export function createBridgeHandlers(ctx: BridgeHandlersContext) {
             opts: p,
           });
           return { ok: true, payloadJSON: JSON.stringify(result) };
+        }
+        case "sessions.resolve": {
+          const params = parseParams();
+          if (!validateSessionsResolveParams(params)) {
+            return {
+              ok: false,
+              error: {
+                code: ErrorCodes.INVALID_REQUEST,
+                message: `invalid sessions.resolve params: ${formatValidationErrors(validateSessionsResolveParams.errors)}`,
+              },
+            };
+          }
+
+          const p = params as SessionsResolveParams;
+          const cfg = loadConfig();
+          const resolved = resolveSessionKeyFromResolveParams({ cfg, p });
+          if (!resolved.ok) {
+            return {
+              ok: false,
+              error: {
+                code: resolved.error.code,
+                message: resolved.error.message,
+                details: resolved.error.details,
+              },
+            };
+          }
+          return {
+            ok: true,
+            payloadJSON: JSON.stringify({ ok: true, key: resolved.key }),
+          };
         }
         case "sessions.patch": {
           const params = parseParams();
@@ -323,12 +356,21 @@ export function createBridgeHandlers(ctx: BridgeHandlersContext) {
           }
 
           const cfg = loadConfig();
-          const storePath = resolveStorePath(cfg.session?.store);
+          const target = resolveGatewaySessionStoreTarget({ cfg, key });
+          const storePath = target.storePath;
           const store = loadSessionStore(storePath);
+          const primaryKey = target.storeKeys[0] ?? key;
+          const existingKey = target.storeKeys.find(
+            (candidate) => store[candidate],
+          );
+          if (existingKey && existingKey !== primaryKey && !store[primaryKey]) {
+            store[primaryKey] = store[existingKey];
+            delete store[existingKey];
+          }
           const applied = await applySessionsPatchToStore({
             cfg,
             store,
-            storeKey: key,
+            storeKey: primaryKey,
             patch: p,
             loadGatewayModelCatalog: ctx.loadGatewayModelCatalog,
           });
@@ -346,7 +388,7 @@ export function createBridgeHandlers(ctx: BridgeHandlersContext) {
           const payload: SessionsPatchResult = {
             ok: true,
             path: storePath,
-            key,
+            key: target.canonicalKey,
             entry: applied.entry,
           };
           return { ok: true, payloadJSON: JSON.stringify(payload) };

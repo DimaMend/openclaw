@@ -673,7 +673,7 @@ export function createTelegramBot(opts: TelegramBotOptions) {
       : undefined;
     const draftChunking =
       draftStream && streamMode === "block"
-        ? resolveBlockStreamingChunking(cfg, "telegram")
+        ? resolveBlockStreamingChunking(cfg, "telegram", route.accountId)
         : undefined;
     const draftChunker = draftChunking
       ? new EmbeddedBlockChunker(draftChunking)
@@ -770,7 +770,11 @@ export function createTelegramBot(opts: TelegramBotOptions) {
               if (payload.text) draftStream.update(payload.text);
             }
           : undefined,
-        disableBlockStreaming: Boolean(draftStream),
+        disableBlockStreaming:
+          Boolean(draftStream) ||
+          (typeof telegramCfg.blockStreaming === "boolean"
+            ? !telegramCfg.blockStreaming
+            : undefined),
       },
     });
     markDispatchIdle();

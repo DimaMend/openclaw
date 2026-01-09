@@ -788,6 +788,8 @@ export async function monitorWebProvider(
       groupAllowFrom: account.groupAllowFrom,
       groupPolicy: account.groupPolicy,
       textChunkLimit: account.textChunkLimit,
+      mediaMaxMb: account.mediaMaxMb,
+      blockStreaming: account.blockStreaming,
       groups: account.groups,
     },
   } satisfies ReturnType<typeof loadConfig>;
@@ -1276,7 +1278,13 @@ export async function monitorWebProvider(
         cfg,
         dispatcher,
         replyResolver,
-        replyOptions,
+        replyOptions: {
+          ...replyOptions,
+          disableBlockStreaming:
+            typeof cfg.whatsapp?.blockStreaming === "boolean"
+              ? !cfg.whatsapp.blockStreaming
+              : undefined,
+        },
       });
       markDispatchIdle();
       if (!queuedFinal) {
@@ -1298,6 +1306,7 @@ export async function monitorWebProvider(
       verbose,
       accountId: account.accountId,
       authDir: account.authDir,
+      mediaMaxMb: account.mediaMaxMb,
       onMessage: async (msg) => {
         handledMessages += 1;
         lastMessageAt = Date.now();

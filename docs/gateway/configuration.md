@@ -265,7 +265,8 @@ For groups, use `whatsapp.groupPolicy` + `whatsapp.groupAllowFrom`.
   whatsapp: {
     dmPolicy: "pairing", // pairing | allowlist | open | disabled
     allowFrom: ["+15555550123", "+447700900123"],
-    textChunkLimit: 4000 // optional outbound chunk size (chars)
+    textChunkLimit: 4000, // optional outbound chunk size (chars)
+    mediaMaxMb: 50 // optional inbound media cap (MB)
   }
 }
 ```
@@ -1142,6 +1143,7 @@ See [/concepts/session-pruning](/concepts/session-pruning) for behavior details.
 
 Block streaming:
 - `agents.defaults.blockStreamingDefault`: `"on"`/`"off"` (default on).
+- Provider overrides: `*.blockStreaming` (and per-account variants) to force block streaming on/off.
 - `agents.defaults.blockStreamingBreak`: `"text_end"` or `"message_end"` (default: text_end).
 - `agents.defaults.blockStreamingChunk`: soft chunking for streamed blocks. Defaults to
   800–1200 chars, prefers paragraph breaks (`\n\n`), then newlines, then sentences.
@@ -1151,6 +1153,12 @@ Block streaming:
     agents: { defaults: { blockStreamingChunk: { minChars: 800, maxChars: 1200 } } }
   }
   ```
+- `agents.defaults.blockStreamingCoalesce`: merge streamed blocks before sending.
+  Defaults to `{ idleMs: 400 }` and inherits `minChars` from `blockStreamingChunk`
+  with `maxChars` capped to the provider text limit.
+  Provider overrides: `whatsapp.blockStreamingCoalesce`, `telegram.blockStreamingCoalesce`,
+  `discord.blockStreamingCoalesce`, `slack.blockStreamingCoalesce`, `signal.blockStreamingCoalesce`,
+  `imessage.blockStreamingCoalesce`, `msteams.blockStreamingCoalesce` (and per-account variants).
 See [/concepts/streaming](/concepts/streaming) for behavior + chunking details.
 
 Typing indicators:
@@ -1463,6 +1471,67 @@ Notes:
 - LM Studio must have the model loaded and the local server enabled (default URL above).
 - Responses API enables clean reasoning/output separation; WhatsApp sees only final text.
 - Adjust `contextWindow`/`maxTokens` if your LM Studio context length differs.
+
+### MiniMax API (platform.minimax.io)
+
+Use MiniMax's Anthropic-compatible API directly without LM Studio:
+
+```json5
+{
+  agent: {
+    model: { primary: "minimax/MiniMax-M2.1" },
+    models: {
+      "anthropic/claude-opus-4-5": { alias: "Opus" },
+      "minimax/MiniMax-M2.1": { alias: "Minimax" }
+    }
+  },
+  models: {
+    mode: "merge",
+    providers: {
+      minimax: {
+        baseUrl: "https://api.minimax.io/anthropic",
+        apiKey: "${MINIMAX_API_KEY}",
+        api: "anthropic-messages",
+        models: [
+          {
+            id: "MiniMax-M2.1",
+            name: "MiniMax M2.1",
+            reasoning: false,
+            input: ["text"],
+            // Pricing: MiniMax doesn't publish public rates. Override in models.json for accurate costs.
+            cost: { input: 15, output: 60, cacheRead: 2, cacheWrite: 10 },
+            contextWindow: 200000,
+            maxTokens: 8192
+          },
+          {
+            id: "MiniMax-M2.1-lightning",
+            name: "MiniMax M2.1 Lightning",
+            reasoning: false,
+            input: ["text"],
+            cost: { input: 15, output: 60, cacheRead: 2, cacheWrite: 10 },
+            contextWindow: 200000,
+            maxTokens: 8192
+          },
+          {
+            id: "MiniMax-M2",
+            name: "MiniMax M2",
+            reasoning: true,
+            input: ["text"],
+            cost: { input: 15, output: 60, cacheRead: 2, cacheWrite: 10 },
+            contextWindow: 200000,
+            maxTokens: 8192
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+Notes:
+- Set `MINIMAX_API_KEY` environment variable or use `clawdbot onboard --auth-choice minimax-api`
+- Available models: `MiniMax-M2.1` (default), `MiniMax-M2.1-lightning` (~100 tps), `MiniMax-M2` (reasoning)
+- Pricing is a placeholder; MiniMax doesn't publish public rates. Override in `models.json` for accurate cost tracking.
 
 Notes:
 - Supported APIs: `openai-completions`, `openai-responses`, `anthropic-messages`,

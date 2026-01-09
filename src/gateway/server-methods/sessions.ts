@@ -24,6 +24,7 @@ import {
   validateSessionsListParams,
   validateSessionsPatchParams,
   validateSessionsResetParams,
+  validateSessionsResolveParams,
 } from "../protocol/index.js";
 import {
   archiveFileOnDisk,
@@ -34,6 +35,7 @@ import {
   type SessionsPatchResult,
 } from "../session-utils.js";
 import { applySessionsPatchToStore } from "../sessions-patch.js";
+import { resolveSessionKeyFromResolveParams } from "../sessions-resolve.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
 export const sessionsHandlers: GatewayRequestHandlers = {
@@ -59,6 +61,28 @@ export const sessionsHandlers: GatewayRequestHandlers = {
       opts: p,
     });
     respond(true, result, undefined);
+  },
+  "sessions.resolve": ({ params, respond }) => {
+    if (!validateSessionsResolveParams(params)) {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          `invalid sessions.resolve params: ${formatValidationErrors(validateSessionsResolveParams.errors)}`,
+        ),
+      );
+      return;
+    }
+    const p = params as import("../protocol/index.js").SessionsResolveParams;
+    const cfg = loadConfig();
+
+    const resolved = resolveSessionKeyFromResolveParams({ cfg, p });
+    if (!resolved.ok) {
+      respond(false, undefined, resolved.error);
+      return;
+    }
+    respond(true, { ok: true, key: resolved.key }, undefined);
   },
   "sessions.patch": async ({ params, respond, context }) => {
     if (!validateSessionsPatchParams(params)) {
