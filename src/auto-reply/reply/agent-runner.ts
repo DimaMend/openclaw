@@ -825,8 +825,22 @@ export async function runReplyAgent(params: {
       DEFAULT_CONTEXT_TOKENS;
 
     if (sessionStore && sessionKey) {
+      // Reload store to avoid overwriting concurrent updates (e.g. from inline directives or parallel runs)
+      let freshStore = sessionStore;
+      let entry = sessionEntry ?? sessionStore[sessionKey];
+
+      if (storePath) {
+        try {
+          freshStore = loadSessionStore(storePath);
+          entry = freshStore[sessionKey];
+        } catch (err) {
+          logVerbose(
+            `failed to reload session store for usage update: ${String(err)}`,
+          );
+        }
+      }
+
       if (hasNonzeroUsage(usage)) {
-        const entry = sessionEntry ?? sessionStore[sessionKey];
         if (entry) {
           const input = usage.input ?? 0;
           const output = usage.output ?? 0;
@@ -846,15 +860,14 @@ export async function runReplyAgent(params: {
           if (cliSessionId) {
             nextEntry.claudeCliSessionId = cliSessionId;
           }
-          sessionStore[sessionKey] = nextEntry;
+          freshStore[sessionKey] = nextEntry;
           if (storePath) {
-            await saveSessionStore(storePath, sessionStore);
+            await saveSessionStore(storePath, freshStore);
           }
         }
       } else if (modelUsed || contextTokensUsed) {
-        const entry = sessionEntry ?? sessionStore[sessionKey];
         if (entry) {
-          sessionStore[sessionKey] = {
+          freshStore[sessionKey] = {
             ...entry,
             modelProvider: providerUsed ?? entry.modelProvider,
             model: modelUsed ?? entry.model,
@@ -862,7 +875,7 @@ export async function runReplyAgent(params: {
             claudeCliSessionId: cliSessionId ?? entry.claudeCliSessionId,
           };
           if (storePath) {
-            await saveSessionStore(storePath, sessionStore);
+            await saveSessionStore(storePath, freshStore);
           }
         }
       }

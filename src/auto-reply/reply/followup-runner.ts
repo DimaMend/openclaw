@@ -4,7 +4,11 @@ import { DEFAULT_CONTEXT_TOKENS } from "../../agents/defaults.js";
 import { runWithModelFallback } from "../../agents/model-fallback.js";
 import { runEmbeddedPiAgent } from "../../agents/pi-embedded.js";
 import { hasNonzeroUsage } from "../../agents/usage.js";
-import { type SessionEntry, saveSessionStore } from "../../config/sessions.js";
+import {
+  loadSessionStore,
+  type SessionEntry,
+  saveSessionStore,
+} from "../../config/sessions.js";
 import type { TypingMode } from "../../config/types.js";
 import { logVerbose } from "../../globals.js";
 import { registerAgentRunContext } from "../../infra/agent-events.js";
@@ -242,14 +246,27 @@ export function createFollowupRunner(params: {
           sessionEntry?.contextTokens ??
           DEFAULT_CONTEXT_TOKENS;
 
+        // Reload store to avoid overwriting concurrent updates
+        let freshStore = sessionStore;
+        let entry = sessionStore[sessionKey];
+        if (storePath) {
+          try {
+            freshStore = loadSessionStore(storePath);
+            entry = freshStore[sessionKey];
+          } catch (err) {
+            logVerbose(
+              `failed to reload session store for followup usage update: ${String(err)}`,
+            );
+          }
+        }
+
         if (hasNonzeroUsage(usage)) {
-          const entry = sessionStore[sessionKey];
           if (entry) {
             const input = usage.input ?? 0;
             const output = usage.output ?? 0;
             const promptTokens =
               input + (usage.cacheRead ?? 0) + (usage.cacheWrite ?? 0);
-            sessionStore[sessionKey] = {
+            freshStore[sessionKey] = {
               ...entry,
               inputTokens: input,
               outputTokens: output,
@@ -261,20 +278,19 @@ export function createFollowupRunner(params: {
               updatedAt: Date.now(),
             };
             if (storePath) {
-              await saveSessionStore(storePath, sessionStore);
+              await saveSessionStore(storePath, freshStore);
             }
           }
         } else if (modelUsed || contextTokensUsed) {
-          const entry = sessionStore[sessionKey];
           if (entry) {
-            sessionStore[sessionKey] = {
+            freshStore[sessionKey] = {
               ...entry,
               modelProvider: fallbackProvider ?? entry.modelProvider,
               model: modelUsed ?? entry.model,
               contextTokens: contextTokensUsed ?? entry.contextTokens,
             };
             if (storePath) {
-              await saveSessionStore(storePath, sessionStore);
+              await saveSessionStore(storePath, freshStore);
             }
           }
         }
