@@ -26,10 +26,8 @@ Read the main workflow guide and understand the development model:
 | Priority | File | Purpose |
 |----------|------|---------|
 | 1 | `.workflow/AGENTS.md` | Complete workflow guide - the source of truth |
-| 2 | `~/Projects/clawdbot/project/BACKLOG.md` | Current priorities and tasks |
-| 3 | `~/Projects/clawdbot/project/DONE.md` | Completed work log |
-| 4 | `.workflow/automation/agent-automation.md` | Multi-agent coordination (if exists) |
-| 5 | `.workflow/automation/infrastructure.md` | Infrastructure setup (if exists) |
+| 2 | `.workflow/automation/agent-automation.md` | Multi-agent coordination |
+| 3 | `.workflow/automation/infrastructure.md` | Infrastructure setup |
 
 ---
 
@@ -96,7 +94,6 @@ From `.workflow/AGENTS.md`, understand the three-remote model:
 ## Phase 5: Generate Report
 
 Create a concise internal summary covering:
-- Current project priorities (from BACKLOG.md)
 - Hotfix system and build workflow
 - Available slash commands
 - Git remote model
@@ -108,10 +105,6 @@ Display your summary:
 ```
 Dev Workflow Primed
 ===================
-
-Project Status:
-  Backlog:   ~/Projects/clawdbot/project/BACKLOG.md
-  Done log:  ~/Projects/clawdbot/project/DONE.md
 
 Hotfix System:
   Convention:  hotfix/* branches auto-apply during builds
@@ -133,7 +126,7 @@ Commands:
   /build:help  Release build commands
   /wiz:help    Wizard priming commands
 
-Ready for questions about workflow, releases, or project planning.
+Ready for questions about workflow or releases.
 ```
 
 ### Default (no --verbose):

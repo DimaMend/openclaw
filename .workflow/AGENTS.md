@@ -107,6 +107,8 @@ git checkout main && git branch -D temp/test-123
 
 Results: `~/.clawdbot/daily-builds/summary-$(date +%Y-%m-%d).log`
 
+See `automation/infrastructure.md` for per-architecture scripts and detailed setup.
+
 ---
 
 ## Standards
