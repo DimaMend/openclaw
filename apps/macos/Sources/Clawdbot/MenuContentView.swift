@@ -304,7 +304,9 @@ struct MenuContent: View {
         SettingsTabRouter.request(tab)
         NSApp.activate(ignoringOtherApps: true)
         self.openSettings()
-        NotificationCenter.default.post(name: .clawdbotSelectSettingsTab, object: tab)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .clawdbotSelectSettingsTab, object: tab)
+        }
     }
 
     @MainActor

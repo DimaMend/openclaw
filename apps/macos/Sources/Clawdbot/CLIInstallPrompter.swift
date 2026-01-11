@@ -61,8 +61,10 @@ final class CLIInstallPrompter {
 
     private func openSettings(tab: SettingsTab) {
         SettingsTabRouter.request(tab)
-        NotificationCenter.default.post(name: .clawdbotSelectSettingsTab, object: tab)
         SettingsWindowOpener.shared.open()
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .clawdbotSelectSettingsTab, object: tab)
+        }
     }
 
     private static func appVersion() -> String? {
