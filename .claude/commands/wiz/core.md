@@ -1,7 +1,7 @@
 ---
 description: Summon architecture wizard - prime agent with Clawdbot product internals
-allowed-tools: [Read, Glob, Grep, Task]
-argument-hint: "[--verbose]"
+allowed-tools: [Read, Glob, Grep, Task, Write, Bash]
+argument-hint: "[output-file]"
 ---
 
 # Wizard: Clawdbot Core Architecture
@@ -10,12 +10,17 @@ You are summoning an architecture wizard. Prime yourself with deep understanding
 
 **Arguments:** $ARGUMENTS
 
+**Output file:** `$ARGUMENTS` (default: `/dev/null`)
+- Use `stdout` to display report on screen
+- Use a file path to write report to that location
+- Default `/dev/null` suppresses output
+
 ## CRITICAL: No Cheating
 
-You MUST explore the codebase and build understanding, even in quiet mode.
-The exploration happens regardless - `--verbose` only controls whether you display the report.
+You MUST explore the codebase and build understanding regardless of output destination.
+The exploration happens always - the argument only controls where the report is written.
 
-Generate your internal summary to ensure context is loaded. Then decide whether to show it.
+Generate your internal summary to ensure context is loaded. Then write it to the specified destination.
 
 ---
 
@@ -115,9 +120,7 @@ Create a concise internal summary covering:
 - Key abstractions
 - Entry points
 
-### If `--verbose` in arguments:
-
-Display your summary:
+**Report content:**
 
 ```
 Clawdbot Architecture Primed
@@ -145,13 +148,12 @@ Key Abstractions:
 Ready for questions about architecture, data flow, or implementation.
 ```
 
-### Default (no --verbose):
+**Output handling:**
 
-Just say:
-
-```
-Primed for Clawdbot architecture questions.
-```
+1. Determine output destination from `$ARGUMENTS` (default: `/dev/null`)
+2. If argument is empty or `/dev/null`: Write nothing, just confirm "Primed for Clawdbot architecture questions."
+3. If argument is `stdout`: Display the report above directly to user
+4. If argument is a file path: Use Write tool to save the report to that path, then confirm "Report written to [path]. Primed for Clawdbot architecture questions."
 
 ---
 

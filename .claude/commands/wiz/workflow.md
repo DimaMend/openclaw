@@ -1,7 +1,7 @@
 ---
 description: Summon workflow wizard - prime agent with dev workflow and project management
-allowed-tools: [Read, Glob, Grep, Task, Bash]
-argument-hint: "[--verbose]"
+allowed-tools: [Read, Glob, Grep, Task, Bash, Write]
+argument-hint: "[output-file]"
 ---
 
 # Wizard: Development Workflow
@@ -10,12 +10,17 @@ You are summoning a workflow wizard. Prime yourself with understanding of the de
 
 **Arguments:** $ARGUMENTS
 
+**Output file:** `$ARGUMENTS` (default: `/dev/null`)
+- Use `stdout` to display report on screen
+- Use a file path to write report to that location
+- Default `/dev/null` suppresses output
+
 ## CRITICAL: No Cheating
 
-You MUST explore the workflow docs and project state, even in quiet mode.
-The exploration happens regardless - `--verbose` only controls whether you display the report.
+You MUST explore the workflow docs and project state regardless of output destination.
+The exploration happens always - the argument only controls where the report is written.
 
-Generate your internal summary to ensure context is loaded. Then decide whether to show it.
+Generate your internal summary to ensure context is loaded. Then write it to the specified destination.
 
 ---
 
@@ -98,9 +103,7 @@ Create a concise internal summary covering:
 - Available slash commands
 - Git remote model
 
-### If `--verbose` in arguments:
-
-Display your summary:
+**Report content:**
 
 ```
 Dev Workflow Primed
@@ -129,13 +132,12 @@ Commands:
 Ready for questions about workflow or releases.
 ```
 
-### Default (no --verbose):
+**Output handling:**
 
-Just say:
-
-```
-Primed for workflow and project management questions.
-```
+1. Determine output destination from `$ARGUMENTS` (default: `/dev/null`)
+2. If argument is empty or `/dev/null`: Write nothing, just confirm "Primed for workflow and project management questions."
+3. If argument is `stdout`: Display the report above directly to user
+4. If argument is a file path: Use Write tool to save the report to that path, then confirm "Report written to [path]. Primed for workflow and project management questions."
 
 ---
 
