@@ -38,7 +38,7 @@ Results: `~/.clawdbot/daily-builds/summary-$(date +%Y-%m-%d).log`
 | Log | Location |
 |-----|----------|
 | Gateway | stdout/stderr |
-| Sessions | `~/.clawdbot/sessions/*.jsonl` |
+| Sessions | `~/.clawdbot/agents/main/sessions/*.jsonl` |
 | Agent | `~/.claude/session.log` |
 | macOS unified | `./scripts/clawlog.sh --follow` |
 
