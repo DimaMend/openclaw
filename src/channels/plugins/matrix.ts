@@ -11,6 +11,7 @@ import {
 } from "../../routing/session-key.js";
 import { getChatChannelMeta } from "../registry.js";
 import { formatPairingApproveHint } from "./helpers.js";
+import { matrixOnboardingAdapter } from "./onboarding/matrix.js";
 import { PAIRING_APPROVED_MESSAGE } from "./pairing-message.js";
 import type { ChannelPlugin } from "./types.js";
 
@@ -25,6 +26,7 @@ export type ResolvedMatrixAccount = {
     homeserver?: string;
     userId?: string;
     accessToken?: string;
+    password?: string;
     encryption?: boolean;
     dmPolicy?: string;
     allowFrom?: Array<string | number>;
@@ -33,23 +35,37 @@ export type ResolvedMatrixAccount = {
   };
 };
 
+function clean(value?: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function resolveMatrixCredentialValues(
+  cfg: { matrix?: Record<string, unknown> },
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const matrixConfig = (cfg.matrix ?? {}) as Record<string, unknown>;
+  return {
+    matrixConfig,
+    homeserver: clean(env.MATRIX_HOMESERVER) || clean(matrixConfig.homeserver),
+    userId: clean(env.MATRIX_USER_ID) || clean(matrixConfig.userId),
+    accessToken:
+      clean(env.MATRIX_ACCESS_TOKEN) || clean(matrixConfig.accessToken),
+    password: clean(env.MATRIX_PASSWORD) || clean(matrixConfig.password),
+  };
+}
+
 function resolveMatrixAccount(params: {
   cfg: { matrix?: Record<string, unknown> };
   accountId?: string | null;
 }): ResolvedMatrixAccount {
   const cfg = params.cfg;
-  const matrixConfig = (cfg.matrix ?? {}) as Record<string, unknown>;
+  const resolved = resolveMatrixCredentialValues(cfg);
+  const matrixConfig = resolved.matrixConfig;
   const enabled = matrixConfig.enabled !== false;
-  const hasAccessToken =
-    typeof matrixConfig.accessToken === "string" &&
-    matrixConfig.accessToken.trim().length > 0;
-  const hasPassword =
-    typeof matrixConfig.password === "string" &&
-    matrixConfig.password.trim().length > 0;
   const configured = Boolean(
-    matrixConfig.homeserver &&
-      matrixConfig.userId &&
-      (hasAccessToken || hasPassword),
+    resolved.homeserver &&
+      resolved.userId &&
+      (resolved.accessToken || resolved.password),
   );
   return {
     accountId: params.accountId ?? DEFAULT_ACCOUNT_ID,
@@ -57,9 +73,10 @@ function resolveMatrixAccount(params: {
     enabled,
     configured,
     config: {
-      homeserver: matrixConfig.homeserver as string | undefined,
-      userId: matrixConfig.userId as string | undefined,
-      accessToken: matrixConfig.accessToken as string | undefined,
+      homeserver: resolved.homeserver || undefined,
+      userId: resolved.userId || undefined,
+      accessToken: resolved.accessToken || undefined,
+      password: resolved.password || undefined,
       encryption: matrixConfig.encryption as boolean | undefined,
       dmPolicy: (matrixConfig.dm as Record<string, unknown> | undefined)
         ?.policy as string | undefined,
@@ -76,6 +93,7 @@ export const matrixPlugin: ChannelPlugin<ResolvedMatrixAccount> = {
   meta: {
     ...meta,
   },
+  onboarding: matrixOnboardingAdapter,
   pairing: {
     idLabel: "matrixUserId",
     normalizeAllowEntry: (entry) => entry.replace(/^matrix:/i, ""),

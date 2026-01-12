@@ -67,4 +67,91 @@ describe("setupChannels", () => {
     );
     expect(multiselect).not.toHaveBeenCalled();
   });
+
+  it("QuickStart prompts for Matrix credentials", async () => {
+    const envKeys = [
+      "MATRIX_HOMESERVER",
+      "MATRIX_USER_ID",
+      "MATRIX_ACCESS_TOKEN",
+      "MATRIX_PASSWORD",
+      "MATRIX_DEVICE_NAME",
+    ] as const;
+    const prevEnv = Object.fromEntries(
+      envKeys.map((key) => [key, process.env[key]]),
+    ) as Record<(typeof envKeys)[number], string | undefined>;
+    for (const key of envKeys) {
+      delete process.env[key];
+    }
+
+    const select = vi.fn(async ({ message }: { message: string }) => {
+      if (message === "Select provider (QuickStart)") return "matrix";
+      throw new Error(`unexpected select prompt: ${message}`);
+    });
+    const multiselect = vi.fn(async () => {
+      throw new Error("unexpected multiselect");
+    });
+    const text = vi.fn(async ({ message }: { message: string }) => {
+      if (message === "Matrix homeserver") {
+        return "https://matrix.example.org";
+      }
+      if (message === "Matrix user id") {
+        return "@clawdbot:example.org";
+      }
+      if (message === "Matrix access token") {
+        return "syt_test";
+      }
+      throw new Error(`unexpected text prompt: ${message}`);
+    });
+    const confirm = vi.fn(async ({ message }: { message: string }) => {
+      if (message.includes("Use a Matrix access token")) return true;
+      if (message.includes("Enable Matrix end-to-end encryption")) return false;
+      throw new Error(`unexpected confirm prompt: ${message}`);
+    });
+
+    const prompter: WizardPrompter = {
+      intro: vi.fn(async () => {}),
+      outro: vi.fn(async () => {}),
+      note: vi.fn(async () => {}),
+      select: select as WizardPrompter["select"],
+      multiselect,
+      text: text as unknown as WizardPrompter["text"],
+      confirm: confirm as WizardPrompter["confirm"],
+      progress: vi.fn(() => ({ update: vi.fn(), stop: vi.fn() })),
+    };
+
+    const runtime: RuntimeEnv = {
+      log: vi.fn(),
+      error: vi.fn(),
+      exit: vi.fn((code: number) => {
+        throw new Error(`exit:${code}`);
+      }),
+    };
+
+    try {
+      await setupProviders({} as ClawdbotConfig, runtime, prompter, {
+        skipConfirm: true,
+        quickstartDefaults: true,
+        skipDmPolicyPrompt: true,
+      });
+    } finally {
+      for (const key of envKeys) {
+        if (prevEnv[key] === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = prevEnv[key];
+        }
+      }
+    }
+
+    expect(text).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Matrix homeserver" }),
+    );
+    expect(text).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Matrix user id" }),
+    );
+    expect(text).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Matrix access token" }),
+    );
+    expect(multiselect).not.toHaveBeenCalled();
+  });
 });

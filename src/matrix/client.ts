@@ -8,6 +8,7 @@ export type MatrixResolvedConfig = {
   userId: string;
   accessToken?: string;
   password?: string;
+  deviceId?: string;
   deviceName?: string;
   encryption: boolean;
   initialSyncLimit?: number;
@@ -34,6 +35,7 @@ type SharedMatrixClientState = {
 let sharedClientState: SharedMatrixClientState | null = null;
 let sharedClientPromise: Promise<SharedMatrixClientState> | null = null;
 let sharedClientStartPromise: Promise<void> | null = null;
+const deviceIdCache = new Map<string, string>();
 
 export function isBunRuntime(): boolean {
   const versions = process.versions as { bun?: string };
@@ -59,6 +61,7 @@ export function resolveMatrixConfig(
     clean(env.MATRIX_ACCESS_TOKEN) || clean(matrix.accessToken) || undefined;
   const password =
     clean(env.MATRIX_PASSWORD) || clean(matrix.password) || undefined;
+  const deviceId = clean(matrix.deviceId) || undefined;
   const deviceName =
     clean(env.MATRIX_DEVICE_NAME) || clean(matrix.deviceName) || undefined;
   const encryption = matrix.encryption === true;
@@ -71,10 +74,44 @@ export function resolveMatrixConfig(
     userId,
     accessToken,
     password,
+    deviceId,
     deviceName,
     encryption,
     initialSyncLimit,
   };
+}
+
+function buildDeviceIdCacheKey(params: {
+  homeserver: string;
+  userId: string;
+  accessToken: string;
+}): string {
+  return `${params.homeserver}|${params.userId}|${params.accessToken}`;
+}
+
+export async function resolveMatrixDeviceIdFromWhoami(params: {
+  homeserver: string;
+  userId: string;
+  accessToken: string;
+  timeoutMs?: number;
+}): Promise<string | undefined> {
+  const sdk = await loadMatrixSdk();
+  const client = sdk.createClient({
+    baseUrl: params.homeserver,
+    userId: params.userId,
+    accessToken: params.accessToken,
+    localTimeoutMs: params.timeoutMs,
+  });
+  try {
+    const response = await client.whoami();
+    const deviceId =
+      typeof response.device_id === "string"
+        ? response.device_id.trim()
+        : "";
+    return deviceId || undefined;
+  } finally {
+    client.stopClient();
+  }
 }
 
 export async function resolveMatrixAuth(params?: {
@@ -91,18 +128,6 @@ export async function resolveMatrixAuth(params?: {
     throw new Error("Matrix userId is required (matrix.userId)");
   }
 
-  // If access token is provided in config, use it directly
-  if (resolved.accessToken) {
-    return {
-      homeserver: resolved.homeserver,
-      userId: resolved.userId,
-      accessToken: resolved.accessToken,
-      deviceName: resolved.deviceName,
-      encryption: resolved.encryption,
-      initialSyncLimit: resolved.initialSyncLimit,
-    };
-  }
-
   // Try to load cached credentials from previous password login
   const {
     loadMatrixCredentials,
@@ -112,20 +137,73 @@ export async function resolveMatrixAuth(params?: {
   } = await import("./credentials.js");
 
   const cached = loadMatrixCredentials(env);
-  if (
+  const cachedCredentials =
     cached &&
     credentialsMatchConfig(cached, {
       homeserver: resolved.homeserver,
       userId: resolved.userId,
     })
-  ) {
+      ? cached
+      : null;
+
+  // If access token is provided in config, use it directly.
+  if (resolved.accessToken) {
+    let deviceId = resolved.deviceId;
+    if (
+      !deviceId &&
+      cachedCredentials &&
+      cachedCredentials.accessToken === resolved.accessToken
+    ) {
+      deviceId = cachedCredentials.deviceId;
+      touchMatrixCredentials(env);
+    }
+    if (!deviceId && resolved.encryption) {
+      const cacheKey = buildDeviceIdCacheKey({
+        homeserver: resolved.homeserver,
+        userId: resolved.userId,
+        accessToken: resolved.accessToken,
+      });
+      if (deviceIdCache.has(cacheKey)) {
+        deviceId = deviceIdCache.get(cacheKey);
+      } else {
+        try {
+          deviceId = await resolveMatrixDeviceIdFromWhoami({
+            homeserver: resolved.homeserver,
+            userId: resolved.userId,
+            accessToken: resolved.accessToken,
+          });
+        } catch {
+          deviceId = undefined;
+        }
+      }
+      if (deviceId) {
+        deviceIdCache.set(cacheKey, deviceId);
+      }
+    }
+    if (!deviceId && resolved.encryption) {
+      throw new Error(
+        "Matrix encryption requires a deviceId when using an access token. Set matrix.deviceId or use password login to register a device.",
+      );
+    }
+    return {
+      homeserver: resolved.homeserver,
+      userId: resolved.userId,
+      accessToken: resolved.accessToken,
+      deviceId,
+      deviceName: resolved.deviceName,
+      encryption: resolved.encryption,
+      initialSyncLimit: resolved.initialSyncLimit,
+    };
+  }
+
+  if (cachedCredentials) {
     // Update lastUsedAt timestamp
     touchMatrixCredentials(env);
     return {
-      homeserver: cached.homeserver,
-      userId: cached.userId,
-      accessToken: cached.accessToken,
-      deviceId: cached.deviceId,
+      homeserver: cachedCredentials.homeserver,
+      userId: cachedCredentials.userId,
+      accessToken: cachedCredentials.accessToken,
+      deviceId: cachedCredentials.deviceId,
       deviceName: resolved.deviceName,
       encryption: resolved.encryption,
       initialSyncLimit: resolved.initialSyncLimit,
