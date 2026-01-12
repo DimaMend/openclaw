@@ -365,16 +365,6 @@ export async function monitorIMessageProvider(
       commandAuthorized &&
       hasControlCommand(messageText);
     const effectiveWasMentioned = mentioned || shouldBypassMention;
-    if (
-      isGroup &&
-      requireMention &&
-      canDetectMention &&
-      !mentioned &&
-      !shouldBypassMention
-    ) {
-      logVerbose(`imessage: skipping group message (no mention)`);
-      return;
-    }
 
     const attachments = includeAttachments ? (message.attachments ?? []) : [];
     const firstAttachment = attachments?.find(
@@ -390,14 +380,53 @@ export async function monitorIMessageProvider(
         : "";
     const bodyText = messageText || placeholder;
     if (!bodyText) return;
+    const createdAt = message.created_at
+      ? Date.parse(message.created_at)
+      : undefined;
+    const historyKey = isGroup
+      ? String(chatId ?? chatGuid ?? chatIdentifier ?? "unknown")
+      : undefined;
+    if (
+      isGroup &&
+      requireMention &&
+      canDetectMention &&
+      !mentioned &&
+      !shouldBypassMention
+    ) {
+      if (historyKey && historyLimit > 0) {
+        const fromLabel = `${message.chat_name || "iMessage Group"} id:${
+          chatId ?? "unknown"
+        }`;
+        buildHistoryContextFromMap({
+          historyMap: groupHistories,
+          historyKey,
+          limit: historyLimit,
+          entry: {
+            sender: normalizeIMessageHandle(sender),
+            body: bodyText,
+            timestamp: createdAt,
+            messageId: message.id ? String(message.id) : undefined,
+          },
+          currentMessage: "",
+          formatEntry: (entry) =>
+            formatAgentEnvelope({
+              provider: "iMessage",
+              from: fromLabel,
+              timestamp: entry.timestamp,
+              body: `${entry.sender}: ${entry.body}${
+                entry.messageId ? ` [id:${entry.messageId}]` : ""
+              }`,
+            }),
+        });
+      }
+      logVerbose(`imessage: skipping group message (no mention)`);
+      return;
+    }
 
     const chatTarget = formatIMessageChatTarget(chatId);
     const fromLabel = isGroup
       ? `${message.chat_name || "iMessage Group"} id:${chatId ?? "unknown"}`
       : `${normalizeIMessageHandle(sender)} id:${sender}`;
-    const createdAt = message.created_at
-      ? Date.parse(message.created_at)
-      : undefined;
     const body = formatAgentEnvelope({
       provider: "iMessage",
       from: fromLabel,
@@ -405,9 +434,6 @@ export async function monitorIMessageProvider(
       body: bodyText,
     });
     let combinedBody = body;
-    const historyKey = isGroup
-      ? String(chatId ?? chatGuid ?? chatIdentifier ?? "unknown")
-      : undefined;
     if (isGroup && historyKey && historyLimit > 0) {
       combinedBody = buildHistoryContextFromMap({
         historyMap: groupHistories,

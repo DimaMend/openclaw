@@ -126,6 +126,52 @@ describe("monitorIMessageProvider", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
+  it("stores unmentioned group messages for later mention context", async () => {
+    const run = monitorIMessageProvider();
+    await waitForSubscribe();
+
+    notificationHandler?.({
+      method: "message",
+      params: {
+        message: {
+          id: 21,
+          chat_id: 42,
+          sender: "+15550001111",
+          is_from_me: false,
+          text: "first message",
+          is_group: true,
+          chat_name: "Lobster Squad",
+        },
+      },
+    });
+
+    await flush();
+
+    notificationHandler?.({
+      method: "message",
+      params: {
+        message: {
+          id: 22,
+          chat_id: 42,
+          sender: "+15550001111",
+          is_from_me: false,
+          text: "@clawd second message",
+          is_group: true,
+          chat_name: "Lobster Squad",
+        },
+      },
+    });
+
+    await flush();
+    closeResolve?.();
+    await run;
+
+    expect(replyMock).toHaveBeenCalledTimes(1);
+    const ctx = replyMock.mock.calls[0]?.[0] as { Body?: string };
+    expect(ctx.Body).toContain("first message");
+    expect(ctx.Body).toContain("second message");
+  });
+
   it("allows group messages when imessage groups default disables mention gating", async () => {
     config = {
       ...config,
