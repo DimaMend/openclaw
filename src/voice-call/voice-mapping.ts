@@ -1,6 +1,18 @@
 /**
- * Voice mapping utilities for converting between different TTS providers.
+ * Voice mapping and XML utilities for voice call providers.
  */
+
+/**
+ * Escape XML special characters for TwiML and other XML responses.
+ */
+export function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
 
 /**
  * Map of OpenAI voice names to similar Twilio Polly voices.

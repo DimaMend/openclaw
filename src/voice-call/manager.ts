@@ -17,7 +17,7 @@ import {
   TerminalStates,
   type TranscriptEntry,
 } from "./types.js";
-import { mapVoiceToPolly } from "./voice-mapping.js";
+import { escapeXml, mapVoiceToPolly } from "./voice-mapping.js";
 
 /**
  * Manages voice calls: state machine, persistence, and provider coordination.
@@ -459,43 +459,37 @@ export class CallManager {
    * Check if an inbound call should be accepted based on policy.
    */
   private shouldAcceptInbound(from: string | undefined): boolean {
-    const policy = this.config.inboundPolicy;
+    const { inboundPolicy: policy, allowFrom } = this.config;
 
-    if (policy === "disabled") {
-      console.log("[voice-call] Inbound call rejected: policy is disabled");
-      return false;
-    }
-
-    if (policy === "open") {
-      console.log("[voice-call] Inbound call accepted: policy is open");
-      return true;
-    }
-
-    if (policy === "allowlist" || policy === "pairing") {
-      const allowlist = this.config.allowFrom || [];
-      const normalized = from?.replace(/\D/g, "") || "";
-      const allowed = allowlist.some((num) => {
-        const normalizedAllow = num.replace(/\D/g, "");
-        return (
-          normalized.endsWith(normalizedAllow) ||
-          normalizedAllow.endsWith(normalized)
-        );
-      });
-
-      if (allowed) {
-        console.log(
-          `[voice-call] Inbound call accepted: ${from} is in allowlist`,
-        );
-        return true;
-      } else {
-        console.log(
-          `[voice-call] Inbound call rejected: ${from} not in allowlist`,
-        );
+    switch (policy) {
+      case "disabled":
+        console.log("[voice-call] Inbound call rejected: policy is disabled");
         return false;
-      }
-    }
 
-    return false;
+      case "open":
+        console.log("[voice-call] Inbound call accepted: policy is open");
+        return true;
+
+      case "allowlist":
+      case "pairing": {
+        const normalized = from?.replace(/\D/g, "") || "";
+        const allowed = (allowFrom || []).some((num) => {
+          const normalizedAllow = num.replace(/\D/g, "");
+          return (
+            normalized.endsWith(normalizedAllow) ||
+            normalizedAllow.endsWith(normalized)
+          );
+        });
+        const status = allowed ? "accepted" : "rejected";
+        console.log(
+          `[voice-call] Inbound call ${status}: ${from} ${allowed ? "is in" : "not in"} allowlist`,
+        );
+        return allowed;
+      }
+
+      default:
+        return false;
+    }
   }
 
   /**
@@ -720,49 +714,49 @@ export class CallManager {
     return calls;
   }
 
+  // States that can cycle during multi-turn conversations
+  private static readonly ConversationStates = new Set<CallState>([
+    "speaking",
+    "listening",
+  ]);
+
+  // Non-terminal state order for monotonic transitions
+  private static readonly StateOrder: readonly CallState[] = [
+    "initiated",
+    "ringing",
+    "answered",
+    "active",
+    "speaking",
+    "listening",
+  ];
+
   /**
    * Transition call state with monotonic enforcement.
    */
   private transitionState(call: CallRecord, newState: CallState): void {
-    // Don't move backwards or to same state
-    if (call.state === newState) return;
-    if (TerminalStates.has(call.state)) return;
+    // No-op for same state or already terminal
+    if (call.state === newState || TerminalStates.has(call.state)) return;
+
+    // Terminal states can always be reached from non-terminal
+    if (TerminalStates.has(newState)) {
+      call.state = newState;
+      return;
+    }
 
     // Allow cycling between speaking and listening (multi-turn conversations)
-    const conversationStates = new Set<CallState>(["speaking", "listening"]);
     if (
-      conversationStates.has(call.state) &&
-      conversationStates.has(newState)
+      CallManager.ConversationStates.has(call.state) &&
+      CallManager.ConversationStates.has(newState)
     ) {
       call.state = newState;
       return;
     }
 
-    // State priority for monotonic transitions
-    const stateOrder: CallState[] = [
-      "initiated",
-      "ringing",
-      "answered",
-      "active",
-      "speaking",
-      "listening",
-      // Terminal states (can be reached from any non-terminal)
-      "completed",
-      "hangup-user",
-      "hangup-bot",
-      "timeout",
-      "error",
-      "failed",
-      "no-answer",
-      "busy",
-      "voicemail",
-    ];
+    // Only allow forward transitions in state order
+    const currentIndex = CallManager.StateOrder.indexOf(call.state);
+    const newIndex = CallManager.StateOrder.indexOf(newState);
 
-    const currentIndex = stateOrder.indexOf(call.state);
-    const newIndex = stateOrder.indexOf(newState);
-
-    // Allow forward transitions and terminal states
-    if (newIndex > currentIndex || TerminalStates.has(newState)) {
+    if (newIndex > currentIndex) {
       call.state = newState;
     }
   }
@@ -841,16 +835,9 @@ export class CallManager {
    * Generate TwiML for notify mode (speak message and hang up).
    */
   private generateNotifyTwiml(message: string, voice: string): string {
-    const escapedMessage = message
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&apos;");
-
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${voice}">${escapedMessage}</Say>
+  <Say voice="${voice}">${escapeXml(message)}</Say>
   <Hangup/>
 </Response>`;
   }

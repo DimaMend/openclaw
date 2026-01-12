@@ -14,7 +14,7 @@ import type {
   WebhookContext,
   WebhookVerificationResult,
 } from "../types.js";
-import { mapVoiceToPolly } from "../voice-mapping.js";
+import { escapeXml, mapVoiceToPolly } from "../voice-mapping.js";
 import { verifyTwilioWebhook } from "../webhook-security.js";
 import type { VoiceCallProvider } from "./base.js";
 import type { OpenAITTSProvider } from "./tts-openai.js";
@@ -207,6 +207,18 @@ export class TwilioProvider implements VoiceCallProvider {
   }
 
   /**
+   * Parse Twilio direction to normalized format.
+   */
+  private static parseDirection(
+    direction: string | null,
+  ): "inbound" | "outbound" | undefined {
+    if (direction === "inbound") return "inbound";
+    if (direction === "outbound-api" || direction === "outbound-dial")
+      return "outbound";
+    return undefined;
+  }
+
+  /**
    * Convert Twilio webhook params to normalized event format.
    */
   private normalizeEvent(
@@ -214,24 +226,15 @@ export class TwilioProvider implements VoiceCallProvider {
     callIdOverride?: string,
   ): NormalizedEvent | null {
     const callSid = params.get("CallSid") || "";
-    const direction = params.get("Direction");
-    const from = params.get("From");
-    const to = params.get("To");
 
     const baseEvent = {
       id: crypto.randomUUID(),
       callId: callIdOverride || callSid,
       providerCallId: callSid,
       timestamp: Date.now(),
-      // Include direction/from/to for inbound call detection
-      direction:
-        direction === "inbound"
-          ? ("inbound" as const)
-          : direction === "outbound-api" || direction === "outbound-dial"
-            ? ("outbound" as const)
-            : undefined,
-      from: from || undefined,
-      to: to || undefined,
+      direction: TwilioProvider.parseDirection(params.get("Direction")),
+      from: params.get("From") || undefined,
+      to: params.get("To") || undefined,
     };
 
     // Handle speech result (from <Gather>)
@@ -286,9 +289,7 @@ export class TwilioProvider implements VoiceCallProvider {
    * When a call is answered, connects to media stream for bidirectional audio.
    */
   private generateTwimlResponse(ctx?: WebhookContext): string {
-    if (!ctx) {
-      return TwilioProvider.EMPTY_TWIML;
-    }
+    if (!ctx) return TwilioProvider.EMPTY_TWIML;
 
     const params = new URLSearchParams(ctx.rawBody);
     const callStatus = params.get("CallStatus");
@@ -298,39 +299,23 @@ export class TwilioProvider implements VoiceCallProvider {
       `[voice-call] generateTwimlResponse: status=${callStatus} direction=${direction}`,
     );
 
-    // For inbound calls, answer immediately with stream (regardless of status)
-    // Our TwiML response answers the call and starts the stream
+    // For inbound calls, answer immediately with stream
     if (direction === "inbound") {
       const streamUrl = this.getStreamUrl();
-      console.log(`[voice-call] Inbound call - Stream URL: ${streamUrl}`);
-      if (streamUrl) {
-        const twiml = this.getStreamConnectXml(streamUrl);
-        console.log(
-          `[voice-call] Returning Stream TwiML for inbound: ${twiml}`,
-        );
-        return twiml;
-      }
-      // Fallback: just answer with pause if no stream
-      return TwilioProvider.PAUSE_TWIML;
+      return streamUrl
+        ? this.getStreamConnectXml(streamUrl)
+        : TwilioProvider.PAUSE_TWIML;
     }
 
     // For outbound calls, only connect to stream when call is in-progress
     if (callStatus !== "in-progress") {
-      console.log(`[voice-call] Not in-progress, returning empty TwiML`);
       return TwilioProvider.EMPTY_TWIML;
     }
 
     const streamUrl = this.getStreamUrl();
-    console.log(`[voice-call] Stream URL: ${streamUrl}`);
-    if (streamUrl) {
-      const twiml = this.getStreamConnectXml(streamUrl);
-      console.log(`[voice-call] Returning Stream TwiML: ${twiml}`);
-      return twiml;
-    }
-
-    // Fallback: keep call alive with pause while waiting for TTS via API
-    console.log(`[voice-call] No stream URL, returning pause TwiML`);
-    return TwilioProvider.PAUSE_TWIML;
+    return streamUrl
+      ? this.getStreamConnectXml(streamUrl)
+      : TwilioProvider.PAUSE_TWIML;
   }
 
   /**
@@ -369,7 +354,7 @@ export class TwilioProvider implements VoiceCallProvider {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="${this.escapeXml(streamUrl)}" />
+    <Stream url="${escapeXml(streamUrl)}" />
   </Connect>
 </Response>`;
   }
@@ -465,8 +450,8 @@ export class TwilioProvider implements VoiceCallProvider {
     const pollyVoice = mapVoiceToPolly(input.voice);
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${pollyVoice}" language="${input.locale || "en-US"}">${this.escapeXml(input.text)}</Say>
-  <Gather input="speech" speechTimeout="auto" action="${this.escapeXml(webhookUrl)}" method="POST">
+  <Say voice="${pollyVoice}" language="${input.locale || "en-US"}">${escapeXml(input.text)}</Say>
+  <Gather input="speech" speechTimeout="auto" action="${escapeXml(webhookUrl)}" method="POST">
     <Say>.</Say>
   </Gather>
 </Response>`;
@@ -520,7 +505,7 @@ export class TwilioProvider implements VoiceCallProvider {
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Gather input="speech" speechTimeout="auto" language="${input.language || "en-US"}" action="${this.escapeXml(webhookUrl)}" method="POST">
+  <Gather input="speech" speechTimeout="auto" language="${input.language || "en-US"}" action="${escapeXml(webhookUrl)}" method="POST">
   </Gather>
 </Response>`;
 
@@ -535,18 +520,6 @@ export class TwilioProvider implements VoiceCallProvider {
   async stopListening(_input: StopListeningInput): Promise<void> {
     // Twilio's <Gather> automatically stops on speech end
     // No explicit action needed
-  }
-
-  /**
-   * Escape XML special characters.
-   */
-  private escapeXml(text: string): string {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&apos;");
   }
 }
 

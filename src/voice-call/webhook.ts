@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import http from "node:http";
 import { URL } from "node:url";
 
@@ -374,33 +375,48 @@ export type TailscaleSelfInfo = {
   nodeId: string | null;
 };
 
-export async function getTailscaleSelfInfo(): Promise<TailscaleSelfInfo | null> {
-  const { spawn } = await import("node:child_process");
-
+/**
+ * Run a tailscale command with timeout, collecting stdout.
+ */
+function runTailscaleCommand(
+  args: string[],
+  timeoutMs = 2500,
+): Promise<{ code: number; stdout: string }> {
   return new Promise((resolve) => {
-    const proc = spawn("tailscale", ["status", "--json"], {
+    const proc = spawn("tailscale", args, {
       stdio: ["ignore", "pipe", "pipe"],
     });
 
-    let output = "";
+    let stdout = "";
     proc.stdout.on("data", (data) => {
-      output += data;
+      stdout += data;
     });
+
+    const timer = setTimeout(() => {
+      proc.kill("SIGKILL");
+      resolve({ code: -1, stdout: "" });
+    }, timeoutMs);
+
     proc.on("close", (code) => {
-      if (code !== 0) {
-        resolve(null);
-        return;
-      }
-      try {
-        const status = JSON.parse(output);
-        const dnsName = status.Self?.DNSName?.replace(/\.$/, "") || null;
-        const nodeId = status.Self?.ID || null;
-        resolve({ dnsName, nodeId });
-      } catch {
-        resolve(null);
-      }
+      clearTimeout(timer);
+      resolve({ code: code ?? -1, stdout });
     });
   });
+}
+
+export async function getTailscaleSelfInfo(): Promise<TailscaleSelfInfo | null> {
+  const { code, stdout } = await runTailscaleCommand(["status", "--json"]);
+  if (code !== 0) return null;
+
+  try {
+    const status = JSON.parse(stdout);
+    return {
+      dnsName: status.Self?.DNSName?.replace(/\.$/, "") || null,
+      nodeId: status.Self?.ID || null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function getTailscaleDnsName(): Promise<string | null> {
@@ -413,63 +429,36 @@ export async function setupTailscaleExposureRoute(opts: {
   path: string;
   localUrl: string;
 }): Promise<string | null> {
-  const { spawn } = await import("node:child_process");
-
   const dnsName = await getTailscaleDnsName();
   if (!dnsName) {
     console.warn("[voice-call] Could not get Tailscale DNS name");
     return null;
   }
 
-  return new Promise((resolve) => {
-    const proc = spawn(
-      "tailscale",
-      [opts.mode, "--bg", "--yes", "--set-path", opts.path, opts.localUrl],
-      {
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    );
+  const { code } = await runTailscaleCommand([
+    opts.mode,
+    "--bg",
+    "--yes",
+    "--set-path",
+    opts.path,
+    opts.localUrl,
+  ]);
 
-    const timer = setTimeout(() => {
-      proc.kill("SIGKILL");
-      resolve(null);
-    }, 2500);
+  if (code === 0) {
+    const publicUrl = `https://${dnsName}${opts.path}`;
+    console.log(`[voice-call] Tailscale ${opts.mode} active: ${publicUrl}`);
+    return publicUrl;
+  }
 
-    proc.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0) {
-        const publicUrl = `https://${dnsName}${opts.path}`;
-        console.log(`[voice-call] Tailscale ${opts.mode} active: ${publicUrl}`);
-        resolve(publicUrl);
-      } else {
-        console.warn(`[voice-call] Tailscale ${opts.mode} failed`);
-        resolve(null);
-      }
-    });
-  });
+  console.warn(`[voice-call] Tailscale ${opts.mode} failed`);
+  return null;
 }
 
 export async function cleanupTailscaleExposureRoute(opts: {
   mode: "serve" | "funnel";
   path: string;
 }): Promise<void> {
-  const { spawn } = await import("node:child_process");
-
-  await new Promise<void>((resolve) => {
-    const proc = spawn("tailscale", [opts.mode, "off", opts.path], {
-      stdio: "ignore",
-    });
-
-    const timer = setTimeout(() => {
-      proc.kill("SIGKILL");
-      resolve();
-    }, 2500);
-
-    proc.on("close", () => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
+  await runTailscaleCommand([opts.mode, "off", opts.path]);
 }
 
 /**

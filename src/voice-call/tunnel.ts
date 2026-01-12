@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 
+import { getTailscaleDnsName } from "./webhook.js";
+
 /**
  * Tunnel configuration for exposing the webhook server.
  */
@@ -289,40 +291,6 @@ async function stopTailscaleTunnel(
     proc.on("close", () => {
       clearTimeout(timeout);
       resolve();
-    });
-  });
-}
-
-/**
- * Get Tailscale DNS name for the current machine.
- */
-async function getTailscaleDnsName(): Promise<string | null> {
-  return new Promise((resolve) => {
-    const proc = spawn("tailscale", ["status", "--json"], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let output = "";
-    proc.stdout.on("data", (data) => {
-      output += data;
-    });
-
-    proc.on("close", (code) => {
-      if (code !== 0) {
-        resolve(null);
-        return;
-      }
-      try {
-        const status = JSON.parse(output);
-        const dnsName = status.Self?.DNSName?.replace(/\.$/, "") || null;
-        resolve(dnsName);
-      } catch {
-        resolve(null);
-      }
-    });
-
-    proc.on("error", () => {
-      resolve(null);
     });
   });
 }
