@@ -94,13 +94,10 @@ function pickFirstExistingAgentId(
   cfg: ClawdbotConfig,
   agentId: string,
 ): string {
-  const normalized = normalizeAgentId(agentId);
-  const agents = listAgents(cfg);
-  if (agents.length === 0) return normalized;
-  if (agents.some((agent) => normalizeAgentId(agent.id) === normalized)) {
-    return normalized;
-  }
-  return normalizeAgentId(resolveDefaultAgentId(cfg));
+  // We trust explicit bindings. If the agent doesn't exist, we want to fail
+  // or let the runtime handle it, rather than silently falling back to 'main'
+  // which causes session pollution and identity confusion.
+  return normalizeAgentId(agentId);
 }
 
 function matchesProvider(

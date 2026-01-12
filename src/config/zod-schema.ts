@@ -910,13 +910,21 @@ const MemorySearchSchema = z
   })
   .optional();
 
+const AgentModelSelectionSchema = z.union([
+  z.string(),
+  z.object({
+    primary: z.string().optional(),
+    fallbacks: z.array(z.string()).optional(),
+  }),
+]);
+
 const AgentEntrySchema = z.object({
   id: z.string(),
   default: z.boolean().optional(),
   name: z.string().optional(),
   workspace: z.string().optional(),
   agentDir: z.string().optional(),
-  model: z.string().optional(),
+  model: AgentModelSelectionSchema.optional(),
   memorySearch: MemorySearchSchema,
   humanDelay: HumanDelaySchema.optional(),
   identity: IdentitySchema,
@@ -1121,15 +1129,9 @@ const HooksGmailSchema = z
       .optional(),
   })
   .optional();
-
 const AgentDefaultsSchema = z
   .object({
-    model: z
-      .object({
-        primary: z.string().optional(),
-        fallbacks: z.array(z.string()).optional(),
-      })
-      .optional(),
+    model: AgentModelSelectionSchema.optional(),
     imageModel: z
       .object({
         primary: z.string().optional(),
