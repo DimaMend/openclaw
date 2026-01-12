@@ -907,8 +907,12 @@ export function createDiscordMessageHandler(params: {
             }
           : undefined;
 
-      const shouldRequireMention =
-        channelConfig?.requireMention ?? guildInfo?.requireMention ?? true;
+      const shouldRequireMention = resolveDiscordShouldRequireMention({
+        isGuildMessage,
+        isThread: Boolean(threadChannel),
+        channelConfig,
+        guildInfo,
+      });
       const hasAnyMention = Boolean(
         !isDirectMessage &&
           (message.mentionedEveryone ||
@@ -2432,6 +2436,17 @@ export function resolveDiscordChannelConfig(params: {
     };
   }
   return { allowed: false };
+}
+
+export function resolveDiscordShouldRequireMention(params: {
+  isGuildMessage: boolean;
+  isThread: boolean;
+  channelConfig?: DiscordChannelConfigResolved | null;
+  guildInfo?: DiscordGuildEntryResolved | null;
+}): boolean {
+  if (!params.isGuildMessage) return false;
+  if (params.isThread && params.channelConfig?.autoThread) return false;
+  return params.channelConfig?.requireMention ?? params.guildInfo?.requireMention ?? true;
 }
 
 export function isDiscordGroupAllowedByPolicy(params: {
