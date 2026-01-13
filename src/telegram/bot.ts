@@ -1593,9 +1593,12 @@ async function deliverReplies(params: {
 }
 
 function buildTelegramThreadParams(messageThreadId?: number) {
-  return messageThreadId != null
-    ? { message_thread_id: messageThreadId }
-    : undefined;
+  // General topic (ID 1) should not have message_thread_id set when sending
+  // Telegram routes messages to General by NOT specifying the thread ID
+  if (messageThreadId == null || messageThreadId === 1) {
+    return undefined;
+  }
+  return { message_thread_id: messageThreadId };
 }
 
 function resolveTelegramStreamMode(
