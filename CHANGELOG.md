@@ -3,7 +3,7 @@
 ## 2026.1.12-3
 
 ### Fixes
-- Heartbeat: align the default heartbeat prompt with docs by instructing agents to read `HEARTBEAT.md` when present. (#PR)
+- Heartbeat: align the default heartbeat prompt with docs by instructing agents to read `HEARTBEAT.md` when present. (#868)
 
 ## 2026.1.12-2
 
