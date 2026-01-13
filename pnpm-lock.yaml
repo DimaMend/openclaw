@@ -7498,7 +7498,7 @@ snapshots:
 
   matrix-js-sdk@40.0.0-rc.0:
     dependencies:
-      '@babel/runtime': 7.28.4
+      '@babel/runtime': 7.28.6
       '@matrix-org/matrix-sdk-crypto-wasm': 16.0.0
       another-json: 0.2.0
       bs58: 6.0.0
