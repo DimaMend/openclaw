@@ -949,3 +949,39 @@ describe("runEmbeddedPiAgent", () => {
     expect(secondAssistantIndex).toBeGreaterThan(secondUserIndex);
   });
 });
+
+// === Web Search Tests ===
+import { resolveWebSearch } from "./pi-embedded-runner.js";
+
+describe("resolveWebSearch", () => {
+  it("returns undefined when webSearch not configured", () => {
+    expect(resolveWebSearch(undefined)).toBeUndefined();
+    expect(resolveWebSearch({})).toBeUndefined();
+    expect(resolveWebSearch({ agents: {} })).toBeUndefined();
+  });
+
+  it("returns undefined when webSearch.enabled is false", () => {
+    const cfg = { agents: { defaults: { webSearch: { enabled: false } } } };
+    expect(resolveWebSearch(cfg as any)).toBeUndefined();
+  });
+
+  it("returns config when webSearch.enabled is true", () => {
+    const cfg = {
+      agents: {
+        defaults: {
+          webSearch: {
+            enabled: true,
+            maxUses: 5,
+            allowedDomains: ["example.com"],
+          },
+        },
+      },
+    };
+    const result = resolveWebSearch(cfg as any);
+    expect(result).toEqual({
+      enabled: true,
+      maxUses: 5,
+      allowedDomains: ["example.com"],
+    });
+  });
+});

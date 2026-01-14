@@ -205,9 +205,9 @@ export function resolveExtraParams(params: {
 
 /**
  * Resolve webSearch config from agent defaults.
- * @internal
+ * @internal Exported for testing
  */
-function resolveWebSearch(
+export function resolveWebSearch(
   cfg: ClawdbotConfig | undefined,
 ): WebSearchConfig | undefined {
   const ws = cfg?.agents?.defaults?.webSearch;
