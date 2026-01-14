@@ -850,9 +850,9 @@ export function subscribeEmbeddedPiSession(
           const onBlockReply = params.onBlockReply;
           const shouldEmitReasoning = Boolean(
             includeReasoning &&
-              formattedReasoning &&
-              onBlockReply &&
-              formattedReasoning !== lastReasoningSent,
+            formattedReasoning &&
+            onBlockReply &&
+            formattedReasoning !== lastReasoningSent,
           );
           const shouldEmitReasoningBeforeAnswer =
             shouldEmitReasoning &&

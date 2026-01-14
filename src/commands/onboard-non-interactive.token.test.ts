@@ -45,9 +45,8 @@ describe("onboard (non-interactive): token auth", () => {
     };
 
     try {
-      const { runNonInteractiveOnboarding } = await import(
-        "./onboard-non-interactive.js"
-      );
+      const { runNonInteractiveOnboarding } =
+        await import("./onboard-non-interactive.js");
       await runNonInteractiveOnboarding(
         {
           nonInteractive: true,
@@ -76,9 +75,8 @@ describe("onboard (non-interactive): token auth", () => {
       );
       expect(cfg.auth?.profiles?.["anthropic:default"]?.mode).toBe("token");
 
-      const { ensureAuthProfileStore } = await import(
-        "../agents/auth-profiles.js"
-      );
+      const { ensureAuthProfileStore } =
+        await import("../agents/auth-profiles.js");
       const store = ensureAuthProfileStore();
       const profile = store.profiles["anthropic:default"];
       expect(profile?.type).toBe("token");

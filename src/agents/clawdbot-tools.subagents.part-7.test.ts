@@ -6,7 +6,7 @@ vi.mock("../gateway/call.js", () => ({
 }));
 
 let configOverride: ReturnType<
-  typeof import("../config/config.js")["loadConfig"]
+  (typeof import("../config/config.js"))["loadConfig"]
 > = {
   session: {
     mainKey: "main",

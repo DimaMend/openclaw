@@ -256,9 +256,8 @@ describe("gateway wizard (e2e)", () => {
     }
 
     const port2 = await getFreeGatewayPort();
-    const { startGatewayServer: startGatewayServer2 } = await import(
-      "./server.js"
-    );
+    const { startGatewayServer: startGatewayServer2 } =
+      await import("./server.js");
     const server2 = await startGatewayServer2(port2, {
       bind: "loopback",
       controlUiEnabled: false,

@@ -59,9 +59,8 @@ vi.mock("./client.js", () => ({
   },
 }));
 
-const { buildGatewayConnectionDetails, callGateway } = await import(
-  "./call.js"
-);
+const { buildGatewayConnectionDetails, callGateway } =
+  await import("./call.js");
 
 describe("callGateway url resolution", () => {
   beforeEach(() => {

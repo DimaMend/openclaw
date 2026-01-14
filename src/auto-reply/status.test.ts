@@ -258,9 +258,8 @@ describe("buildStatusMessage", () => {
     await withTempHome(
       async (dir) => {
         vi.resetModules();
-        const { buildStatusMessage: buildStatusMessageDynamic } = await import(
-          "./status.js"
-        );
+        const { buildStatusMessage: buildStatusMessageDynamic } =
+          await import("./status.js");
 
         const sessionId = "sess-1";
         const logPath = path.join(

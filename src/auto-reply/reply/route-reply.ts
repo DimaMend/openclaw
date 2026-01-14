@@ -106,9 +106,8 @@ export async function routeReply(
   try {
     // Provider docking: this is an execution boundary (we're about to send).
     // Keep the module cheap to import by loading outbound plumbing lazily.
-    const { deliverOutboundPayloads } = await import(
-      "../../infra/outbound/deliver.js"
-    );
+    const { deliverOutboundPayloads } =
+      await import("../../infra/outbound/deliver.js");
     const results = await deliverOutboundPayloads({
       cfg,
       channel: channelId,

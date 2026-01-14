@@ -287,9 +287,8 @@ export const imessagePlugin: ChannelPlugin<ResolvedIMessageAccount> = {
         `[${account.accountId}] starting provider (${cliPath}${dbPath ? ` db=${dbPath}` : ""})`,
       );
       // Lazy import: the monitor pulls the reply pipeline; avoid ESM init cycles.
-      const { monitorIMessageProvider } = await import(
-        "../../imessage/index.js"
-      );
+      const { monitorIMessageProvider } =
+        await import("../../imessage/index.js");
       return monitorIMessageProvider({
         accountId: account.accountId,
         config: ctx.cfg,

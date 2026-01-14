@@ -73,9 +73,8 @@ describe("onboard (non-interactive): remote gateway config", () => {
     };
 
     try {
-      const { runNonInteractiveOnboarding } = await import(
-        "./onboard-non-interactive.js"
-      );
+      const { runNonInteractiveOnboarding } =
+        await import("./onboard-non-interactive.js");
       await runNonInteractiveOnboarding(
         {
           nonInteractive: true,

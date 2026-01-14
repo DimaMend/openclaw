@@ -53,10 +53,10 @@ export const imessageOnboardingAdapter: ChannelOnboardingAdapter = {
       const account = resolveIMessageAccount({ cfg, accountId });
       return Boolean(
         account.config.cliPath ||
-          account.config.dbPath ||
-          account.config.allowFrom ||
-          account.config.service ||
-          account.config.region,
+        account.config.dbPath ||
+        account.config.allowFrom ||
+        account.config.service ||
+        account.config.region,
       );
     });
     const imessageCliPath = cfg.channels?.imessage?.cliPath ?? "imsg";

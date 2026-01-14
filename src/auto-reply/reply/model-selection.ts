@@ -227,9 +227,8 @@ export async function createModelSelectionState(params: {
     sessionKey &&
     sessionEntry.authProfileOverride
   ) {
-    const { ensureAuthProfileStore } = await import(
-      "../../agents/auth-profiles.js"
-    );
+    const { ensureAuthProfileStore } =
+      await import("../../agents/auth-profiles.js");
     const store = ensureAuthProfileStore(undefined, {
       allowKeychainPrompt: false,
     });

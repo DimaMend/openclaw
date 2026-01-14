@@ -133,9 +133,8 @@ describe("onboard (non-interactive): gateway auth", () => {
       },
     };
 
-    const { runNonInteractiveOnboarding } = await import(
-      "./onboard-non-interactive.js"
-    );
+    const { runNonInteractiveOnboarding } =
+      await import("./onboard-non-interactive.js");
     await runNonInteractiveOnboarding(
       {
         nonInteractive: true,

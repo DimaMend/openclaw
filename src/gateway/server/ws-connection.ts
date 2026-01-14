@@ -159,7 +159,7 @@ export function attachGatewayWsConnectionHandler(params: {
     ) =>
       Boolean(
         userAgent?.toLowerCase().includes("swiftpm-testing-helper") &&
-          isLoopbackAddress(remote),
+        isLoopbackAddress(remote),
       );
 
     socket.once("close", (code, reason) => {

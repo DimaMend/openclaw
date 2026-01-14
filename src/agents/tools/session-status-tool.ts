@@ -330,8 +330,8 @@ export function createSessionStatusTool(opts?: {
       const queueDepth = queueKey ? getFollowupQueueDepth(queueKey) : 0;
       const queueOverrides = Boolean(
         resolved.entry.queueDebounceMs ??
-          resolved.entry.queueCap ??
-          resolved.entry.queueDrop,
+        resolved.entry.queueCap ??
+        resolved.entry.queueDrop,
       );
 
       const statusText = buildStatusMessage({

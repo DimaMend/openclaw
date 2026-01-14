@@ -154,9 +154,8 @@ describe("onboard (non-interactive): lan bind auto-token", () => {
       )) as typeof import("../config/config.js");
     });
 
-    const { runNonInteractiveOnboarding } = await import(
-      "./onboard-non-interactive.js"
-    );
+    const { runNonInteractiveOnboarding } =
+      await import("./onboard-non-interactive.js");
     await runNonInteractiveOnboarding(
       {
         nonInteractive: true,

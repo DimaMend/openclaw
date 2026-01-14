@@ -139,9 +139,8 @@ export async function compactEmbeddedPiSession(params: {
         });
 
         if (model.provider === "github-copilot") {
-          const { resolveCopilotApiToken } = await import(
-            "../../providers/github-copilot-token.js"
-          );
+          const { resolveCopilotApiToken } =
+            await import("../../providers/github-copilot-token.js");
           const copilotToken = await resolveCopilotApiToken({
             githubToken: apiKeyInfo.apiKey,
           });

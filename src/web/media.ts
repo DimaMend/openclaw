@@ -43,7 +43,8 @@ async function loadWebMediaInternal(
     if (optimized.buffer.length > cap) {
       throw new Error(
         `Media could not be reduced below ${(cap / (1024 * 1024)).toFixed(0)}MB (got ${(
-          optimized.buffer.length / (1024 * 1024)
+          optimized.buffer.length /
+          (1024 * 1024)
         ).toFixed(2)}MB)`,
       );
     }
@@ -72,7 +73,8 @@ async function loadWebMediaInternal(
             `${
               isGif ? "GIF" : "Media"
             } exceeds ${(cap / (1024 * 1024)).toFixed(0)}MB limit (got ${(
-              params.buffer.length / (1024 * 1024)
+              params.buffer.length /
+              (1024 * 1024)
             ).toFixed(2)}MB)`,
           );
         }
@@ -91,7 +93,8 @@ async function loadWebMediaInternal(
     if (params.buffer.length > cap) {
       throw new Error(
         `Media exceeds ${(cap / (1024 * 1024)).toFixed(0)}MB limit (got ${(
-          params.buffer.length / (1024 * 1024)
+          params.buffer.length /
+          (1024 * 1024)
         ).toFixed(2)}MB)`,
       );
     }

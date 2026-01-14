@@ -347,9 +347,9 @@ export async function preflightDiscordMessage(
   });
   const hasAnyMention = Boolean(
     !isDirectMessage &&
-      (message.mentionedEveryone ||
-        (message.mentionedUsers?.length ?? 0) > 0 ||
-        (message.mentionedRoles?.length ?? 0) > 0),
+    (message.mentionedEveryone ||
+      (message.mentionedUsers?.length ?? 0) > 0 ||
+      (message.mentionedRoles?.length ?? 0) > 0),
   );
   if (!isDirectMessage) {
     commandAuthorized = resolveDiscordCommandAuthorized({

@@ -36,10 +36,7 @@ import { validateConfigObject } from "./validation.js";
 import { ClawdbotSchema } from "./zod-schema.js";
 
 // Re-export for backwards compatibility
-export {
-  CircularIncludeError,
-  ConfigIncludeError,
-} from "./includes.js";
+export { CircularIncludeError, ConfigIncludeError } from "./includes.js";
 
 const SHELL_ENV_EXPECTED_KEYS = [
   "OPENAI_API_KEY",

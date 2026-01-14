@@ -76,14 +76,14 @@ export const msteamsOnboardingAdapter: ChannelOnboardingAdapter = {
     const resolved = resolveMSTeamsCredentials(cfg.channels?.msteams);
     const hasConfigCreds = Boolean(
       cfg.channels?.msteams?.appId?.trim() &&
-        cfg.channels?.msteams?.appPassword?.trim() &&
-        cfg.channels?.msteams?.tenantId?.trim(),
+      cfg.channels?.msteams?.appPassword?.trim() &&
+      cfg.channels?.msteams?.tenantId?.trim(),
     );
     const canUseEnv = Boolean(
       !hasConfigCreds &&
-        process.env.MSTEAMS_APP_ID?.trim() &&
-        process.env.MSTEAMS_APP_PASSWORD?.trim() &&
-        process.env.MSTEAMS_TENANT_ID?.trim(),
+      process.env.MSTEAMS_APP_ID?.trim() &&
+      process.env.MSTEAMS_APP_PASSWORD?.trim() &&
+      process.env.MSTEAMS_TENANT_ID?.trim(),
     );
 
     let next = cfg;

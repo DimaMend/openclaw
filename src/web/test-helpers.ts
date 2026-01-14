@@ -68,14 +68,13 @@ vi.mock("qrcode-terminal", () => ({
   generate: vi.fn(),
 }));
 
-export const baileys = (await import(
-  "@whiskeysockets/baileys"
-)) as unknown as typeof import("@whiskeysockets/baileys") & {
-  makeWASocket: ReturnType<typeof vi.fn>;
-  useMultiFileAuthState: ReturnType<typeof vi.fn>;
-  fetchLatestBaileysVersion: ReturnType<typeof vi.fn>;
-  makeCacheableSignalKeyStore: ReturnType<typeof vi.fn>;
-};
+export const baileys =
+  (await import("@whiskeysockets/baileys")) as unknown as typeof import("@whiskeysockets/baileys") & {
+    makeWASocket: ReturnType<typeof vi.fn>;
+    useMultiFileAuthState: ReturnType<typeof vi.fn>;
+    fetchLatestBaileysVersion: ReturnType<typeof vi.fn>;
+    makeCacheableSignalKeyStore: ReturnType<typeof vi.fn>;
+  };
 
 export function resetBaileysMocks() {
   const recreated = createMockBaileys();

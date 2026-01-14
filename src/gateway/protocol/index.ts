@@ -151,11 +151,9 @@ import {
   WizardStepSchema,
 } from "./schema.js";
 
-const ajv = new (
-  AjvPkg as unknown as new (
-    opts?: object,
-  ) => import("ajv").default
-)({
+const ajv = new (AjvPkg as unknown as new (
+  opts?: object,
+) => import("ajv").default)({
   allErrors: true,
   strict: false,
   removeAdditional: false,

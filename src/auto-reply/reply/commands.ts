@@ -196,8 +196,8 @@ export async function buildStatusReply(params: {
   const queueDepth = queueKey ? getFollowupQueueDepth(queueKey) : 0;
   const queueOverrides = Boolean(
     sessionEntry?.queueDebounceMs ??
-      sessionEntry?.queueCap ??
-      sessionEntry?.queueDrop,
+    sessionEntry?.queueCap ??
+    sessionEntry?.queueDrop,
   );
   const groupActivation = isGroup
     ? (normalizeGroupActivation(sessionEntry?.groupActivation) ??
@@ -776,7 +776,9 @@ export async function handleCommands(params: {
       if (!removed) {
         return {
           shouldContinue: false,
-          reply: { text: `⚙️ No config value found for ${configCommand.path}.` },
+          reply: {
+            text: `⚙️ No config value found for ${configCommand.path}.`,
+          },
         };
       }
       const validated = validateConfigObject(parsedBase);

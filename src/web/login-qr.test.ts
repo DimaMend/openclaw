@@ -40,9 +40,8 @@ vi.mock("./qr-image.js", () => ({
 }));
 
 const { startWebLoginWithQr, waitForWebLogin } = await import("./login-qr.js");
-const { createWaSocket, waitForWaConnection, logoutWeb } = await import(
-  "./session.js"
-);
+const { createWaSocket, waitForWaConnection, logoutWeb } =
+  await import("./session.js");
 
 describe("login-qr", () => {
   beforeEach(() => {

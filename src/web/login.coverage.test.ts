@@ -46,9 +46,8 @@ vi.mock("./session.js", () => {
   };
 });
 
-const { createWaSocket, waitForWaConnection, formatError } = await import(
-  "./session.js"
-);
+const { createWaSocket, waitForWaConnection, formatError } =
+  await import("./session.js");
 const { loginWeb } = await import("./login.js");
 
 describe("loginWeb coverage", () => {

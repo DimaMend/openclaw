@@ -116,8 +116,8 @@ export async function monitorIMessageProvider(
     // that thread as a "group" for permission gating and session isolation.
     const treatAsGroupByConfig = Boolean(
       groupIdCandidate &&
-        groupListPolicy.allowlistEnabled &&
-        groupListPolicy.groupConfig,
+      groupListPolicy.allowlistEnabled &&
+      groupListPolicy.groupConfig,
     );
 
     const isGroup = Boolean(message.is_group) || treatAsGroupByConfig;

@@ -32,9 +32,8 @@ describe("gateway server auth/connect", () => {
   );
 
   test("connect (req) handshake returns hello-ok payload", async () => {
-    const { CONFIG_PATH_CLAWDBOT, STATE_DIR_CLAWDBOT } = await import(
-      "../config/config.js"
-    );
+    const { CONFIG_PATH_CLAWDBOT, STATE_DIR_CLAWDBOT } =
+      await import("../config/config.js");
     const port = await getFreePort();
     const server = await startGatewayServer(port);
     const ws = new WebSocket(`ws://127.0.0.1:${port}`);

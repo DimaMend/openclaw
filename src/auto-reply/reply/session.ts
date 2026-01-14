@@ -241,9 +241,9 @@ export async function initSessionState(params: {
     const normalizedChannel = normalizeChannelId(channel);
     const isRoomProvider = Boolean(
       normalizedChannel &&
-        getChannelDock(normalizedChannel)?.capabilities.chatTypes.includes(
-          "channel",
-        ),
+      getChannelDock(normalizedChannel)?.capabilities.chatTypes.includes(
+        "channel",
+      ),
     );
     const nextRoom =
       explicitRoom ??

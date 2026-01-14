@@ -193,9 +193,9 @@ describe("msteams attachments", () => {
       const fetchMock = vi.fn(async (_url: string, opts?: RequestInit) => {
         const hasAuth = Boolean(
           opts &&
-            typeof opts === "object" &&
-            "headers" in opts &&
-            (opts.headers as Record<string, string>)?.Authorization,
+          typeof opts === "object" &&
+          "headers" in opts &&
+          (opts.headers as Record<string, string>)?.Authorization,
         );
         if (!hasAuth) {
           return new Response("unauthorized", { status: 401 });

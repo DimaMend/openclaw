@@ -132,9 +132,9 @@ function matchRule(path: string): ReloadRule | null {
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return Boolean(
     value &&
-      typeof value === "object" &&
-      !Array.isArray(value) &&
-      Object.prototype.toString.call(value) === "[object Object]",
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.prototype.toString.call(value) === "[object Object]",
   );
 }
 

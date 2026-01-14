@@ -26,7 +26,7 @@ export function createWebOnMessageHandler(params: {
   backgroundTasks: Set<Promise<unknown>>;
   replyResolver: typeof getReplyFromConfig;
   replyLogger: ReturnType<
-    typeof import("../../../logging.js")["getChildLogger"]
+    (typeof import("../../../logging.js"))["getChildLogger"]
   >;
   baseMentionConfig: MentionConfig;
   account: { authDir?: string; accountId?: string };

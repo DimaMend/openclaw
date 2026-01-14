@@ -111,9 +111,8 @@ async function createLocalEmbeddingProvider(
   const modelCacheDir = options.local?.modelCacheDir?.trim();
 
   // Lazy-load node-llama-cpp to keep startup light unless local is enabled.
-  const { getLlama, resolveModelFile, LlamaLogLevel } = await import(
-    "node-llama-cpp"
-  );
+  const { getLlama, resolveModelFile, LlamaLogLevel } =
+    await import("node-llama-cpp");
 
   let llama: Llama | null = null;
   let embeddingModel: LlamaModel | null = null;

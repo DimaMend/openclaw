@@ -42,9 +42,8 @@ describe("cli credentials", () => {
       return "";
     });
 
-    const { writeClaudeCliKeychainCredentials } = await import(
-      "./cli-credentials.js"
-    );
+    const { writeClaudeCliKeychainCredentials } =
+      await import("./cli-credentials.js");
 
     const ok = writeClaudeCliKeychainCredentials({
       access: "new-access",
@@ -130,9 +129,8 @@ describe("cli credentials", () => {
 
     vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
 
-    const { readClaudeCliCredentialsCached } = await import(
-      "./cli-credentials.js"
-    );
+    const { readClaudeCliCredentialsCached } =
+      await import("./cli-credentials.js");
 
     const first = readClaudeCliCredentialsCached({
       allowKeychainPrompt: true,
@@ -163,9 +161,8 @@ describe("cli credentials", () => {
 
     vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
 
-    const { readClaudeCliCredentialsCached } = await import(
-      "./cli-credentials.js"
-    );
+    const { readClaudeCliCredentialsCached } =
+      await import("./cli-credentials.js");
 
     const first = readClaudeCliCredentialsCached({
       allowKeychainPrompt: true,

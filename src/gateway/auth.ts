@@ -58,8 +58,8 @@ function isLocalDirectRequest(req?: IncomingMessage): boolean {
 
   const hasForwarded = Boolean(
     req.headers["x-forwarded-for"] ||
-      req.headers["x-real-ip"] ||
-      req.headers["x-forwarded-host"],
+    req.headers["x-real-ip"] ||
+    req.headers["x-forwarded-host"],
   );
 
   return hostIsLocal && !hasForwarded;
@@ -89,8 +89,8 @@ function hasTailscaleProxyHeaders(req?: IncomingMessage): boolean {
   if (!req) return false;
   return Boolean(
     req.headers["x-forwarded-for"] &&
-      req.headers["x-forwarded-proto"] &&
-      req.headers["x-forwarded-host"],
+    req.headers["x-forwarded-proto"] &&
+    req.headers["x-forwarded-host"],
   );
 }
 

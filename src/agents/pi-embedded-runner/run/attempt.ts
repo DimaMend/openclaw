@@ -474,7 +474,7 @@ export async function runEmbeddedAttempt(
         messagingToolSentTargets: getMessagingToolSentTargets(),
         cloudCodeAssistFormatError: Boolean(
           lastAssistant?.errorMessage &&
-            isCloudCodeAssistFormatError(lastAssistant.errorMessage),
+          isCloudCodeAssistFormatError(lastAssistant.errorMessage),
         ),
       };
     } finally {

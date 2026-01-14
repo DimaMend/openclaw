@@ -346,8 +346,8 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
       const allowUnmentionedGroups =
         Boolean(
           groups?.["*"] &&
-            (groups["*"] as { requireMention?: boolean }).requireMention ===
-              false,
+          (groups["*"] as { requireMention?: boolean }).requireMention ===
+            false,
         ) ||
         Object.entries(groups ?? {}).some(
           ([key, value]) =>
@@ -396,9 +396,8 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
         `[${account.accountId}] starting provider${telegramBotLabel}`,
       );
       // Lazy import: the monitor pulls the reply pipeline; avoid ESM init cycles.
-      const { monitorTelegramProvider } = await import(
-        "../../telegram/monitor.js"
-      );
+      const { monitorTelegramProvider } =
+        await import("../../telegram/monitor.js");
       return monitorTelegramProvider({
         token,
         accountId: account.accountId,

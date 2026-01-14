@@ -1093,7 +1093,7 @@ export async function getReplyFromConfig(
   });
   const shouldInjectGroupIntro = Boolean(
     isGroupChat &&
-      (isFirstTurnInSession || sessionEntry?.groupActivationNeedsSystemIntro),
+    (isFirstTurnInSession || sessionEntry?.groupActivationNeedsSystemIntro),
   );
   const groupIntro = shouldInjectGroupIntro
     ? buildGroupIntro({

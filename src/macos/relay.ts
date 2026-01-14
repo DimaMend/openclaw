@@ -34,9 +34,8 @@ async function main() {
     process.exit(0);
   }
 
-  const { parseRelaySmokeTest, runRelaySmokeTest } = await import(
-    "./relay-smoke.js"
-  );
+  const { parseRelaySmokeTest, runRelaySmokeTest } =
+    await import("./relay-smoke.js");
   const smokeTest = parseRelaySmokeTest(args, process.env);
   if (smokeTest) {
     try {
@@ -61,9 +60,8 @@ async function main() {
 
   const { assertSupportedRuntime } = await import("../infra/runtime-guard.js");
   assertSupportedRuntime();
-  const { installUnhandledRejectionHandler } = await import(
-    "../infra/unhandled-rejections.js"
-  );
+  const { installUnhandledRejectionHandler } =
+    await import("../infra/unhandled-rejections.js");
 
   const { buildProgram } = await import("../cli/program.js");
   const program = buildProgram();

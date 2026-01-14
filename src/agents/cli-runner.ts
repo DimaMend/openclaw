@@ -114,9 +114,9 @@ export async function runCliAgent(params: {
   });
   const useResume = Boolean(
     params.cliSessionId &&
-      cliSessionIdToSend &&
-      backend.resumeArgs &&
-      backend.resumeArgs.length > 0,
+    cliSessionIdToSend &&
+    backend.resumeArgs &&
+    backend.resumeArgs.length > 0,
   );
   const sessionIdSent = cliSessionIdToSend
     ? useResume ||

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let configOverride: ReturnType<
-  typeof import("../config/config.js")["loadConfig"]
+  (typeof import("../config/config.js"))["loadConfig"]
 > = {
   session: {
     mainKey: "main",

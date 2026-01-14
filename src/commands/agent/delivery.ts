@@ -25,7 +25,9 @@ import {
 import type { AgentCommandOpts } from "./types.js";
 
 type RunResult = Awaited<
-  ReturnType<typeof import("../../agents/pi-embedded.js")["runEmbeddedPiAgent"]>
+  ReturnType<
+    (typeof import("../../agents/pi-embedded.js"))["runEmbeddedPiAgent"]
+  >
 >;
 
 export async function deliverAgentCommandResult(params: {

@@ -60,17 +60,17 @@ export function resolveIMessageAccount(params: {
   const accountEnabled = merged.enabled !== false;
   const configured = Boolean(
     merged.cliPath?.trim() ||
-      merged.dbPath?.trim() ||
-      merged.service ||
-      merged.region?.trim() ||
-      (merged.allowFrom && merged.allowFrom.length > 0) ||
-      (merged.groupAllowFrom && merged.groupAllowFrom.length > 0) ||
-      merged.dmPolicy ||
-      merged.groupPolicy ||
-      typeof merged.includeAttachments === "boolean" ||
-      typeof merged.mediaMaxMb === "number" ||
-      typeof merged.textChunkLimit === "number" ||
-      (merged.groups && Object.keys(merged.groups).length > 0),
+    merged.dbPath?.trim() ||
+    merged.service ||
+    merged.region?.trim() ||
+    (merged.allowFrom && merged.allowFrom.length > 0) ||
+    (merged.groupAllowFrom && merged.groupAllowFrom.length > 0) ||
+    merged.dmPolicy ||
+    merged.groupPolicy ||
+    typeof merged.includeAttachments === "boolean" ||
+    typeof merged.mediaMaxMb === "number" ||
+    typeof merged.textChunkLimit === "number" ||
+    (merged.groups && Object.keys(merged.groups).length > 0),
   );
   return {
     accountId,
