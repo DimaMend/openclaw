@@ -618,15 +618,24 @@ export async function handleCommands(params: {
 
   // Custom clawd-* commands that run shell scripts
   const clawdScriptCommands: Record<string, { path: string; restart: boolean }> = {
-    "/clawd-update": { path: "~/clawd-scripts/clawd_update.sh", restart: true },
-    "/clawd-restart": { path: "~/clawd-scripts/clawd_restart.sh", restart: true },
-    "/clawd-revert": { path: "~/clawd-scripts/clawd_revert.sh", restart: true },
-    "/clawd-push": { path: "~/clawd-scripts/clawd_push.sh", restart: false },
-    "/clawd-git-status": { path: "~/clawd-scripts/clawd_git_status.sh", restart: false },
-    "/clawd-doctor": { path: "~/clawd-scripts/clawd_doctor.sh", restart: false },
-    "/clawd-logs": { path: "~/clawd-scripts/clawd_logs.sh", restart: false },
-    "/crons": { path: "~/clawd-scripts/clawd_crons.sh", restart: false },
-    "/copilot-models": { path: "~/clawd-scripts/clawd_models.sh", restart: false },
+    // Short aliases (preferred)
+    "/update": { path: "~/clawd-scripts/update.sh", restart: true },
+    "/restart": { path: "~/clawd-scripts/restart.sh", restart: true },
+    "/revert": { path: "~/clawd-scripts/revert.sh", restart: true },
+    "/push": { path: "~/clawd-scripts/push.sh", restart: false },
+    "/git-status": { path: "~/clawd-scripts/git-status.sh", restart: false },
+    "/doctor": { path: "~/clawd-scripts/doctor.sh", restart: false },
+    "/logs": { path: "~/clawd-scripts/logs.sh", restart: false },
+    "/crons": { path: "~/clawd-scripts/crons.sh", restart: false },
+    "/copilot-models": { path: "~/clawd-scripts/models.sh", restart: false },
+    // Legacy aliases (for backwards compatibility)
+    "/clawd-update": { path: "~/clawd-scripts/update.sh", restart: true },
+    "/clawd-restart": { path: "~/clawd-scripts/restart.sh", restart: true },
+    "/clawd-revert": { path: "~/clawd-scripts/revert.sh", restart: true },
+    "/clawd-push": { path: "~/clawd-scripts/push.sh", restart: false },
+    "/clawd-git-status": { path: "~/clawd-scripts/git-status.sh", restart: false },
+    "/clawd-doctor": { path: "~/clawd-scripts/doctor.sh", restart: false },
+    "/clawd-logs": { path: "~/clawd-scripts/logs.sh", restart: false },
   };
 
   const scriptDef = clawdScriptCommands[command.commandBodyNormalized];

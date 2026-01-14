@@ -264,6 +264,64 @@ export const CHAT_COMMANDS: ChatCommandDefinition[] = (() => {
   registerAlias(commands, "elevated", "/elev");
   registerAlias(commands, "model", "/models");
 
+  // Script commands - add text aliases for recognition
+  commands.push(
+    defineChatCommand({
+      key: "script-update",
+      description: "Update ClawdBot from upstream and restart.",
+      textAliases: ["/update", "/clawd-update"],
+      scope: "text",
+    }),
+    defineChatCommand({
+      key: "script-push",
+      description: "Push current changes to fork.",
+      textAliases: ["/push", "/clawd-push"],
+      scope: "text",
+    }),
+    defineChatCommand({
+      key: "script-git-status",
+      description: "Show git status of ClawdBot.",
+      textAliases: ["/git-status", "/clawd-git-status"],
+      scope: "text",
+    }),
+    defineChatCommand({
+      key: "script-revert",
+      description: "Revert ClawdBot to previous version.",
+      textAliases: ["/revert", "/clawd-revert"],
+      scope: "text",
+    }),
+    defineChatCommand({
+      key: "script-restart",
+      description: "Rebuild and restart ClawdBot (via script).",
+      textAlias: "/clawd-restart",
+      scope: "text",
+    }),
+    defineChatCommand({
+      key: "script-doctor",
+      description: "Run ClawdBot doctor checks.",
+      textAliases: ["/doctor", "/clawd-doctor"],
+      scope: "text",
+    }),
+    defineChatCommand({
+      key: "script-logs",
+      description: "Show ClawdBot logs.",
+      textAliases: ["/logs", "/clawd-logs"],
+      scope: "text",
+    }),
+    defineChatCommand({
+      key: "script-crons",
+      description: "Show ClawdBot cron jobs.",
+      textAlias: "/crons",
+      scope: "text",
+    }),
+    defineChatCommand({
+      key: "script-models",
+      description: "Show Copilot models.",
+      textAlias: "/copilot-models",
+      scope: "text",
+    }),
+  );
+
   assertCommandRegistry(commands);
   return commands;
 })();
