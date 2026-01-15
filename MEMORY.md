@@ -38,7 +38,7 @@
 - **Email accounts**:
   - dbh.today@gmail.com (personal Google) ✅
   - db@lovemolly.app (work Google - Molly) ✅
-  - dhurley@onepoint-partners.com (M365 - One Point) ⏳ pending Azure setup
+  - dhurley@onepoint-partners.com (M365 - One Point) ⏳ Azure setup
 
 ## Etsy Shops (AI Agent-Operated)
 

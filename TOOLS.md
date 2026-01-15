@@ -2,6 +2,16 @@
 
 Skills define *how* tools work. This file is for *your* specifics — the stuff that's unique to your setup.
 
+## 1Password Access
+
+**IMPORTANT:** Use the existing `op-safe` tmux session for all 1Password operations!
+- Session name: `op-safe` (default tmux socket)
+- Already authenticated (may need re-auth periodically)
+- Commands: `tmux send-keys -t op-safe "op <command>" Enter`
+- Capture output: `tmux capture-pane -p -t op-safe -S -20`
+
+Do NOT create new tmux sessions for op commands — use op-safe!
+
 ## SSH Hosts
 
 ### synology
@@ -60,6 +70,16 @@ Global bins: `/Users/dbhurley/Library/pnpm/`
 ### David's Account (default `bird` command)
 - Uses browser cookies automatically
 - Just run `bird <command>` for David's account
+
+## Webhooks
+
+### TradingView
+- **URL**: `https://stevehooks.ngrok.app/hooks/tradingview?token=tv-webhook-8f3k2m9x`
+- **Tunnel**: stevehooks.ngrok.app → localhost:18789
+- **Config**: hooks.mappings in clawdbot.json
+
+### MS Teams
+- **Tunnel**: opie.ngrok.app → localhost:3978
 
 ---
 
