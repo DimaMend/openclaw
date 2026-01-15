@@ -104,6 +104,15 @@ async function readPackageVersion(root: string) {
   }
 }
 
+async function exists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function resolveGitRoot(
   runCommand: CommandRunner,
   candidates: string[],
@@ -129,7 +138,14 @@ async function findPackageRoot(candidates: string[]) {
       try {
         const raw = await fs.readFile(pkgPath, "utf-8");
         const parsed = JSON.parse(raw) as { name?: string };
-        if (parsed?.name === "clawdbot") return current;
+        if (parsed?.name === "clawdbot") {
+          // Stronger check: ensure it's a workspace root by looking for a lockfile
+          const hasLock =
+            (await exists(path.join(current, "pnpm-lock.yaml"))) ||
+            (await exists(path.join(current, "bun.lockb"))) ||
+            (await exists(path.join(current, "package-lock.json")));
+          if (hasLock) return current;
+        }
       } catch {
         // ignore
       }

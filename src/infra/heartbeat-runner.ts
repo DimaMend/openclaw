@@ -148,8 +148,12 @@ async function restoreHeartbeatUpdatedAt(params: {
   const store = loadSessionStore(storePath);
   const entry = store[sessionKey];
   if (!entry) return;
-  if (entry.updatedAt === updatedAt) return;
-  store[sessionKey] = { ...entry, updatedAt };
+  
+  // Prevent regression: only update if new timestamp is newer or same
+  const nextUpdatedAt = Math.max(entry.updatedAt ?? 0, updatedAt);
+  if (entry.updatedAt === nextUpdatedAt) return;
+
+  store[sessionKey] = { ...entry, updatedAt: nextUpdatedAt };
   await saveSessionStore(storePath, store);
 }
 
