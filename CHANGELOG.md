@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026.1.15 (unreleased)
+
+- Fix: guard model fallback against undefined provider/model values. (#954) — thanks @roshanasingh4.
+
 ## 2026.1.14-1
 
 ### Highlights
