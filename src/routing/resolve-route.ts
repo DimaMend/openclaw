@@ -68,6 +68,8 @@ export function buildAgentSessionKey(params: {
   agentId: string;
   channel: string;
   peer?: RoutePeer | null;
+  /** When true, DM conversations get isolated sessions per channel instead of sharing the main session. */
+  isolateDmSessions?: boolean;
 }): string {
   const channel = normalizeToken(params.channel) || "unknown";
   const peer = params.peer;
@@ -77,6 +79,7 @@ export function buildAgentSessionKey(params: {
     channel,
     peerKind: peer?.kind ?? "dm",
     peerId: peer ? normalizeId(peer.id) || "unknown" : null,
+    isolateDmSessions: params.isolateDmSessions,
   });
 }
 
@@ -149,6 +152,8 @@ export function resolveAgentRoute(input: ResolveAgentRouteInput): ResolvedAgentR
     return matchesAccountId(binding.match?.accountId, accountId);
   });
 
+  const isolateDmSessions = input.cfg.session?.isolateDmSessions ?? false;
+
   const choose = (agentId: string, matchedBy: ResolvedAgentRoute["matchedBy"]) => {
     const resolvedAgentId = pickFirstExistingAgentId(input.cfg, agentId);
     return {
@@ -159,6 +164,7 @@ export function resolveAgentRoute(input: ResolveAgentRouteInput): ResolvedAgentR
         agentId: resolvedAgentId,
         channel,
         peer,
+        isolateDmSessions,
       }),
       mainSessionKey: buildAgentMainSessionKey({
         agentId: resolvedAgentId,

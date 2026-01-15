@@ -5,6 +5,8 @@ import { GroupChatSchema, NativeCommandsSettingSchema, QueueSchema } from "./zod
 export const SessionSchema = z
   .object({
     scope: z.union([z.literal("per-sender"), z.literal("global")]).optional(),
+    /** When true, DM conversations get isolated sessions per channel instead of sharing the main session. */
+    isolateDmSessions: z.boolean().optional(),
     resetTriggers: z.array(z.string()).optional(),
     idleMinutes: z.number().int().positive().optional(),
     heartbeatIdleMinutes: z.number().int().positive().optional(),

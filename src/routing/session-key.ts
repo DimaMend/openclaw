@@ -88,9 +88,17 @@ export function buildAgentPeerSessionKey(params: {
   channel: string;
   peerKind?: "dm" | "group" | "channel" | null;
   peerId?: string | null;
+  /** When true, DM conversations get isolated sessions per channel instead of sharing the main session. */
+  isolateDmSessions?: boolean;
 }): string {
   const peerKind = params.peerKind ?? "dm";
   if (peerKind === "dm") {
+    // If isolateDmSessions is enabled and we have a peerId, create an isolated session
+    if (params.isolateDmSessions && params.peerId) {
+      const channel = (params.channel ?? "").trim().toLowerCase() || "unknown";
+      const peerId = (params.peerId ?? "").trim() || "unknown";
+      return `agent:${normalizeAgentId(params.agentId)}:${channel}:dm:${peerId}`;
+    }
     return buildAgentMainSessionKey({
       agentId: params.agentId,
       mainKey: params.mainKey,
