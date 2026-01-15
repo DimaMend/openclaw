@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sync clawd workspace: pull upstream + push changes + notify
+# Sync clawd workspace: pull upstream + push changes + sync personal scripts
 
 cd /Users/steve/clawd
 
@@ -40,7 +40,21 @@ if [ "$UPSTREAM_CHANGES" -eq 1 ] || [ "$LOCAL_CHANGES" -eq 1 ]; then
     git push origin main
 fi
 
-# 4. Output summary for notification
+# 4. Sync personal-scripts from repo to ~/.clawd/scripts/
+echo "Syncing personal scripts..."
+mkdir -p ~/.clawd/scripts
+for script in /Users/steve/clawd/personal-scripts/*.{sh,py}; do
+    [ -f "$script" ] || continue
+    filename=$(basename "$script")
+    # Only copy if repo version is newer or local doesn't exist
+    if [ ! -f ~/.clawd/scripts/"$filename" ] || [ "$script" -nt ~/.clawd/scripts/"$filename" ]; then
+        cp "$script" ~/.clawd/scripts/
+        chmod +x ~/.clawd/scripts/"$filename"
+        echo "  Updated: $filename"
+    fi
+done
+
+# 5. Output summary for notification
 if [ "$UPSTREAM_CHANGES" -eq 1 ]; then
     echo "NOTIFY:UPSTREAM:$UPSTREAM_COUNT"
 fi
