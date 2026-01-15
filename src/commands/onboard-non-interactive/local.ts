@@ -110,4 +110,10 @@ export async function runNonInteractiveOnboardingLocal(params: {
     skipSkills: Boolean(opts.skipSkills),
     skipHealth: Boolean(opts.skipHealth),
   });
+
+  if (!opts.json) {
+    runtime.log(
+      "Tip: run `clawdbot configure --section web` to store your Brave API key for web_search. Docs: https://docs.clawd.bot/tools/web",
+    );
+  }
 }

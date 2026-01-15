@@ -105,6 +105,7 @@ group messages, so use admin if you need full visibility.
 - Media downloads/uploads are capped by `channels.telegram.mediaMaxMb` (default 5).
 - Telegram Bot API requests time out after `channels.telegram.timeoutSeconds` (default 500 via grammY). Set lower to avoid long hangs.
 - Group history context uses `channels.telegram.historyLimit` (or `channels.telegram.accounts.*.historyLimit`), falling back to `messages.groupChat.historyLimit`. Set `0` to disable (default 50).
+- DM history can be limited with `channels.telegram.dmHistoryLimit` (user turns). Per-user overrides: `channels.telegram.dms["<user_id>"].historyLimit`.
 
 ## Group activation modes
 
@@ -167,6 +168,20 @@ Forward any message from the group to `@userinfobot` or `@getidsbot` on Telegram
 **Tip:** For your own user ID, DM the bot and it will reply with your user ID (pairing message), or use `/whoami` once commands are enabled.
 
 **Privacy note:** `@userinfobot` is a third-party bot. If you prefer, use gateway logs (`clawdbot logs`) or Telegram developer tools to find user/chat IDs.
+
+## Config writes
+By default, Telegram is allowed to write config updates triggered by channel events or `/config set|unset`.
+
+This happens when:
+- A group is upgraded to a supergroup and Telegram emits `migrate_to_chat_id` (chat ID changes). Clawdbot can migrate `channels.telegram.groups` automatically.
+- You run `/config set` or `/config unset` in a Telegram chat (requires `commands.config: true`).
+
+Disable with:
+```json5
+{
+  channels: { telegram: { configWrites: false } }
+}
+```
 
 ## Topics (forum supergroups)
 Telegram forum topics include a `message_thread_id` per message. Clawdbot:

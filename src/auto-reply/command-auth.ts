@@ -1,7 +1,7 @@
 import type { ChannelDock } from "../channels/dock.js";
 import { getChannelDock, listChannelDocks } from "../channels/dock.js";
 import type { ChannelId } from "../channels/plugins/types.js";
-import { normalizeChannelId } from "../channels/registry.js";
+import { normalizeChannelId } from "../channels/plugins/index.js";
 import type { ClawdbotConfig } from "../config/config.js";
 import type { MsgContext } from "./templating.js";
 
@@ -116,7 +116,12 @@ export function resolveCommandAuthorization(params: {
 
   const ownerCandidates = allowAll ? [] : allowFromList.filter((entry) => entry !== "*");
   if (!allowAll && ownerCandidates.length === 0 && to) {
-    const normalizedTo = normalizeAllowFromEntry({ dock, cfg, accountId: ctx.AccountId, value: to });
+    const normalizedTo = normalizeAllowFromEntry({
+      dock,
+      cfg,
+      accountId: ctx.AccountId,
+      value: to,
+    });
     if (normalizedTo) ownerCandidates.push(normalizedTo);
   }
   const ownerList = ownerCandidates;

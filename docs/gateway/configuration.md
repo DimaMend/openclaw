@@ -32,16 +32,41 @@ It writes a restart sentinel and pings the last active session after the Gateway
 
 Params:
 - `raw` (string) — JSON5 payload for the entire config
+- `baseHash` (optional) — config hash from `config.get` (required when a config already exists)
 - `sessionKey` (optional) — last active session key for the wake-up ping
 - `restartDelayMs` (optional) — delay before restart (default 2000)
 
 Example (via `gateway call`):
 
 ```bash
+clawdbot gateway call config.get --params '{}' # capture payload.hash
 clawdbot gateway call config.apply --params '{
   "raw": "{\\n  agents: { defaults: { workspace: \\"~/clawd\\" } }\\n}\\n",
+  "baseHash": "<hash-from-config.get>",
   "sessionKey": "agent:main:whatsapp:dm:+15555550123",
   "restartDelayMs": 1000
+}'
+```
+
+## Partial updates (RPC)
+
+Use `config.patch` to merge a partial update into the existing config without clobbering
+unrelated keys. It applies JSON merge patch semantics:
+- objects merge recursively
+- `null` deletes a key
+- arrays replace
+
+Params:
+- `raw` (string) — JSON5 payload containing just the keys to change
+- `baseHash` (required) — config hash from `config.get`
+
+Example:
+
+```bash
+clawdbot gateway call config.get --params '{}' # capture payload.hash
+clawdbot gateway call config.patch --params '{
+  "raw": "{\\n  channels: { telegram: { groups: { \\"*\\": { requireMention: false } } } }\\n}\\n",
+  "baseHash": "<hash-from-config.get>"
 }'
 ```
 
@@ -306,6 +331,10 @@ rotation order used for failover.
 }
 ```
 
+Note: `anthropic:claude-cli` should use `mode: "oauth"` even when the stored
+credential is a setup-token. Clawdbot auto-migrates older configs that used
+`mode: "token"`.
+
 ### `agents.list[].identity`
 
 Optional per-agent identity used for defaults and UX. This is written by the macOS onboarding assistant.
@@ -478,6 +507,30 @@ Group messages default to **require mention** (either metadata mention or regex 
 ```
 
 `messages.groupChat.historyLimit` sets the global default for group history context. Channels can override with `channels.<channel>.historyLimit` (or `channels.<channel>.accounts.*.historyLimit` for multi-account). Set `0` to disable history wrapping.
+
+#### DM history limits
+
+DM conversations use session-based history managed by the agent. You can limit the number of user turns retained per DM session:
+
+```json5
+{
+  channels: {
+    telegram: {
+      dmHistoryLimit: 30,  // limit DM sessions to 30 user turns
+      dms: {
+        "123456789": { historyLimit: 50 }  // per-user override (user ID)
+      }
+    }
+  }
+}
+```
+
+Resolution order:
+1. Per-DM override: `channels.<provider>.dms[userId].historyLimit`
+2. Provider default: `channels.<provider>.dmHistoryLimit`
+3. No limit (all history retained)
+
+Supported providers: `telegram`, `whatsapp`, `discord`, `slack`, `signal`, `imessage`, `msteams`.
 
 Per-agent override (takes precedence when set, even `[]`):
 ```json5
@@ -780,6 +833,7 @@ Notes:
 - `commands.bash: true` enables `! <cmd>` to run host shell commands (`/bash <cmd>` also works as an alias). Requires `tools.elevated.enabled` and allowlisting the sender in `tools.elevated.allowFrom.<channel>`.
 - `commands.bashForegroundMs` controls how long bash waits before backgrounding. While a bash job is running, new `! <cmd>` requests are rejected (one at a time).
 - `commands.config: true` enables `/config` (reads/writes `clawdbot.json`).
+- `channels.<provider>.configWrites` gates config mutations initiated by that channel (default: true). This applies to `/config set|unset` plus provider-specific auto-migrations (Telegram supergroup ID changes, Slack channel ID changes).
 - `commands.debug: true` enables `/debug` (runtime-only overrides).
 - `commands.restart: true` enables `/restart` and the gateway tool restart action.
 - `commands.useAccessGroups: false` allows commands to bypass access-group allowlists/policies.
@@ -810,6 +864,7 @@ Set `web.enabled: false` to keep it off by default.
 Clawdbot starts Telegram only when a `channels.telegram` config section exists. The bot token is resolved from `TELEGRAM_BOT_TOKEN` or `channels.telegram.botToken`.
 Set `channels.telegram.enabled: false` to disable automatic startup.
 Multi-account support lives under `channels.telegram.accounts` (see the multi-account section above). Env tokens only apply to the default account.
+Set `channels.telegram.configWrites: false` to block Telegram-initiated config writes (including supergroup ID migrations and `/config set|unset`).
 
 ```json5
 {
@@ -1002,6 +1057,7 @@ Slack runs in Socket Mode and requires both a bot token and app token:
 Multi-account support lives under `channels.slack.accounts` (see the multi-account section above). Env tokens only apply to the default account.
 
 Clawdbot starts Slack when the provider is enabled and both tokens are set (via config or `SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN`). Use `user:<id>` (DM) or `channel:<id>` when specifying delivery targets for cron/CLI commands.
+Set `channels.slack.configWrites: false` to block Slack-initiated config writes (including channel ID migrations and `/config set|unset`).
 
 Bot-authored messages are ignored by default. Enable with `channels.slack.allowBots` or `channels.slack.channels.<id>.allowBots`.
 
@@ -1549,6 +1605,18 @@ of `every`, keep `HEARTBEAT.md` tiny, and/or choose a cheaper `model`.
 Note: `applyPatch` is only under `tools.exec` (no `tools.bash` alias).
 Legacy: `tools.bash` is still accepted as an alias.
 
+`tools.web` configures web search + fetch tools:
+- `tools.web.search.enabled` (default: true when key is present)
+- `tools.web.search.apiKey` (recommended: set via `clawdbot configure --section web`, or use `BRAVE_API_KEY` env var)
+- `tools.web.search.maxResults` (1–10, default 5)
+- `tools.web.search.timeoutSeconds` (default 30)
+- `tools.web.search.cacheTtlMinutes` (default 15)
+- `tools.web.fetch.enabled` (default false; sandboxed sessions auto-enable unless set to false)
+- `tools.web.fetch.maxChars` (default 50000)
+- `tools.web.fetch.timeoutSeconds` (default 30)
+- `tools.web.fetch.cacheTtlMinutes` (default 15)
+- `tools.web.fetch.userAgent` (optional override)
+
 `agents.defaults.subagents` configures sub-agent defaults:
 - `model`: default model for spawned sub-agents (string or `{ primary, fallbacks }`). If omitted, sub-agents inherit the caller’s model unless overridden per agent or per call.
 - `maxConcurrent`: max concurrent sub-agent runs (default 1)
@@ -1583,6 +1651,37 @@ Example (coding profile, but deny exec/process everywhere):
 }
 ```
 
+`tools.byProvider` lets you **further restrict** tools for specific providers (or a single `provider/model`).
+Per-agent override: `agents.list[].tools.byProvider`.
+
+Order: base profile → provider profile → allow/deny policies.
+Provider keys accept either `provider` (e.g. `google-antigravity`) or `provider/model`
+(e.g. `openai/gpt-5.2`).
+
+Example (keep global coding profile, but minimal tools for Google Antigravity):
+```json5
+{
+  tools: {
+    profile: "coding",
+    byProvider: {
+      "google-antigravity": { profile: "minimal" }
+    }
+  }
+}
+```
+
+Example (provider/model-specific allowlist):
+```json5
+{
+  tools: {
+    allow: ["group:fs", "group:runtime", "sessions_list"],
+    byProvider: {
+      "openai/gpt-5.2": { allow: ["group:fs", "sessions_list"] }
+    }
+  }
+}
+```
+
 `tools.allow` / `tools.deny` configure a global tool allow/deny policy (deny wins).
 This is applied even when the Docker sandbox is **off**.
 
@@ -1598,6 +1697,7 @@ Tool groups (shorthands) work in **global** and **per-agent** tool policies:
 - `group:fs`: `read`, `write`, `edit`, `apply_patch`
 - `group:sessions`: `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `session_status`
 - `group:memory`: `memory_search`, `memory_get`
+- `group:web`: `web_search`, `web_fetch`
 - `group:ui`: `browser`, `canvas`
 - `group:automation`: `cron`, `gateway`
 - `group:messaging`: `message`
@@ -2123,7 +2223,7 @@ Example:
 ```json5
 {
   skills: {
-    allowBundled: ["brave-search", "gemini"],
+    allowBundled: ["gemini", "peekaboo"],
     load: {
       extraDirs: [
         "~/Projects/agent-scripts/skills",

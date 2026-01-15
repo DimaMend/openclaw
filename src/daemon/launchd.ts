@@ -127,6 +127,7 @@ async function execLaunchctl(
   try {
     const { stdout, stderr } = await execFileAsync("launchctl", args, {
       encoding: "utf8",
+      shell: process.platform === "win32",
     });
     return {
       stdout: String(stdout ?? ""),
@@ -410,11 +411,12 @@ export async function installLaunchAgent({
 
   await execLaunchctl(["bootout", domain, plistPath]);
   await execLaunchctl(["unload", plistPath]);
+  // launchd can persist "disabled" state even after bootout + plist removal; clear it before bootstrap.
+  await execLaunchctl(["enable", `${domain}/${label}`]);
   const boot = await execLaunchctl(["bootstrap", domain, plistPath]);
   if (boot.code !== 0) {
     throw new Error(`launchctl bootstrap failed: ${boot.stderr || boot.stdout}`.trim());
   }
-  await execLaunchctl(["enable", `${domain}/${label}`]);
   await execLaunchctl(["kickstart", "-k", `${domain}/${label}`]);
 
   stdout.write(`${formatLine("Installed LaunchAgent", plistPath)}\n`);

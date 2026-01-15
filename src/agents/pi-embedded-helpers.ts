@@ -8,6 +8,7 @@ export {
 export {
   classifyFailoverReason,
   formatAssistantErrorText,
+  getApiErrorPayloadFingerprint,
   isAuthAssistantError,
   isAuthErrorMessage,
   isBillingAssistantError,
@@ -18,12 +19,14 @@ export {
   isFailoverAssistantError,
   isFailoverErrorMessage,
   isOverloadedErrorMessage,
+  isRawApiErrorPayload,
   isRateLimitAssistantError,
   isRateLimitErrorMessage,
   isTimeoutErrorMessage,
 } from "./pi-embedded-helpers/errors.js";
 export {
   downgradeGeminiHistory,
+  downgradeGeminiThinkingBlocks,
   isGoogleModelApi,
   sanitizeGoogleTurnOrdering,
 } from "./pi-embedded-helpers/google.js";

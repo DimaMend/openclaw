@@ -12,6 +12,7 @@ import {
 import type { RuntimeEnv } from "../runtime.js";
 import { note } from "../terminal/note.js";
 import { resolveUserPath } from "../utils.js";
+import { hasAnyWhatsAppAuth } from "../web/accounts.js";
 
 function resolveLegacyConfigPath(env: NodeJS.ProcessEnv): string {
   const override = env.CLAWDIS_CONFIG_PATH?.trim();
@@ -219,7 +220,9 @@ export function normalizeLegacyConfigValues(cfg: ClawdbotConfig): {
   }
 
   const legacyAckReaction = cfg.messages?.ackReaction?.trim();
-  if (legacyAckReaction) {
+  const hasWhatsAppConfig = cfg.channels?.whatsapp !== undefined;
+  const hasWhatsAppAuth = hasAnyWhatsAppAuth(cfg);
+  if (legacyAckReaction && (hasWhatsAppConfig || hasWhatsAppAuth)) {
     const hasWhatsAppAck = cfg.channels?.whatsapp?.ackReaction !== undefined;
     if (!hasWhatsAppAck) {
       const legacyScope = cfg.messages?.ackReactionScope ?? "group-mentions";

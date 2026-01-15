@@ -48,6 +48,8 @@ clawdbot [--dev] [--profile <name>] <command>
   onboard
   configure (alias: config)
   doctor
+  security
+    audit
   reset
   uninstall
   update
@@ -179,6 +181,12 @@ clawdbot [--dev] [--profile <name>] <command>
 ```
 
 Note: plugins can add additional top-level commands (for example `clawdbot voicecall`).
+
+## Security
+
+- `clawdbot security audit` — audit config + local state for common security foot-guns.
+- `clawdbot security audit --deep` — best-effort live Gateway probe.
+- `clawdbot security audit --fix` — tighten safe defaults and chmod state/config.
 
 ## Plugins
 
@@ -579,7 +587,11 @@ Subcommands:
 
 Common RPCs:
 - `config.apply` (validate + write config + restart + wake)
+- `config.patch` (merge a partial update without clobbering unrelated keys)
 - `update.run` (run update + restart + wake)
+
+Tip: when calling `config.set`/`config.apply`/`config.patch` directly, pass `baseHash` from
+`config.get` if a config already exists.
 
 ## Models
 
