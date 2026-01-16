@@ -63,34 +63,36 @@ function normalizeAttachments(ctx: MsgContext): MediaAttachment[] {
   const typesFromArray = Array.isArray(ctx.MediaTypes) ? ctx.MediaTypes : undefined;
 
   if (pathsFromArray && pathsFromArray.length > 0) {
+    const count = pathsFromArray.length;
     const urls =
-      urlsFromArray && urlsFromArray.length === pathsFromArray.length
+      urlsFromArray && urlsFromArray.length === count
         ? urlsFromArray
         : undefined;
     const types =
-      typesFromArray && typesFromArray.length === pathsFromArray.length
+      typesFromArray && typesFromArray.length === count
         ? typesFromArray
         : undefined;
     return pathsFromArray
       .map((value, index) => ({
         path: value?.trim() || undefined,
         url: urls?.[index] ?? ctx.MediaUrl,
-        mime: types?.[index] ?? ctx.MediaType,
+        mime: types?.[index] || (count === 1 ? ctx.MediaType : undefined),
         index,
       }))
       .filter((entry) => Boolean(entry.path?.trim() || entry.url?.trim()));
   }
 
   if (urlsFromArray && urlsFromArray.length > 0) {
+    const count = urlsFromArray.length;
     const types =
-      typesFromArray && typesFromArray.length === urlsFromArray.length
+      typesFromArray && typesFromArray.length === count
         ? typesFromArray
         : undefined;
     return urlsFromArray
       .map((value, index) => ({
         path: undefined,
         url: value?.trim() || undefined,
-        mime: types?.[index] ?? ctx.MediaType,
+        mime: types?.[index] || (count === 1 ? ctx.MediaType : undefined),
         index,
       }))
       .filter((entry) => Boolean(entry.url?.trim()));

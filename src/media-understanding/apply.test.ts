@@ -154,6 +154,51 @@ describe("applyMediaUnderstanding", () => {
     expect(ctx.Body).toBe("<media:audio>");
   });
 
+  it("avoids global MediaType when multiple attachments exist", async () => {
+    const { applyMediaUnderstanding } = await loadApply();
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "clawdbot-media-"));
+    const imagePath = path.join(dir, "image.jpg");
+    const audioPath = path.join(dir, "note.ogg");
+    await fs.writeFile(imagePath, "image-bytes");
+    await fs.writeFile(audioPath, "audio-bytes");
+
+    let seenFileName: string | undefined;
+    const ctx: MsgContext = {
+      Body: "<media:audio>",
+      MediaPaths: [imagePath, audioPath],
+      MediaType: "audio/ogg",
+    };
+    const cfg: ClawdbotConfig = {
+      tools: {
+        audio: {
+          transcription: {
+            enabled: true,
+            provider: "groq",
+            maxBytes: 1024 * 1024,
+          },
+        },
+      },
+    };
+
+    const result = await applyMediaUnderstanding({
+      ctx,
+      cfg,
+      providers: {
+        groq: {
+          id: "groq",
+          transcribeAudio: async (req) => {
+            seenFileName = req.fileName;
+            return { text: "multi audio" };
+          },
+        },
+      },
+    });
+
+    expect(result.appliedAudio).toBe(true);
+    expect(seenFileName).toBe("note.ogg");
+    expect(ctx.Body).toBe("[Audio]\nTranscript:\nmulti audio");
+  });
+
   it("skips video when base64 payload exceeds limit", async () => {
     const { applyMediaUnderstanding } = await loadApply();
     const bigBuffer = Buffer.alloc(54 * 1024 * 1024);
