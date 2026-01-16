@@ -175,4 +175,9 @@ export type ToolsConfig = {
       deny?: string[];
     };
   };
+  /** Message tool configuration. */
+  message?: {
+    /** Allow sending messages to targets outside the current chat context. Default: false. */
+    allowCrossContextSend?: boolean;
+  };
 };

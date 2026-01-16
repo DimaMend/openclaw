@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ClawdbotConfig } from "../../config/config.js";
+import * as configModule from "../../config/config.js";
 import { runMessageAction } from "./message-action-runner.js";
 
 const slackConfig = {
@@ -16,6 +17,19 @@ const whatsappConfig = {
   channels: {
     whatsapp: {
       allowFrom: ["*"],
+    },
+  },
+} as ClawdbotConfig;
+
+const crossContextConfig = {
+  channels: {
+    whatsapp: {
+      allowFrom: ["*"],
+    },
+  },
+  tools: {
+    message: {
+      allowCrossContextSend: true,
     },
   },
 } as ClawdbotConfig;
@@ -162,5 +176,26 @@ describe("runMessageAction context isolation", () => {
         dryRun: true,
       }),
     ).rejects.toThrow(/Cross-context messaging denied/);
+  });
+
+  it("allows cross-context send when allowCrossContextSend is enabled", async () => {
+    vi.spyOn(configModule, "loadConfig").mockReturnValue(crossContextConfig);
+    try {
+      const result = await runMessageAction({
+        cfg: crossContextConfig,
+        action: "send",
+        params: {
+          channel: "whatsapp",
+          to: "456@g.us",
+          message: "hi",
+        },
+        toolContext: { currentChannelId: "123@g.us" },
+        dryRun: true,
+      });
+
+      expect(result.kind).toBe("send");
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });

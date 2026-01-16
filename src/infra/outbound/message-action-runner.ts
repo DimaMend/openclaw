@@ -12,7 +12,7 @@ import type {
   ChannelMessageActionName,
   ChannelThreadingToolContext,
 } from "../../channels/plugins/types.js";
-import type { ClawdbotConfig } from "../../config/config.js";
+import { loadConfig, type ClawdbotConfig } from "../../config/config.js";
 import type { GatewayClientMode, GatewayClientName } from "../../utils/message-channel.js";
 import { resolveMessageChannelSelection } from "./channel-selection.js";
 import type { OutboundSendDeps } from "./deliver.js";
@@ -147,6 +147,9 @@ function enforceContextIsolation(params: {
   params: Record<string, unknown>;
   toolContext?: ChannelThreadingToolContext;
 }): void {
+  // Always read fresh config so changes take effect without gateway restart
+  if (loadConfig().tools?.message?.allowCrossContextSend) return;
+
   const currentTarget = params.toolContext?.currentChannelId?.trim();
   if (!currentTarget) return;
   if (!CONTEXT_GUARDED_ACTIONS.has(params.action)) return;
