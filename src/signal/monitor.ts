@@ -144,24 +144,30 @@ function buildSignalReactionSystemEventText(params: {
 async function waitForSignalDaemonReady(params: {
   baseUrl: string;
   abortSignal?: AbortSignal;
-  timeoutMs: number;
+  logAfterMs: number;
+  logIntervalMs?: number;
   runtime: RuntimeEnv;
 }): Promise<void> {
   const started = Date.now();
+  const logIntervalMs = Math.max(1_000, params.logIntervalMs ?? 30_000);
+  let nextLogAt = started + Math.max(0, params.logAfterMs);
   let lastError: string | null = null;
 
-  while (Date.now() - started < params.timeoutMs) {
+  while (true) {
     if (params.abortSignal?.aborted) return;
     const res = await signalCheck(params.baseUrl, 1000);
     if (res.ok) return;
     lastError = res.error ?? (res.status ? `HTTP ${res.status}` : "unreachable");
+    const now = Date.now();
+    if (now >= nextLogAt) {
+      const elapsedMs = now - started;
+      params.runtime.error?.(
+        danger(`daemon not ready after ${elapsedMs}ms (${lastError ?? "unknown error"})`),
+      );
+      nextLogAt = now + logIntervalMs;
+    }
     await new Promise((r) => setTimeout(r, 150));
   }
-
-  params.runtime.error?.(
-    danger(`daemon not ready after ${params.timeoutMs}ms (${lastError ?? "unknown error"})`),
-  );
-  throw new Error(`signal daemon not ready (${lastError ?? "unknown error"})`);
 }
 
 async function fetchAttachment(params: {
@@ -305,7 +311,8 @@ export async function monitorSignalProvider(opts: MonitorSignalOpts = {}): Promi
       await waitForSignalDaemonReady({
         baseUrl,
         abortSignal: opts.abortSignal,
-        timeoutMs: 10_000,
+        logAfterMs: 10_000,
+        logIntervalMs: 30_000,
         runtime,
       });
     }
