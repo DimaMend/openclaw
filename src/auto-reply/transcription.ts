@@ -11,7 +11,6 @@ import type { RuntimeEnv } from "../runtime.js";
 import { applyTemplate, type MsgContext } from "./templating.js";
 
 const AUDIO_TRANSCRIPTION_BINARY = "whisper";
-const DEFAULT_AUDIO_MAX_BYTES = 20 * 1024 * 1024;
 
 export function isAudio(mediaType?: string | null) {
   return Boolean(mediaType?.startsWith("audio"));
@@ -45,9 +44,7 @@ export async function transcribeInboundAudio(
     typeof toolTranscriber?.maxBytes === "number" &&
     toolTranscriber.maxBytes > 0
       ? toolTranscriber.maxBytes
-      : hasToolTranscriber
-        ? DEFAULT_AUDIO_MAX_BYTES
-        : undefined;
+      : undefined;
   let tmpPath: string | undefined;
   let mediaPath = ctx.MediaPath;
   try {

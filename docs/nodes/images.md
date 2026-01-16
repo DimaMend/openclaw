@@ -49,7 +49,7 @@ The WhatsApp channel runs via **Baileys Web**. This document captures the curren
 - Oversize or unreadable media → clear error in logs and the reply is skipped.
 
 **Media understanding caps (transcription/description)**
-- Audio transcription default: 20 MB (`tools.audio.transcription.maxBytes`).
+- Audio transcription default (provider): 20 MB (`tools.audio.transcription.maxBytes`; CLI enforces when set).
 - Video understanding default: 50 MB (`tools.video.understanding.maxBytes`).
 - Oversize media skips understanding, but replies still go through with the original body.
 

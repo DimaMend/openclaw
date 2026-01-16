@@ -1712,7 +1712,7 @@ Legacy: `tools.bash` is still accepted as an alias.
 - `model`: model id override (default `whisper-1` for OpenAI; `whisper-large-v3-turbo` for Groq).
 - `language`, `prompt`: optional hints.
 - `timeoutSeconds`: request timeout (default 60s for provider path).
-- `maxBytes`: max audio size to send (default 20MB).
+- `maxBytes`: max audio size to send (default 20MB for provider transcription; CLI path enforces only when set).
 - `enabled`: opt-out switch.
 - `profile` / `preferredProfile`: auth profile selection.
 - `scope`: optional gating (first match wins) with `match.channel`, `match.chatType`, or `match.keyPrefix`.

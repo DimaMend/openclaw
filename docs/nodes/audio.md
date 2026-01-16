@@ -12,7 +12,7 @@ read_when:
   3) Call the provider (e.g. `openai`, `groq`) and capture the transcript.
   4) Replace `Body` with an `[Audio]` block, set `{{Transcript}}`, and set `CommandBody`/`RawBody` to the transcript for command parsing.
   5) Continue through the normal auto-reply pipeline (templating, sessions, Pi command).
-- **CLI fallback (optional)**: If `tools.audio.transcription.args` is set and provider transcription fails (or no provider is configured), Clawdbot will run the configured CLI args (templated with `{{MediaPath}}`) and use stdout as the transcript.
+- **CLI fallback (optional)**: If `tools.audio.transcription.args` is set and provider transcription fails (or no provider is configured), Clawdbot will run the configured CLI args (templated with `{{MediaPath}}`) and use stdout as the transcript. `maxBytes` is only enforced for the CLI path when you explicitly set it.
 - **Verbose logging**: In `--verbose`, we log when transcription runs and when it replaces the body.
 
 ## Config examples
@@ -56,7 +56,7 @@ Requires `whisper` CLI installed:
 
 ## Notes & limits
 - Provider auth follows the standard model auth order (auth profiles, env vars, `models.providers.*.apiKey`).
-- Default size cap is 20MB (`tools.audio.transcription.maxBytes`). Oversize audio is skipped.
+- Default size cap is 20MB for provider transcription (`tools.audio.transcription.maxBytes`). Oversize audio is skipped when `maxBytes` is set (provider always respects it; CLI respects it when configured).
 - If provider transcription succeeds, the CLI args path does not run. If the provider fails and args exist, CLI fallback runs.
 - Transcript is available to templates as `{{Transcript}}`; `Body` is replaced with an `[Audio]` block that can include caption text as `User text:`.
 - CLI stdout is capped (5MB); keep CLI output concise.
