@@ -25,7 +25,7 @@ export function resolveMediaUnderstandingScope(params: {
 
   const channel = normalizeMatch(params.channel);
   const chatType = normalizeMatch(params.chatType);
-  const sessionKey = params.sessionKey ?? "";
+  const sessionKey = normalizeMatch(params.sessionKey) ?? "";
 
   for (const rule of scope.rules ?? []) {
     if (!rule) continue;

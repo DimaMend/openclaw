@@ -12,7 +12,7 @@ import { defaultRuntime } from "../../runtime.js";
 import { resolveCommandAuthorization } from "../command-auth.js";
 import type { MsgContext } from "../templating.js";
 import { SILENT_REPLY_TOKEN } from "../tokens.js";
-import { hasAudioTranscriptionConfig, isAudio, transcribeInboundAudio } from "../transcription.js";
+import { hasAudioTranscriptionConfig, transcribeInboundAudio } from "../transcription.js";
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
 import { resolveDefaultModel } from "./directive-handling.js";
 import { resolveReplyDirectives } from "./get-reply-directives.js";
@@ -23,6 +23,7 @@ import { stageSandboxMedia } from "./stage-sandbox-media.js";
 import { createTypingController } from "./typing.js";
 import { applyMediaUnderstanding } from "../../media-understanding/apply.js";
 import { resolveAudioAttachment } from "./attachments.js";
+import { extractMediaUserText, formatMediaUnderstandingBody } from "../../media-understanding/format.js";
 
 export async function getReplyFromConfig(
   ctx: MsgContext,
@@ -86,6 +87,7 @@ export async function getReplyFromConfig(
   const audioAttachment = resolveAudioAttachment(ctx);
   let transcribedText: string | undefined;
   if (hasAudioTranscriptionConfig(cfg) && audioAttachment && !mediaUnderstanding.appliedAudio) {
+    const priorUserText = extractMediaUserText(ctx.CommandBody ?? ctx.RawBody);
     const transcriptionCtx: MsgContext = {
       ...ctx,
       MediaPath: audioAttachment.path ?? ctx.MediaPath,
@@ -95,9 +97,28 @@ export async function getReplyFromConfig(
     const transcribed = await transcribeInboundAudio(cfg, transcriptionCtx, defaultRuntime);
     if (transcribed?.text) {
       transcribedText = transcribed.text;
-      ctx.Body = transcribed.text;
       ctx.Transcript = transcribed.text;
-      logVerbose("Replaced Body with audio transcript for reply flow");
+      ctx.CommandBody = transcribed.text;
+      ctx.RawBody = transcribed.text;
+      if (mediaUnderstanding.appliedVideo || (ctx.MediaUnderstanding?.length ?? 0) > 0) {
+        const mergedOutputs = [
+          ...(ctx.MediaUnderstanding ?? []),
+          {
+            kind: "audio.transcription",
+            attachmentIndex: audioAttachment.index,
+            text: transcribed.text,
+            provider: "cli",
+          },
+        ].sort((a, b) => a.attachmentIndex - b.attachmentIndex);
+        ctx.MediaUnderstanding = mergedOutputs;
+        ctx.Body = formatMediaUnderstandingBody({
+          body: priorUserText ?? undefined,
+          outputs: mergedOutputs,
+        });
+      } else {
+        ctx.Body = transcribed.text;
+        logVerbose("Replaced Body with audio transcript for reply flow");
+      }
     }
   }
 

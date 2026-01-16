@@ -12,6 +12,7 @@ describe("resolveAudioAttachment", () => {
     const result = resolveAudioAttachment(ctx);
 
     expect(result?.path).toBe("note.ogg");
+    expect(result?.index).toBe(1);
   });
 
   it("falls back to ctx.MediaType when only one attachment exists", () => {
@@ -24,5 +25,6 @@ describe("resolveAudioAttachment", () => {
 
     expect(result?.path).toBe("blob.bin");
     expect(result?.type).toBe("audio/ogg");
+    expect(result?.index).toBe(0);
   });
 });

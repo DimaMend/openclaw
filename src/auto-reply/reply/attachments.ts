@@ -2,7 +2,7 @@ import type { MsgContext } from "../templating.js";
 import { isAudioFileName } from "../../media/mime.js";
 import { isAudio } from "../transcription.js";
 
-type AudioAttachment = { path?: string; url?: string; type?: string };
+type AudioAttachment = { path?: string; url?: string; type?: string; index: number };
 
 export function resolveAudioAttachment(ctx: MsgContext): AudioAttachment | undefined {
   const paths = Array.isArray(ctx.MediaPaths) ? ctx.MediaPaths : [];
@@ -26,6 +26,7 @@ export function resolveAudioAttachment(ctx: MsgContext): AudioAttachment | undef
       path: pathValue,
       url: urls[index] ?? ctx.MediaUrl,
       type: types[index] ?? (allowGlobalTypeFallback ? ctx.MediaType : undefined),
+      index,
     }));
     const found = scan(entries);
     if (found) return found;
@@ -36,6 +37,7 @@ export function resolveAudioAttachment(ctx: MsgContext): AudioAttachment | undef
       path: undefined,
       url: urlValue,
       type: types[index] ?? (allowGlobalTypeFallback ? ctx.MediaType : undefined),
+      index,
     }));
     const found = scan(entries);
     if (found) return found;
@@ -45,6 +47,7 @@ export function resolveAudioAttachment(ctx: MsgContext): AudioAttachment | undef
     path: ctx.MediaPath,
     url: ctx.MediaUrl,
     type: ctx.MediaType,
+    index: 0,
   };
   return scan([fallback]) ?? undefined;
 }

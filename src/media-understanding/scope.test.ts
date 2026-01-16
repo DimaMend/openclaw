@@ -32,4 +32,15 @@ describe("resolveMediaUnderstandingScope", () => {
     });
     expect(decision).toBe("allow");
   });
+
+  it("matches keyPrefix case-insensitively", () => {
+    const decision = resolveMediaUnderstandingScope({
+      scope: {
+        default: "deny",
+        rules: [{ action: "allow", match: { keyPrefix: "agent:main:" } }],
+      },
+      sessionKey: "AGENT:MAIN:WHATSAPP:GROUP:123",
+    });
+    expect(decision).toBe("allow");
+  });
 });
