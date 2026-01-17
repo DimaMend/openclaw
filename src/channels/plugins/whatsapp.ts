@@ -1,14 +1,8 @@
-import {
-  createActionGate,
-  readStringParam,
-} from "../../agents/tools/common.js";
+import { createActionGate, readStringParam } from "../../agents/tools/common.js";
 import { handleWhatsAppAction } from "../../agents/tools/whatsapp-actions.js";
 import { chunkText } from "../../auto-reply/chunk.js";
 import { shouldLogVerbose } from "../../globals.js";
-import {
-  DEFAULT_ACCOUNT_ID,
-  normalizeAccountId,
-} from "../../routing/session-key.js";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";
 import { normalizeE164 } from "../../utils.js";
 import {
   listWhatsAppAccountIds,
@@ -25,15 +19,14 @@ import {
   webAuthExists,
 } from "../../web/auth-store.js";
 import { sendMessageWhatsApp, sendPollWhatsApp } from "../../web/outbound.js";
-import {
-  isWhatsAppGroupJid,
-  normalizeWhatsAppTarget,
-} from "../../whatsapp/normalize.js";
+import { isWhatsAppGroupJid, normalizeWhatsAppTarget } from "../../whatsapp/normalize.js";
 import { getChatChannelMeta } from "../registry.js";
+import { WhatsAppConfigSchema } from "../../config/zod-schema.providers-whatsapp.js";
+import { buildChannelConfigSchema } from "./config-schema.js";
 import { createWhatsAppLoginTool } from "./agent-tools/whatsapp-login.js";
 import { resolveWhatsAppGroupRequireMention } from "./group-mentions.js";
 import { formatPairingApproveHint } from "./helpers.js";
-import { normalizeWhatsAppMessagingTarget } from "./normalize-target.js";
+import { looksLikeWhatsAppTargetId, normalizeWhatsAppMessagingTarget } from "./normalize-target.js";
 import { whatsappOnboardingAdapter } from "./onboarding/whatsapp.js";
 import {
   applyAccountNameToChannelSection,
@@ -42,11 +35,15 @@ import {
 import { collectWhatsAppStatusIssues } from "./status-issues/whatsapp.js";
 import type { ChannelMessageActionName, ChannelPlugin } from "./types.js";
 import { resolveWhatsAppHeartbeatRecipients } from "./whatsapp-heartbeat.js";
+import { missingTargetError } from "../../infra/outbound/target-errors.js";
+import {
+  listWhatsAppDirectoryGroupsFromConfig,
+  listWhatsAppDirectoryPeersFromConfig,
+} from "./directory-config.js";
 
 const meta = getChatChannelMeta("whatsapp");
 
-const escapeRegExp = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
   id: "whatsapp",
@@ -70,10 +67,10 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
   },
   reload: { configPrefixes: ["web"], noopPrefixes: ["channels.whatsapp"] },
   gatewayMethods: ["web.login.start", "web.login.wait"],
+  configSchema: buildChannelConfigSchema(WhatsAppConfigSchema),
   config: {
     listAccountIds: (cfg) => listWhatsAppAccountIds(cfg),
-    resolveAccount: (cfg, accountId) =>
-      resolveWhatsAppAccount({ cfg, accountId }),
+    resolveAccount: (cfg, accountId) => resolveWhatsAppAccount({ cfg, accountId }),
     defaultAccountId: (cfg) => resolveDefaultWhatsAppAccountId(cfg),
     setAccountEnabled: ({ cfg, accountId, enabled }) => {
       const accountKey = accountId || DEFAULT_ACCOUNT_ID;
@@ -111,8 +108,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
         },
       };
     },
-    isEnabled: (account, cfg) =>
-      account.enabled !== false && cfg.web?.enabled !== false,
+    isEnabled: (account, cfg) => account.enabled !== false && cfg.web?.enabled !== false,
     disabledReason: () => "disabled",
     isConfigured: async (account) => await webAuthExists(account.authDir),
     unconfiguredReason: () => "not linked",
@@ -121,6 +117,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
       name: account.name,
       enabled: account.enabled,
       configured: Boolean(account.authDir),
+      linked: Boolean(account.authDir),
       dmPolicy: account.dmPolicy,
       allowFrom: account.allowFrom,
     }),
@@ -130,18 +127,13 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
       allowFrom
         .map((entry) => String(entry).trim())
         .filter((entry): entry is string => Boolean(entry))
-        .map((entry) =>
-          entry === "*" ? entry : normalizeWhatsAppTarget(entry),
-        )
+        .map((entry) => (entry === "*" ? entry : normalizeWhatsAppTarget(entry)))
         .filter((entry): entry is string => Boolean(entry)),
   },
   security: {
     resolveDmPolicy: ({ cfg, accountId, account }) => {
-      const resolvedAccountId =
-        accountId ?? account.accountId ?? DEFAULT_ACCOUNT_ID;
-      const useAccountPath = Boolean(
-        cfg.channels?.whatsapp?.accounts?.[resolvedAccountId],
-      );
+      const resolvedAccountId = accountId ?? account.accountId ?? DEFAULT_ACCOUNT_ID;
+      const useAccountPath = Boolean(cfg.channels?.whatsapp?.accounts?.[resolvedAccountId]);
       const basePath = useAccountPath
         ? `channels.whatsapp.accounts.${resolvedAccountId}.`
         : "channels.whatsapp.";
@@ -231,6 +223,26 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
   },
   messaging: {
     normalizeTarget: normalizeWhatsAppMessagingTarget,
+    targetResolver: {
+      looksLikeId: looksLikeWhatsAppTargetId,
+      hint: "<E.164|group JID>",
+    },
+  },
+  directory: {
+    self: async ({ cfg, accountId }) => {
+      const account = resolveWhatsAppAccount({ cfg, accountId });
+      const { e164, jid } = readWebSelfId(account.authDir);
+      const id = e164 ?? jid;
+      if (!id) return null;
+      return {
+        kind: "user",
+        id,
+        name: account.name,
+        raw: { e164, jid },
+      };
+    },
+    listPeers: async (params) => listWhatsAppDirectoryPeersFromConfig(params),
+    listGroups: async (params) => listWhatsAppDirectoryGroupsFromConfig(params),
   },
   actions: {
     listActions: ({ cfg }) => {
@@ -244,29 +256,24 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
     supportsAction: ({ action }) => action === "react",
     handleAction: async ({ action, params, cfg, accountId }) => {
       if (action !== "react") {
-        throw new Error(
-          `Action ${action} is not supported for provider ${meta.id}.`,
-        );
+        throw new Error(`Action ${action} is not supported for provider ${meta.id}.`);
       }
       const messageId = readStringParam(params, "messageId", {
         required: true,
       });
       const emoji = readStringParam(params, "emoji", { allowEmpty: true });
-      const remove =
-        typeof params.remove === "boolean" ? params.remove : undefined;
+      const remove = typeof params.remove === "boolean" ? params.remove : undefined;
       return await handleWhatsAppAction(
         {
           action: "react",
           chatJid:
-            readStringParam(params, "chatJid") ??
-            readStringParam(params, "to", { required: true }),
+            readStringParam(params, "chatJid") ?? readStringParam(params, "to", { required: true }),
           messageId,
           emoji,
           remove,
           participant: readStringParam(params, "participant"),
           accountId: accountId ?? undefined,
-          fromMe:
-            typeof params.fromMe === "boolean" ? params.fromMe : undefined,
+          fromMe: typeof params.fromMe === "boolean" ? params.fromMe : undefined,
         },
         cfg,
       );
@@ -279,9 +286,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
     pollMaxOptions: 12,
     resolveTarget: ({ to, allowFrom, mode }) => {
       const trimmed = to?.trim() ?? "";
-      const allowListRaw = (allowFrom ?? [])
-        .map((entry) => String(entry).trim())
-        .filter(Boolean);
+      const allowListRaw = (allowFrom ?? []).map((entry) => String(entry).trim()).filter(Boolean);
       const hasWildcard = allowListRaw.includes("*");
       const allowList = allowListRaw
         .filter((entry) => entry !== "*")
@@ -291,16 +296,14 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
       if (trimmed) {
         const normalizedTo = normalizeWhatsAppTarget(trimmed);
         if (!normalizedTo) {
-          if (
-            (mode === "implicit" || mode === "heartbeat") &&
-            allowList.length > 0
-          ) {
+          if ((mode === "implicit" || mode === "heartbeat") && allowList.length > 0) {
             return { ok: true, to: allowList[0] };
           }
           return {
             ok: false,
-            error: new Error(
-              "Delivering to WhatsApp requires --to <E.164|group JID> or channels.whatsapp.allowFrom[0]",
+            error: missingTargetError(
+              "WhatsApp",
+              "<E.164|group JID> or channels.whatsapp.allowFrom[0]",
             ),
           };
         }
@@ -324,8 +327,9 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
       }
       return {
         ok: false,
-        error: new Error(
-          "Delivering to WhatsApp requires --to <E.164|group JID> or channels.whatsapp.allowFrom[0]",
+        error: missingTargetError(
+          "WhatsApp",
+          "<E.164|group JID> or channels.whatsapp.allowFrom[0]",
         ),
       };
     },
@@ -356,8 +360,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
   },
   auth: {
     login: async ({ cfg, accountId, runtime, verbose }) => {
-      const resolvedAccountId =
-        accountId?.trim() || resolveDefaultWhatsAppAccountId(cfg);
+      const resolvedAccountId = accountId?.trim() || resolveDefaultWhatsAppAccountId(cfg);
       const { loginWeb } = await import("../../web/login.js");
       await loginWeb(Boolean(verbose), undefined, runtime, resolvedAccountId);
     },
@@ -368,9 +371,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
         return { ok: false, reason: "whatsapp-disabled" };
       }
       const account = resolveWhatsAppAccount({ cfg, accountId });
-      const authExists = await (deps?.webAuthExists ?? webAuthExists)(
-        account.authDir,
-      );
+      const authExists = await (deps?.webAuthExists ?? webAuthExists)(account.authDir);
       if (!authExists) {
         return { ok: false, reason: "whatsapp-not-linked" };
       }
@@ -382,8 +383,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
       }
       return { ok: true, reason: "ok" };
     },
-    resolveRecipients: ({ cfg, opts }) =>
-      resolveWhatsAppHeartbeatRecipients(cfg, opts),
+    resolveRecipients: ({ cfg, opts }) => resolveWhatsAppHeartbeatRecipients(cfg, opts),
   },
   status: {
     defaultRuntime: {
@@ -407,8 +407,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
             ? await webAuthExists(authDir)
             : false;
       const authAgeMs = linked && authDir ? getWebAuthAgeMs(authDir) : null;
-      const self =
-        linked && authDir ? readWebSelfId(authDir) : { e164: null, jid: null };
+      const self = linked && authDir ? readWebSelfId(authDir) : { e164: null, jid: null };
       return {
         configured: linked,
         linked,
@@ -444,8 +443,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
         allowFrom: account.allowFrom,
       };
     },
-    resolveAccountState: ({ configured }) =>
-      configured ? "linked" : "not linked",
+    resolveAccountState: ({ configured }) => (configured ? "linked" : "not linked"),
     logSelfId: ({ account, runtime, includeChannelPrefix }) => {
       logWebSelfId(account.authDir, runtime, includeChannelPrefix);
     },
@@ -466,8 +464,7 @@ export const whatsappPlugin: ChannelPlugin<ResolvedWhatsAppAccount> = {
         ctx.runtime,
         ctx.abortSignal,
         {
-          statusSink: (next) =>
-            ctx.setStatus({ accountId: ctx.accountId, ...next }),
+          statusSink: (next) => ctx.setStatus({ accountId: ctx.accountId, ...next }),
           accountId: account.accountId,
         },
       );

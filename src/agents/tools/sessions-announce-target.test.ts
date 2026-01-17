@@ -26,9 +26,11 @@ describe("resolveAnnounceTarget", () => {
       sessions: [
         {
           key: "agent:main:whatsapp:group:123@g.us",
-          lastChannel: "whatsapp",
-          lastTo: "123@g.us",
-          lastAccountId: "work",
+          deliveryContext: {
+            channel: "whatsapp",
+            to: "123@g.us",
+            accountId: "work",
+          },
         },
       ],
     });
@@ -43,9 +45,7 @@ describe("resolveAnnounceTarget", () => {
       accountId: "work",
     });
     expect(callGatewayMock).toHaveBeenCalledTimes(1);
-    const first = callGatewayMock.mock.calls[0]?.[0] as
-      | { method?: string }
-      | undefined;
+    const first = callGatewayMock.mock.calls[0]?.[0] as { method?: string } | undefined;
     expect(first).toBeDefined();
     expect(first?.method).toBe("sessions.list");
   });

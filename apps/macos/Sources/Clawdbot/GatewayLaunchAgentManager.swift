@@ -2,26 +2,14 @@ import Foundation
 
 enum GatewayLaunchAgentManager {
     private static let logger = Logger(subsystem: "com.clawdbot", category: "gateway.launchd")
-    private static let supportedBindModes: Set<String> = ["loopback", "tailnet", "lan", "auto"]
-    private static let legacyGatewayLaunchdLabel = "com.steipete.clawdbot.gateway"
     private static let disableLaunchAgentMarker = ".clawdbot/disable-launchagent"
-
-    private enum GatewayProgramArgumentsError: LocalizedError {
-        case message(String)
-
-        var errorDescription: String? {
-            switch self {
-            case let .message(message):
-                message
-            }
-        }
-    }
 
     private static var plistURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/LaunchAgents/\(gatewayLaunchdLabel).plist")
     }
 
+<<<<<<< HEAD
     private static var legacyPlistURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/LaunchAgents/\(legacyGatewayLaunchdLabel).plist")
@@ -65,10 +53,11 @@ enum GatewayLaunchAgentManager {
         return .failure(.message("clawdbot CLI not found in PATH; install the CLI."))
     }
 
+=======
+>>>>>>> upstream/main
     static func isLoaded() async -> Bool {
-        guard FileManager.default.fileExists(atPath: self.plistURL.path) else { return false }
-        let result = await Launchctl.run(["print", "gui/\(getuid())/\(gatewayLaunchdLabel)"])
-        return result.status == 0
+        guard let loaded = await self.readDaemonLoaded() else { return false }
+        return loaded
     }
 
     static func set(enabled: Bool, bundlePath: String, port: Int) async -> String? {
@@ -76,7 +65,9 @@ enum GatewayLaunchAgentManager {
             self.logger.info("launchd enable skipped (disable marker set)")
             return nil
         }
+
         if enabled {
+<<<<<<< HEAD
             _ = await Launchctl.run(["bootout", "gui/\(getuid())/\(self.legacyGatewayLaunchdLabel)"])
             try? FileManager.default.removeItem(at: self.legacyPlistURL)
             let gatewayBin = self.gatewayExecutablePath(bundlePath: bundlePath)
@@ -133,19 +124,28 @@ enum GatewayLaunchAgentManager {
             }
             await self.ensureEnabled()
             return nil
+=======
+            self.logger.info("launchd enable requested via CLI port=\(port)")
+            return await self.runDaemonCommand([
+                "install",
+                "--force",
+                "--port",
+                "\(port)",
+                "--runtime",
+                "node",
+            ])
+>>>>>>> upstream/main
         }
 
-        self.logger.info("launchd disable requested")
-        _ = await Launchctl.run(["bootout", "gui/\(getuid())/\(gatewayLaunchdLabel)"])
-        await self.ensureDisabled()
-        try? FileManager.default.removeItem(at: self.plistURL)
-        return nil
+        self.logger.info("launchd disable requested via CLI")
+        return await self.runDaemonCommand(["uninstall"])
     }
 
     static func kickstart() async {
-        _ = await Launchctl.run(["kickstart", "-k", "gui/\(getuid())/\(gatewayLaunchdLabel)"])
+        _ = await self.runDaemonCommand(["restart"], timeout: 20)
     }
 
+<<<<<<< HEAD
     private static func writePlist(bundlePath: String, port: Int) {
         let relayDir = self.relayDir(bundlePath: bundlePath)
         let preferredPath = ([relayDir] + CommandResolver.preferredPaths())
@@ -210,129 +210,25 @@ enum GatewayLaunchAgentManager {
         } catch {
             self.logger.error("launchd plist write failed: \(error.localizedDescription)")
         }
+=======
+    static func launchdConfigSnapshot() -> LaunchAgentPlistSnapshot? {
+        LaunchAgentPlist.snapshot(url: self.plistURL)
+>>>>>>> upstream/main
     }
 
-    private static func preferredGatewayBind() -> String? {
-        if CommandResolver.connectionModeIsRemote() {
-            return nil
-        }
-        if let env = ProcessInfo.processInfo.environment["CLAWDBOT_GATEWAY_BIND"] {
-            let trimmed = env.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            if self.supportedBindModes.contains(trimmed) {
-                return trimmed
-            }
-        }
-
-        let root = ClawdbotConfigFile.loadDict()
-        if let gateway = root["gateway"] as? [String: Any],
-           let bind = gateway["bind"] as? String
+    static func launchdGatewayLogPath() -> String {
+        let snapshot = self.launchdConfigSnapshot()
+        if let stdout = snapshot?.stdoutPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !stdout.isEmpty
         {
-            let trimmed = bind.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            if self.supportedBindModes.contains(trimmed) {
-                return trimmed
-            }
+            return stdout
         }
-
-        return nil
-    }
-
-    private static func preferredGatewayToken() -> String? {
-        let raw = ProcessInfo.processInfo.environment["CLAWDBOT_GATEWAY_TOKEN"] ?? ""
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            return trimmed
-        }
-        let root = ClawdbotConfigFile.loadDict()
-        if let gateway = root["gateway"] as? [String: Any],
-           let auth = gateway["auth"] as? [String: Any],
-           let token = auth["token"] as? String
+        if let stderr = snapshot?.stderrPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !stderr.isEmpty
         {
-            let value = token.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !value.isEmpty {
-                return value
-            }
+            return stderr
         }
-        return nil
-    }
-
-    private static func preferredGatewayPassword() -> String? {
-        // First check environment variable
-        let raw = ProcessInfo.processInfo.environment["CLAWDBOT_GATEWAY_PASSWORD"] ?? ""
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            return trimmed
-        }
-        // Then check config file (gateway.auth.password)
-        let root = ClawdbotConfigFile.loadDict()
-        if let gateway = root["gateway"] as? [String: Any],
-           let auth = gateway["auth"] as? [String: Any],
-           let password = auth["password"] as? String
-        {
-            return password.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return nil
-    }
-
-    private static func escapePlistValue(_ raw: String) -> String {
-        raw
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\"", with: "&quot;")
-            .replacingOccurrences(of: "'", with: "&apos;")
-    }
-
-    private struct DesiredConfig: Equatable {
-        let port: Int
-        let bind: String
-        let token: String?
-        let password: String?
-    }
-
-    private struct InstalledConfig: Equatable {
-        let port: Int?
-        let bind: String?
-        let token: String?
-        let password: String?
-
-        func matches(_ desired: DesiredConfig) -> Bool {
-            guard self.port == desired.port else { return false }
-            guard (self.bind ?? "loopback") == desired.bind else { return false }
-            guard self.token == desired.token else { return false }
-            guard self.password == desired.password else { return false }
-            return true
-        }
-    }
-
-    private static func readPlistConfig() -> InstalledConfig? {
-        guard let snapshot = LaunchAgentPlist.snapshot(url: self.plistURL) else { return nil }
-        return InstalledConfig(
-            port: snapshot.port,
-            bind: snapshot.bind,
-            token: snapshot.token,
-            password: snapshot.password)
-    }
-
-    private static func ensureEnabled() async {
-        let result = await Launchctl.run(["enable", "gui/\(getuid())/\(gatewayLaunchdLabel)"])
-        guard result.status != 0 else { return }
-        let msg = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
-        if msg.isEmpty {
-            self.logger.warning("launchd enable failed")
-        } else {
-            self.logger.warning("launchd enable failed: \(msg)")
-        }
-    }
-
-    private static func ensureDisabled() async {
-        let result = await Launchctl.run(["disable", "gui/\(getuid())/\(gatewayLaunchdLabel)"])
-        guard result.status != 0 else { return }
-        let msg = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
-        if msg.isEmpty {
-            self.logger.warning("launchd disable failed")
-        } else {
-            self.logger.warning("launchd disable failed: \(msg)")
-        }
+        return LogLocator.launchdGatewayLogPath
     }
 }
 
@@ -342,8 +238,8 @@ extension GatewayLaunchAgentManager {
             .appendingPathComponent(self.disableLaunchAgentMarker)
         return FileManager.default.fileExists(atPath: marker.path)
     }
-}
 
+<<<<<<< HEAD
 #if DEBUG
 extension GatewayLaunchAgentManager {
     static func _testGatewayExecutablePath(bundlePath: String) -> String {
@@ -356,14 +252,103 @@ extension GatewayLaunchAgentManager {
 
     static func _testPreferredGatewayBind() -> String? {
         self.preferredGatewayBind()
+=======
+    private static func readDaemonLoaded() async -> Bool? {
+        let result = await self.runDaemonCommandResult(
+            ["status", "--json", "--no-probe"],
+            timeout: 15,
+            quiet: true)
+        guard result.success, let payload = result.payload else { return nil }
+        guard
+            let json = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+            let service = json["service"] as? [String: Any],
+            let loaded = service["loaded"] as? Bool
+        else {
+            return nil
+        }
+        return loaded
+>>>>>>> upstream/main
     }
 
-    static func _testPreferredGatewayToken() -> String? {
-        self.preferredGatewayToken()
+    private struct CommandResult {
+        let success: Bool
+        let payload: Data?
+        let message: String?
     }
 
-    static func _testEscapePlistValue(_ raw: String) -> String {
-        self.escapePlistValue(raw)
+    private struct ParsedDaemonJson {
+        let text: String
+        let object: [String: Any]
+    }
+
+    private static func runDaemonCommand(
+        _ args: [String],
+        timeout: Double = 15,
+        quiet: Bool = false) async -> String?
+    {
+        let result = await self.runDaemonCommandResult(args, timeout: timeout, quiet: quiet)
+        if result.success { return nil }
+        return result.message ?? "Gateway daemon command failed"
+    }
+
+    private static func runDaemonCommandResult(
+        _ args: [String],
+        timeout: Double,
+        quiet: Bool) async -> CommandResult
+    {
+        let command = CommandResolver.clawdbotCommand(
+            subcommand: "daemon",
+            extraArgs: self.withJsonFlag(args))
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = CommandResolver.preferredPaths().joined(separator: ":")
+        let response = await ShellExecutor.runDetailed(command: command, cwd: nil, env: env, timeout: timeout)
+        let parsed = self.parseDaemonJson(from: response.stdout) ?? self.parseDaemonJson(from: response.stderr)
+        let ok = parsed?.object["ok"] as? Bool
+        let message = (parsed?.object["error"] as? String) ?? (parsed?.object["message"] as? String)
+        let payload = parsed?.text.data(using: .utf8)
+            ?? (response.stdout.isEmpty ? response.stderr : response.stdout).data(using: .utf8)
+        let success = ok ?? response.success
+        if success {
+            return CommandResult(success: true, payload: payload, message: nil)
+        }
+
+        if quiet {
+            return CommandResult(success: false, payload: payload, message: message)
+        }
+
+        let detail = message ?? self.summarize(response.stderr) ?? self.summarize(response.stdout)
+        let exit = response.exitCode.map { "exit \($0)" } ?? (response.errorMessage ?? "failed")
+        let fullMessage = detail.map { "Gateway daemon command failed (\(exit)): \($0)" }
+            ?? "Gateway daemon command failed (\(exit))"
+        self.logger.error("\(fullMessage, privacy: .public)")
+        return CommandResult(success: false, payload: payload, message: detail)
+    }
+
+    private static func withJsonFlag(_ args: [String]) -> [String] {
+        if args.contains("--json") { return args }
+        return args + ["--json"]
+    }
+
+    private static func parseDaemonJson(from raw: String) -> ParsedDaemonJson? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let start = trimmed.firstIndex(of: "{"),
+              let end = trimmed.lastIndex(of: "}")
+        else {
+            return nil
+        }
+        let jsonText = String(trimmed[start...end])
+        guard let data = jsonText.data(using: .utf8) else { return nil }
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return ParsedDaemonJson(text: jsonText, object: object)
+    }
+
+    private static func summarize(_ text: String) -> String? {
+        let lines = text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard let last = lines.last else { return nil }
+        let normalized = last.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        return normalized.count > 200 ? String(normalized.prefix(199)) + "…" : normalized
     }
 }
-#endif

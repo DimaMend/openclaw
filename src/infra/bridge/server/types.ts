@@ -1,3 +1,5 @@
+import type { TlsOptions } from "node:tls";
+
 import type { NodePairingPendingRequest } from "../../node-pairing.js";
 
 export type BridgeHelloFrame = {
@@ -101,11 +103,7 @@ export type NodeBridgeServer = {
     paramsJSON?: string | null;
     timeoutMs?: number;
   }) => Promise<BridgeInvokeResponseFrame>;
-  sendEvent: (opts: {
-    nodeId: string;
-    event: string;
-    payloadJSON?: string | null;
-  }) => void;
+  sendEvent: (opts: { nodeId: string; event: string; payloadJSON?: string | null }) => void;
   listConnected: () => NodeBridgeClientInfo[];
   listeners: Array<{ host: string; port: number }>;
 };
@@ -126,6 +124,7 @@ export type NodeBridgeClientInfo = {
 export type NodeBridgeServerOpts = {
   host: string;
   port: number; // 0 = ephemeral
+  tls?: TlsOptions;
   pairingBaseDir?: string;
   canvasHostPort?: number;
   canvasHostHost?: string;
@@ -139,8 +138,6 @@ export type NodeBridgeServerOpts = {
   >;
   onAuthenticated?: (node: NodeBridgeClientInfo) => Promise<void> | void;
   onDisconnected?: (node: NodeBridgeClientInfo) => Promise<void> | void;
-  onPairRequested?: (
-    request: NodePairingPendingRequest,
-  ) => Promise<void> | void;
+  onPairRequested?: (request: NodePairingPendingRequest) => Promise<void> | void;
   serverName?: string;
 };

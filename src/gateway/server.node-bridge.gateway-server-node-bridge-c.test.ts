@@ -3,10 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, test, vi } from "vitest";
 import { emitAgentEvent } from "../infra/agent-events.js";
-import {
-  GATEWAY_CLIENT_MODES,
-  GATEWAY_CLIENT_NAMES,
-} from "../utils/message-channel.js";
+import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import {
   agentCommand,
   bridgeStartCalls,
@@ -17,6 +14,7 @@ import {
   startGatewayServer,
   startServerWithClient,
   testState,
+  writeSessionStore,
 } from "./test-helpers.js";
 
 const decodeWsData = (data: unknown): string => {
@@ -25,9 +23,7 @@ const decodeWsData = (data: unknown): string => {
   if (Array.isArray(data)) return Buffer.concat(data).toString("utf-8");
   if (data instanceof ArrayBuffer) return Buffer.from(data).toString("utf-8");
   if (ArrayBuffer.isView(data)) {
-    return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString(
-      "utf-8",
-    );
+    return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("utf-8");
   }
   return "";
 };
@@ -47,22 +43,16 @@ describe("gateway server node/bridge", () => {
   test("bridge voice transcript defaults to main session", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "clawdbot-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
-    await fs.writeFile(
-      testState.sessionStorePath,
-      JSON.stringify(
-        {
-          main: {
-            sessionId: "sess-main",
-            updatedAt: Date.now(),
-            lastChannel: "whatsapp",
-            lastTo: "+1555",
-          },
+    await writeSessionStore({
+      entries: {
+        main: {
+          sessionId: "sess-main",
+          updatedAt: Date.now(),
+          lastChannel: "whatsapp",
+          lastTo: "+1555",
         },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
+      },
+    });
 
     const port = await getFreePort();
     const server = await startGatewayServer(port);
@@ -84,10 +74,11 @@ describe("gateway server node/bridge", () => {
     expect(call.deliver).toBe(false);
     expect(call.messageChannel).toBe("node");
 
-    const stored = JSON.parse(
-      await fs.readFile(testState.sessionStorePath, "utf-8"),
-    ) as Record<string, { sessionId?: string } | undefined>;
-    expect(stored.main?.sessionId).toBe("sess-main");
+    const stored = JSON.parse(await fs.readFile(testState.sessionStorePath, "utf-8")) as Record<
+      string,
+      { sessionId?: string } | undefined
+    >;
+    expect(stored["agent:main:main"]?.sessionId).toBe("sess-main");
     expect(stored["node-ios-node"]).toBeUndefined();
 
     await server.close();
@@ -96,20 +87,14 @@ describe("gateway server node/bridge", () => {
   test("bridge voice transcript triggers chat events for webchat clients", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "clawdbot-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
-    await fs.writeFile(
-      testState.sessionStorePath,
-      JSON.stringify(
-        {
-          main: {
-            sessionId: "sess-main",
-            updatedAt: Date.now(),
-          },
+    await writeSessionStore({
+      entries: {
+        main: {
+          sessionId: "sess-main",
+          updatedAt: Date.now(),
         },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
+      },
+    });
 
     const { server, ws } = await startServerWithClient();
     await connectOk(ws, {
@@ -187,20 +172,14 @@ describe("gateway server node/bridge", () => {
   test("bridge chat.abort cancels while saving the session store", async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "clawdbot-gw-"));
     testState.sessionStorePath = path.join(dir, "sessions.json");
-    await fs.writeFile(
-      testState.sessionStorePath,
-      JSON.stringify(
-        {
-          main: {
-            sessionId: "sess-main",
-            updatedAt: Date.now(),
-          },
+    await writeSessionStore({
+      entries: {
+        main: {
+          sessionId: "sess-main",
+          updatedAt: Date.now(),
         },
-        null,
-        2,
-      ),
-      "utf-8",
-    );
+      },
+    });
 
     sessionStoreSaveDelayMs.value = 120;
 

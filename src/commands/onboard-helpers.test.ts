@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { openUrl, resolveBrowserOpenCommand } from "./onboard-helpers.js";
 =======
 import {
@@ -8,6 +9,9 @@ import {
   resolveBrowserOpenCommand,
   resolveControlUiLinks,
 } from "./onboard-helpers.js";
+>>>>>>> upstream/main
+=======
+import { openUrl, resolveBrowserOpenCommand, resolveControlUiLinks } from "./onboard-helpers.js";
 >>>>>>> upstream/main
 
 const mocks = vi.hoisted(() => ({

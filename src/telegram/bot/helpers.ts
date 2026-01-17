@@ -1,7 +1,4 @@
-import {
-  formatLocationText,
-  type NormalizedLocation,
-} from "../../channels/location.js";
+import { formatLocationText, type NormalizedLocation } from "../../channels/location.js";
 import type { TelegramAccountConfig } from "../../config/types.telegram.js";
 import type {
   TelegramLocation,
@@ -22,10 +19,31 @@ export function resolveTelegramForumThreadId(params: {
   return params.messageThreadId ?? undefined;
 }
 
+/**
+ * Build thread params for Telegram API calls (messages, media).
+ * General forum topic (id=1) must be treated like a regular supergroup send:
+ * Telegram rejects sendMessage/sendMedia with message_thread_id=1 ("thread not found").
+ */
 export function buildTelegramThreadParams(messageThreadId?: number) {
-  return messageThreadId != null
-    ? { message_thread_id: messageThreadId }
-    : undefined;
+  if (messageThreadId == null) {
+    return undefined;
+  }
+  const normalized = Math.trunc(messageThreadId);
+  if (normalized === TELEGRAM_GENERAL_TOPIC_ID) {
+    return undefined;
+  }
+  return { message_thread_id: normalized };
+}
+
+/**
+ * Build thread params for typing indicators (sendChatAction).
+ * Empirically, General topic (id=1) needs message_thread_id for typing to appear.
+ */
+export function buildTypingThreadParams(messageThreadId?: number) {
+  if (messageThreadId == null) {
+    return undefined;
+  }
+  return { message_thread_id: Math.trunc(messageThreadId) };
 }
 
 export function resolveTelegramStreamMode(
@@ -36,37 +54,22 @@ export function resolveTelegramStreamMode(
   return "partial";
 }
 
-export function buildTelegramGroupPeerId(
-  chatId: number | string,
-  messageThreadId?: number,
-) {
-  return messageThreadId != null
-    ? `${chatId}:topic:${messageThreadId}`
-    : String(chatId);
+export function buildTelegramGroupPeerId(chatId: number | string, messageThreadId?: number) {
+  return messageThreadId != null ? `${chatId}:topic:${messageThreadId}` : String(chatId);
 }
 
-export function buildTelegramGroupFrom(
-  chatId: number | string,
-  messageThreadId?: number,
-) {
-  return messageThreadId != null
-    ? `group:${chatId}:topic:${messageThreadId}`
-    : `group:${chatId}`;
+export function buildTelegramGroupFrom(chatId: number | string, messageThreadId?: number) {
+  return `telegram:group:${buildTelegramGroupPeerId(chatId, messageThreadId)}`;
 }
 
 export function buildSenderName(msg: TelegramMessage) {
   const name =
-    [msg.from?.first_name, msg.from?.last_name]
-      .filter(Boolean)
-      .join(" ")
-      .trim() || msg.from?.username;
+    [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ").trim() ||
+    msg.from?.username;
   return name || undefined;
 }
 
-export function buildSenderLabel(
-  msg: TelegramMessage,
-  senderId?: number | string,
-) {
+export function buildSenderLabel(msg: TelegramMessage, senderId?: number | string) {
   const name = buildSenderName(msg);
   const username = msg.from?.username ? `@${msg.from.username}` : undefined;
   let label = name;
@@ -77,9 +80,7 @@ export function buildSenderLabel(
   }
   const normalizedSenderId =
     senderId != null && `${senderId}`.trim() ? `${senderId}`.trim() : undefined;
-  const fallbackId =
-    normalizedSenderId ??
-    (msg.from?.id != null ? String(msg.from.id) : undefined);
+  const fallbackId = normalizedSenderId ?? (msg.from?.id != null ? String(msg.from.id) : undefined);
   const idPart = fallbackId ? `id:${fallbackId}` : undefined;
   if (label && idPart) return `${label} ${idPart}`;
   if (label) return label;
@@ -92,21 +93,9 @@ export function buildGroupLabel(
   messageThreadId?: number,
 ) {
   const title = msg.chat?.title;
-  const topicSuffix =
-    messageThreadId != null ? ` topic:${messageThreadId}` : "";
+  const topicSuffix = messageThreadId != null ? ` topic:${messageThreadId}` : "";
   if (title) return `${title} id:${chatId}${topicSuffix}`;
   return `group:${chatId}${topicSuffix}`;
-}
-
-export function buildGroupFromLabel(
-  msg: TelegramMessage,
-  chatId: number | string,
-  senderId?: number | string,
-  messageThreadId?: number,
-) {
-  const groupLabel = buildGroupLabel(msg, chatId, messageThreadId);
-  const senderLabel = buildSenderLabel(msg, senderId);
-  return `${groupLabel} from ${senderLabel}`;
 }
 
 export function hasBotMention(msg: TelegramMessage, botUsername: string) {
@@ -115,10 +104,7 @@ export function hasBotMention(msg: TelegramMessage, botUsername: string) {
   const entities = msg.entities ?? msg.caption_entities ?? [];
   for (const ent of entities) {
     if (ent.type !== "mention") continue;
-    const slice = (msg.text ?? msg.caption ?? "").slice(
-      ent.offset,
-      ent.offset + ent.length,
-    );
+    const slice = (msg.text ?? msg.caption ?? "").slice(ent.offset, ent.offset + ent.length);
     if (slice.toLowerCase() === `@${botUsername}`) return true;
   }
   return false;
@@ -156,9 +142,7 @@ export function describeReplyTarget(msg: TelegramMessage) {
   };
 }
 
-export function extractTelegramLocation(
-  msg: TelegramMessage,
-): NormalizedLocation | null {
+export function extractTelegramLocation(msg: TelegramMessage): NormalizedLocation | null {
   const msgWithLocation = msg as {
     location?: TelegramLocation;
     venue?: TelegramVenue;
@@ -178,8 +162,7 @@ export function extractTelegramLocation(
   }
 
   if (location) {
-    const isLive =
-      typeof location.live_period === "number" && location.live_period > 0;
+    const isLive = typeof location.live_period === "number" && location.live_period > 0;
     return {
       latitude: location.latitude,
       longitude: location.longitude,

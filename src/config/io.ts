@@ -10,10 +10,7 @@ import {
   resolveShellEnvFallbackTimeoutMs,
   shouldEnableShellEnvFallback,
 } from "../infra/shell-env.js";
-import {
-  DuplicateAgentDirError,
-  findDuplicateAgentDirs,
-} from "./agent-dirs.js";
+import { DuplicateAgentDirError, findDuplicateAgentDirs } from "./agent-dirs.js";
 import {
   applyContextPruningDefaults,
   applyLoggingDefaults,
@@ -22,24 +19,19 @@ import {
   applySessionDefaults,
   applyTalkApiKey,
 } from "./defaults.js";
+import { MissingEnvVarError, resolveConfigEnvVars } from "./env-substitution.js";
 import { ConfigIncludeError, resolveConfigIncludes } from "./includes.js";
 import { applyLegacyMigrations, findLegacyConfigIssues } from "./legacy.js";
 import { normalizeConfigPaths } from "./normalize-paths.js";
 import { resolveConfigPath, resolveStateDir } from "./paths.js";
 import { applyConfigOverrides } from "./runtime-overrides.js";
-import type {
-  ClawdbotConfig,
-  ConfigFileSnapshot,
-  LegacyConfigIssue,
-} from "./types.js";
+import type { ClawdbotConfig, ConfigFileSnapshot, LegacyConfigIssue } from "./types.js";
 import { validateConfigObject } from "./validation.js";
 import { ClawdbotSchema } from "./zod-schema.js";
 
 // Re-export for backwards compatibility
-export {
-  CircularIncludeError,
-  ConfigIncludeError,
-} from "./includes.js";
+export { CircularIncludeError, ConfigIncludeError } from "./includes.js";
+export { MissingEnvVarError } from "./env-substitution.js";
 
 const SHELL_ENV_EXPECTED_KEYS = [
   "OPENAI_API_KEY",
@@ -48,6 +40,7 @@ const SHELL_ENV_EXPECTED_KEYS = [
   "GEMINI_API_KEY",
   "ZAI_API_KEY",
   "OPENROUTER_API_KEY",
+  "AI_GATEWAY_API_KEY",
   "MINIMAX_API_KEY",
   "SYNTHETIC_API_KEY",
   "ELEVENLABS_API_KEY",
@@ -59,9 +52,26 @@ const SHELL_ENV_EXPECTED_KEYS = [
   "CLAWDBOT_GATEWAY_PASSWORD",
 ];
 
-export type ParseConfigJson5Result =
-  | { ok: true; parsed: unknown }
-  | { ok: false; error: string };
+export type ParseConfigJson5Result = { ok: true; parsed: unknown } | { ok: false; error: string };
+
+function hashConfigRaw(raw: string | null): string {
+  return crypto
+    .createHash("sha256")
+    .update(raw ?? "")
+    .digest("hex");
+}
+
+export function resolveConfigSnapshotHash(snapshot: {
+  hash?: string;
+  raw?: string | null;
+}): string | null {
+  if (typeof snapshot.hash === "string") {
+    const trimmed = snapshot.hash.trim();
+    if (trimmed) return trimmed;
+  }
+  if (typeof snapshot.raw !== "string") return null;
+  return hashConfigRaw(snapshot.raw);
+}
 
 export type ConfigIoDeps = {
   fs?: typeof fs;
@@ -72,10 +82,7 @@ export type ConfigIoDeps = {
   logger?: Pick<typeof console, "error" | "warn">;
 };
 
-function warnOnConfigMiskeys(
-  raw: unknown,
-  logger: Pick<typeof console, "warn">,
-): void {
+function warnOnConfigMiskeys(raw: unknown, logger: Pick<typeof console, "warn">): void {
   if (!raw || typeof raw !== "object") return;
   const gateway = (raw as Record<string, unknown>).gateway;
   if (!gateway || typeof gateway !== "object") return;
@@ -149,9 +156,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
   const writeConfigFileSync = (cfg: ClawdbotConfig) => {
     const dir = path.dirname(configPath);
     deps.fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-    const json = JSON.stringify(applyModelDefaults(cfg), null, 2)
-      .trimEnd()
-      .concat("\n");
+    const json = JSON.stringify(applyModelDefaults(cfg), null, 2).trimEnd().concat("\n");
 
     const tmp = path.join(
       dir,
@@ -216,11 +221,13 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         parseJson: (raw) => deps.json5.parse(raw),
       });
 
-      const migrated = applyLegacyMigrations(resolved);
-      const resolvedConfig = migrated.next ?? resolved;
+      // Substitute ${VAR} env var references
+      const substituted = resolveConfigEnvVars(resolved, deps.env);
+
+      const migrated = applyLegacyMigrations(substituted);
+      const resolvedConfig = migrated.next ?? substituted;
       warnOnConfigMiskeys(resolvedConfig, deps.logger);
-      if (typeof resolvedConfig !== "object" || resolvedConfig === null)
-        return {};
+      if (typeof resolvedConfig !== "object" || resolvedConfig === null) return {};
       const validated = ClawdbotSchema.safeParse(resolvedConfig);
       if (!validated.success) {
         deps.logger.error("Invalid config:");
@@ -234,17 +241,13 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         try {
           writeConfigFileSync(resolvedConfig as ClawdbotConfig);
         } catch (err) {
-          deps.logger.warn(
-            `Failed to write migrated config at ${configPath}: ${String(err)}`,
-          );
+          deps.logger.warn(`Failed to write migrated config at ${configPath}: ${String(err)}`);
         }
       }
       const cfg = applyModelDefaults(
         applyContextPruningDefaults(
           applySessionDefaults(
-            applyLoggingDefaults(
-              applyMessageDefaults(validated.data as ClawdbotConfig),
-            ),
+            applyLoggingDefaults(applyMessageDefaults(validated.data as ClawdbotConfig)),
           ),
         ),
       );
@@ -260,18 +263,14 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
 
       applyConfigEnv(cfg, deps.env);
 
-      const enabled =
-        shouldEnableShellEnvFallback(deps.env) ||
-        cfg.env?.shellEnv?.enabled === true;
+      const enabled = shouldEnableShellEnvFallback(deps.env) || cfg.env?.shellEnv?.enabled === true;
       if (enabled) {
         loadShellEnvFallback({
           enabled: true,
           env: deps.env,
           expectedKeys: SHELL_ENV_EXPECTED_KEYS,
           logger: deps.logger,
-          timeoutMs:
-            cfg.env?.shellEnv?.timeoutMs ??
-            resolveShellEnvFallbackTimeoutMs(deps.env),
+          timeoutMs: cfg.env?.shellEnv?.timeoutMs ?? resolveShellEnvFallbackTimeoutMs(deps.env),
         });
       }
 
@@ -289,11 +288,10 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
   async function readConfigFileSnapshot(): Promise<ConfigFileSnapshot> {
     const exists = deps.fs.existsSync(configPath);
     if (!exists) {
+      const hash = hashConfigRaw(null);
       const config = applyTalkApiKey(
         applyModelDefaults(
-          applyContextPruningDefaults(
-            applySessionDefaults(applyMessageDefaults({})),
-          ),
+          applyContextPruningDefaults(applySessionDefaults(applyMessageDefaults({}))),
         ),
       );
       const legacyIssues: LegacyConfigIssue[] = [];
@@ -304,6 +302,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         parsed: {},
         valid: true,
         config,
+        hash,
         issues: [],
         legacyIssues,
       };
@@ -311,6 +310,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
 
     try {
       const raw = deps.fs.readFileSync(configPath, "utf-8");
+      const hash = hashConfigRaw(raw);
       const parsedRes = parseConfigJson5(raw, deps.json5);
       if (!parsedRes.ok) {
         return {
@@ -320,9 +320,8 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
           parsed: {},
           valid: false,
           config: {},
-          issues: [
-            { path: "", message: `JSON5 parse failed: ${parsedRes.error}` },
-          ],
+          hash,
+          issues: [{ path: "", message: `JSON5 parse failed: ${parsedRes.error}` }],
           legacyIssues: [],
         };
       }
@@ -346,11 +345,13 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
           parsed: parsedRes.parsed,
           valid: false,
           config: {},
+          hash,
           issues: [{ path: "", message }],
           legacyIssues: [],
         };
       }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
       const legacyIssues = findLegacyConfigIssues(resolved);
       const resolvedConfig =
@@ -360,6 +361,32 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
 =======
       const migrated = applyLegacyMigrations(resolved);
       const resolvedConfigRaw = migrated.next ?? resolved;
+=======
+      // Substitute ${VAR} env var references
+      let substituted: unknown;
+      try {
+        substituted = resolveConfigEnvVars(resolved, deps.env);
+      } catch (err) {
+        const message =
+          err instanceof MissingEnvVarError
+            ? err.message
+            : `Env var substitution failed: ${String(err)}`;
+        return {
+          path: configPath,
+          exists: true,
+          raw,
+          parsed: parsedRes.parsed,
+          valid: false,
+          config: {},
+          hash,
+          issues: [{ path: "", message }],
+          legacyIssues: [],
+        };
+      }
+
+      const migrated = applyLegacyMigrations(substituted);
+      const resolvedConfigRaw = migrated.next ?? substituted;
+>>>>>>> upstream/main
       const legacyIssues = findLegacyConfigIssues(resolvedConfigRaw);
 >>>>>>> upstream/main
 
@@ -376,6 +403,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
           parsed: parsedRes.parsed,
           valid: false,
           config: resolvedConfig,
+          hash,
           issues: validated.issues,
           legacyIssues,
         };
@@ -384,9 +412,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
       if (migrated.next && migrated.changes.length > 0) {
         deps.logger.warn(formatLegacyMigrationLog(migrated.changes));
         await writeConfigFile(validated.config).catch((err) => {
-          deps.logger.warn(
-            `Failed to write migrated config at ${configPath}: ${String(err)}`,
-          );
+          deps.logger.warn(`Failed to write migrated config at ${configPath}: ${String(err)}`);
         });
       }
 
@@ -399,12 +425,11 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         config: normalizeConfigPaths(
           applyTalkApiKey(
             applyModelDefaults(
-              applySessionDefaults(
-                applyLoggingDefaults(applyMessageDefaults(validated.config)),
-              ),
+              applySessionDefaults(applyLoggingDefaults(applyMessageDefaults(validated.config))),
             ),
           ),
         ),
+        hash,
         issues: [],
         legacyIssues,
       };
@@ -416,6 +441,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         parsed: {},
         valid: false,
         config: {},
+        hash: hashConfigRaw(null),
         issues: [{ path: "", message: `read failed: ${String(err)}` }],
         legacyIssues: [],
       };
@@ -425,9 +451,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
   async function writeConfigFile(cfg: ClawdbotConfig) {
     const dir = path.dirname(configPath);
     await deps.fs.promises.mkdir(dir, { recursive: true, mode: 0o700 });
-    const json = JSON.stringify(applyModelDefaults(cfg), null, 2)
-      .trimEnd()
-      .concat("\n");
+    const json = JSON.stringify(applyModelDefaults(cfg), null, 2).trimEnd().concat("\n");
 
     const tmp = path.join(
       dir,
@@ -439,11 +463,9 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
       mode: 0o600,
     });
 
-    await deps.fs.promises
-      .copyFile(configPath, `${configPath}.bak`)
-      .catch(() => {
-        // best-effort
-      });
+    await deps.fs.promises.copyFile(configPath, `${configPath}.bak`).catch(() => {
+      // best-effort
+    });
 
     try {
       await deps.fs.promises.rename(tmp, configPath);
@@ -489,7 +511,5 @@ export async function readConfigFileSnapshot(): Promise<ConfigFileSnapshot> {
 }
 
 export async function writeConfigFile(cfg: ClawdbotConfig): Promise<void> {
-  await createConfigIO({ configPath: resolveConfigPath() }).writeConfigFile(
-    cfg,
-  );
+  await createConfigIO({ configPath: resolveConfigPath() }).writeConfigFile(cfg);
 }

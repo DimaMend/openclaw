@@ -12,6 +12,8 @@ export type GatewayBonjourBeacon = {
   bridgePort?: number;
   gatewayPort?: number;
   sshPort?: number;
+  bridgeTls?: boolean;
+  bridgeTlsFingerprintSha256?: string;
   cliPath?: string;
   txt?: Record<string, string>;
 };
@@ -89,10 +91,7 @@ function parseDigTxt(stdout: string): string[] {
     if (!line) continue;
     const matches = Array.from(line.matchAll(/"([^"]*)"/g), (m) => m[1] ?? "");
     for (const m of matches) {
-      const unescaped = m
-        .replaceAll("\\\\", "\\")
-        .replaceAll('\\"', '"')
-        .replaceAll("\\n", "\n");
+      const unescaped = m.replaceAll("\\\\", "\\").replaceAll('\\"', '"').replaceAll("\\n", "\n");
       tokens.push(unescaped);
     }
   }
@@ -176,10 +175,7 @@ function parseDnsSdBrowse(stdout: string): string[] {
   return Array.from(instances.values());
 }
 
-function parseDnsSdResolve(
-  stdout: string,
-  instanceName: string,
-): GatewayBonjourBeacon | null {
+function parseDnsSdResolve(stdout: string, instanceName: string): GatewayBonjourBeacon | null {
   const decodedInstanceName = decodeDnsSdEscapes(instanceName);
   const beacon: GatewayBonjourBeacon = { instanceName: decodedInstanceName };
   let txt: Record<string, string> = {};
@@ -212,6 +208,11 @@ function parseDnsSdResolve(
   beacon.bridgePort = parseIntOrNull(txt.bridgePort);
   beacon.gatewayPort = parseIntOrNull(txt.gatewayPort);
   beacon.sshPort = parseIntOrNull(txt.sshPort);
+  if (txt.bridgeTls) {
+    const raw = txt.bridgeTls.trim().toLowerCase();
+    beacon.bridgeTls = raw === "1" || raw === "true" || raw === "yes";
+  }
+  if (txt.bridgeTlsSha256) beacon.bridgeTlsFingerprintSha256 = txt.bridgeTlsSha256;
 
   if (!beacon.displayName) beacon.displayName = decodedInstanceName;
   return beacon;
@@ -228,10 +229,9 @@ async function discoverViaDnsSd(
   const instances = parseDnsSdBrowse(browse.stdout);
   const results: GatewayBonjourBeacon[] = [];
   for (const instance of instances) {
-    const resolved = await run(
-      ["dns-sd", "-L", instance, "_clawdbot-bridge._tcp", domain],
-      { timeoutMs },
-    );
+    const resolved = await run(["dns-sd", "-L", instance, "_clawdbot-bridge._tcp", domain], {
+      timeoutMs,
+    });
     const parsed = parseDnsSdResolve(resolved.stdout, instance);
     if (parsed) results.push({ ...parsed, domain });
   }
@@ -247,10 +247,7 @@ async function discoverWideAreaViaTailnetDns(
   const startedAt = Date.now();
   const remainingMs = () => timeoutMs - (Date.now() - startedAt);
 
-  const tailscaleCandidates = [
-    "tailscale",
-    "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
-  ];
+  const tailscaleCandidates = ["tailscale", "/Applications/Tailscale.app/Contents/MacOS/Tailscale"];
   let ips: string[] = [];
   for (const candidate of tailscaleCandidates) {
     try {
@@ -301,9 +298,7 @@ async function discoverWideAreaViaTailnetDns(
     }
   };
 
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, ips.length) }, () => worker()),
-  );
+  await Promise.all(Array.from({ length: Math.min(concurrency, ips.length) }, () => worker()));
 
   if (!nameserver || ptrs.length === 0) return [];
   if (remainingMs() <= 0) return [];
@@ -317,10 +312,9 @@ async function discoverWideAreaViaTailnetDns(
     if (!ptrName) continue;
     const instanceName = ptrName.replace(/\.?_clawdbot-bridge\._tcp\..*$/, "");
 
-    const srv = await run(
-      ["dig", "+short", "+time=1", "+tries=1", nameserverArg, ptrName, "SRV"],
-      { timeoutMs: Math.max(1, Math.min(350, budget)) },
-    ).catch(() => null);
+    const srv = await run(["dig", "+short", "+time=1", "+tries=1", nameserverArg, ptrName, "SRV"], {
+      timeoutMs: Math.max(1, Math.min(350, budget)),
+    }).catch(() => null);
     const srvParsed = srv ? parseDigSrv(srv.stdout) : null;
     if (!srvParsed) continue;
 
@@ -336,10 +330,9 @@ async function discoverWideAreaViaTailnetDns(
       continue;
     }
 
-    const txt = await run(
-      ["dig", "+short", "+time=1", "+tries=1", nameserverArg, ptrName, "TXT"],
-      { timeoutMs: Math.max(1, Math.min(350, txtBudget)) },
-    ).catch(() => null);
+    const txt = await run(["dig", "+short", "+time=1", "+tries=1", nameserverArg, ptrName, "TXT"], {
+      timeoutMs: Math.max(1, Math.min(350, txtBudget)),
+    }).catch(() => null);
     const txtTokens = txt ? parseDigTxt(txt.stdout) : [];
     const txtMap = txtTokens.length > 0 ? parseTxtTokens(txtTokens) : {};
 
@@ -449,18 +442,12 @@ export async function discoverGatewayBeacons(
   try {
     if (platform === "darwin") {
       const perDomain = await Promise.allSettled(
-        domains.map(
-          async (domain) => await discoverViaDnsSd(domain, timeoutMs, run),
-        ),
+        domains.map(async (domain) => await discoverViaDnsSd(domain, timeoutMs, run)),
       );
-      const discovered = perDomain.flatMap((r) =>
-        r.status === "fulfilled" ? r.value : [],
-      );
+      const discovered = perDomain.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 
       const wantsWideArea = domains.includes(WIDE_AREA_DISCOVERY_DOMAIN);
-      const hasWideArea = discovered.some(
-        (b) => b.domain === WIDE_AREA_DISCOVERY_DOMAIN,
-      );
+      const hasWideArea = discovered.some((b) => b.domain === WIDE_AREA_DISCOVERY_DOMAIN);
 
       if (wantsWideArea && !hasWideArea) {
         const fallback = await discoverWideAreaViaTailnetDns(
@@ -475,13 +462,9 @@ export async function discoverGatewayBeacons(
     }
     if (platform === "linux") {
       const perDomain = await Promise.allSettled(
-        domains.map(
-          async (domain) => await discoverViaAvahi(domain, timeoutMs, run),
-        ),
+        domains.map(async (domain) => await discoverViaAvahi(domain, timeoutMs, run)),
       );
-      return perDomain.flatMap((r) =>
-        r.status === "fulfilled" ? r.value : [],
-      );
+      return perDomain.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
     }
   } catch {
     return [];

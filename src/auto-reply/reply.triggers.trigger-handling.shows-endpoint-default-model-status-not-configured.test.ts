@@ -8,8 +8,7 @@ vi.mock("../agents/pi-embedded.js", () => ({
   compactEmbeddedPiSession: vi.fn(),
   runEmbeddedPiAgent: vi.fn(),
   queueEmbeddedPiMessage: vi.fn().mockReturnValue(false),
-  resolveEmbeddedSessionLane: (key: string) =>
-    `session:${key.trim() || "main"}`,
+  resolveEmbeddedSessionLane: (key: string) => `session:${key.trim() || "main"}`,
   isEmbeddedPiRunActive: vi.fn().mockReturnValue(false),
   isEmbeddedPiRunStreaming: vi.fn().mockReturnValue(false),
 }));
@@ -49,10 +48,7 @@ const modelCatalogMocks = vi.hoisted(() => ({
 
 vi.mock("../agents/model-catalog.js", () => modelCatalogMocks);
 
-import {
-  abortEmbeddedPiRun,
-  runEmbeddedPiAgent,
-} from "../agents/pi-embedded.js";
+import { abortEmbeddedPiRun, runEmbeddedPiAgent } from "../agents/pi-embedded.js";
 import { getReplyFromConfig } from "./reply.js";
 
 const _MAIN_SESSION_KEY = "agent:main:main";
@@ -110,6 +106,7 @@ describe("trigger handling", () => {
           Provider: "telegram",
           Surface: "telegram",
           SessionKey: "telegram:slash:111",
+          CommandAuthorized: true,
         },
         {},
         cfg,
@@ -141,6 +138,7 @@ describe("trigger handling", () => {
           Provider: "telegram",
           Surface: "telegram",
           SessionKey: "telegram:slash:111",
+          CommandAuthorized: true,
         },
         {},
         cfg,
@@ -160,6 +158,7 @@ describe("trigger handling", () => {
           Body: "  [Dec 5] /restart",
           From: "+1001",
           To: "+2000",
+          CommandAuthorized: true,
         },
         {},
         makeCfg(home),
@@ -177,15 +176,13 @@ describe("trigger handling", () => {
           Body: "/restart",
           From: "+1001",
           To: "+2000",
+          CommandAuthorized: true,
         },
         {},
         cfg,
       );
       const text = Array.isArray(res) ? res[0]?.text : res?.text;
-      expect(
-        text?.startsWith("⚙️ Restarting") ||
-          text?.startsWith("⚠️ Restart failed"),
-      ).toBe(true);
+      expect(text?.startsWith("⚙️ Restarting") || text?.startsWith("⚠️ Restart failed")).toBe(true);
       expect(runEmbeddedPiAgent).not.toHaveBeenCalled();
     });
   });
@@ -196,6 +193,7 @@ describe("trigger handling", () => {
           Body: "/status",
           From: "+1002",
           To: "+2000",
+          CommandAuthorized: true,
         },
         {},
         makeCfg(home),
@@ -212,6 +210,7 @@ describe("trigger handling", () => {
           Body: "/usage",
           From: "+1002",
           To: "+2000",
+          CommandAuthorized: true,
         },
         {},
         makeCfg(home),

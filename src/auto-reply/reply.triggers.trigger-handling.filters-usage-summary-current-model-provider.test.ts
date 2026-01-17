@@ -8,8 +8,7 @@ vi.mock("../agents/pi-embedded.js", () => ({
   compactEmbeddedPiSession: vi.fn(),
   runEmbeddedPiAgent: vi.fn(),
   queueEmbeddedPiMessage: vi.fn().mockReturnValue(false),
-  resolveEmbeddedSessionLane: (key: string) =>
-    `session:${key.trim() || "main"}`,
+  resolveEmbeddedSessionLane: (key: string) => `session:${key.trim() || "main"}`,
   isEmbeddedPiRunActive: vi.fn().mockReturnValue(false),
   isEmbeddedPiRunStreaming: vi.fn().mockReturnValue(false),
 }));
@@ -20,6 +19,7 @@ const usageMocks = vi.hoisted(() => ({
     providers: [],
   }),
   formatUsageSummaryLine: vi.fn().mockReturnValue("📊 Usage: Claude 80% left"),
+  formatUsageWindowSummary: vi.fn().mockReturnValue("Claude 80% left"),
   resolveUsageProviderId: vi.fn((provider: string) => provider.split("/")[0]),
 }));
 
@@ -49,10 +49,7 @@ const modelCatalogMocks = vi.hoisted(() => ({
 
 vi.mock("../agents/model-catalog.js", () => modelCatalogMocks);
 
-import {
-  abortEmbeddedPiRun,
-  runEmbeddedPiAgent,
-} from "../agents/pi-embedded.js";
+import { abortEmbeddedPiRun, runEmbeddedPiAgent } from "../agents/pi-embedded.js";
 import { getReplyFromConfig } from "./reply.js";
 
 const _MAIN_SESSION_KEY = "agent:main:main";
@@ -101,6 +98,16 @@ describe("trigger handling", () => {
   it("filters usage summary to the current model provider", async () => {
     await withTempHome(async (home) => {
       usageMocks.loadProviderUsageSummary.mockClear();
+      usageMocks.loadProviderUsageSummary.mockResolvedValue({
+        updatedAt: 0,
+        providers: [
+          {
+            provider: "anthropic",
+            displayName: "Anthropic",
+            windows: [],
+          },
+        ],
+      });
 
       const res = await getReplyFromConfig(
         {
@@ -109,6 +116,7 @@ describe("trigger handling", () => {
           To: "+2000",
           Provider: "whatsapp",
           SenderE164: "+1000",
+          CommandAuthorized: true,
         },
         {},
         makeCfg(home),
@@ -131,6 +139,7 @@ describe("trigger handling", () => {
           To: "+2000",
           Provider: "whatsapp",
           SenderE164: "+1000",
+          CommandAuthorized: true,
         },
         {
           onBlockReply: async (payload) => {
@@ -155,6 +164,7 @@ describe("trigger handling", () => {
           To: "+2000",
           Provider: "whatsapp",
           SenderE164: "+1000",
+          CommandAuthorized: true,
         },
         {
           onBlockReply: async (payload) => {
@@ -186,6 +196,7 @@ describe("trigger handling", () => {
           To: "+2000",
           Provider: "whatsapp",
           SenderE164: "+1002",
+          CommandAuthorized: true,
         },
         {
           onBlockReply: async (payload) => {
@@ -199,8 +210,7 @@ describe("trigger handling", () => {
       expect(String(blockReplies[0]?.text ?? "")).toContain("Model:");
       expect(replies.length).toBe(1);
       expect(replies[0]?.text).toBe("agent says hi");
-      const prompt =
-        vi.mocked(runEmbeddedPiAgent).mock.calls[0]?.[0]?.prompt ?? "";
+      const prompt = vi.mocked(runEmbeddedPiAgent).mock.calls[0]?.[0]?.prompt ?? "";
       expect(prompt).not.toContain("/status");
     });
   });
@@ -211,6 +221,7 @@ describe("trigger handling", () => {
           Body: "[Dec 5 10:00] stop",
           From: "+1000",
           To: "+2000",
+          CommandAuthorized: true,
         },
         {},
         makeCfg(home),
@@ -227,6 +238,7 @@ describe("trigger handling", () => {
           Body: "/stop",
           From: "+1003",
           To: "+2000",
+          CommandAuthorized: true,
         },
         {},
         makeCfg(home),

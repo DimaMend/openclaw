@@ -1,22 +1,17 @@
 import type { AgentSession } from "@mariozechner/pi-coding-agent";
 
-import type { ReasoningLevel } from "../auto-reply/thinking.js";
+import type { ReasoningLevel, VerboseLevel } from "../auto-reply/thinking.js";
 import type { BlockReplyChunking } from "./pi-embedded-block-chunker.js";
 
 export type SubscribeEmbeddedPiSessionParams = {
   session: AgentSession;
   runId: string;
-  verboseLevel?: "off" | "on";
+  verboseLevel?: VerboseLevel;
   reasoningMode?: ReasoningLevel;
   shouldEmitToolResult?: () => boolean;
-  onToolResult?: (payload: {
-    text?: string;
-    mediaUrls?: string[];
-  }) => void | Promise<void>;
-  onReasoningStream?: (payload: {
-    text?: string;
-    mediaUrls?: string[];
-  }) => void | Promise<void>;
+  shouldEmitToolOutput?: () => boolean;
+  onToolResult?: (payload: { text?: string; mediaUrls?: string[] }) => void | Promise<void>;
+  onReasoningStream?: (payload: { text?: string; mediaUrls?: string[] }) => void | Promise<void>;
   onBlockReply?: (payload: {
     text?: string;
     mediaUrls?: string[];
@@ -26,15 +21,9 @@ export type SubscribeEmbeddedPiSessionParams = {
   onBlockReplyFlush?: () => void | Promise<void>;
   blockReplyBreak?: "text_end" | "message_end";
   blockReplyChunking?: BlockReplyChunking;
-  onPartialReply?: (payload: {
-    text?: string;
-    mediaUrls?: string[];
-  }) => void | Promise<void>;
+  onPartialReply?: (payload: { text?: string; mediaUrls?: string[] }) => void | Promise<void>;
   onAssistantMessageStart?: () => void | Promise<void>;
-  onAgentEvent?: (evt: {
-    stream: string;
-    data: Record<string, unknown>;
-  }) => void;
+  onAgentEvent?: (evt: { stream: string; data: Record<string, unknown> }) => void | Promise<void>;
   enforceFinalTag?: boolean;
 };
 

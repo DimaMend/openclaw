@@ -25,8 +25,7 @@ import {
   writeOAuthCredentials,
 } from "./onboard-auth.js";
 
-const authProfilePathFor = (agentDir: string) =>
-  path.join(agentDir, "auth-profiles.json");
+const authProfilePathFor = (agentDir: string) => path.join(agentDir, "auth-profiles.json");
 const requireAgentDir = () => {
   const agentDir = process.env.CLAWDBOT_AGENT_DIR;
   if (!agentDir) throw new Error("CLAWDBOT_AGENT_DIR not set");
@@ -88,16 +87,7 @@ describe("writeOAuthCredentials", () => {
     });
 
     await expect(
-      fs.readFile(
-        path.join(
-          tempStateDir,
-          "agents",
-          "main",
-          "agent",
-          "auth-profiles.json",
-        ),
-        "utf8",
-      ),
+      fs.readFile(path.join(tempStateDir, "agents", "main", "agent", "auth-profiles.json"), "utf8"),
     ).rejects.toThrow();
   });
 });
@@ -131,9 +121,7 @@ describe("setMinimaxApiKey", () => {
   });
 
   it("writes to CLAWDBOT_AGENT_DIR when set", async () => {
-    tempStateDir = await fs.mkdtemp(
-      path.join(os.tmpdir(), "clawdbot-minimax-"),
-    );
+    tempStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "clawdbot-minimax-"));
     process.env.CLAWDBOT_STATE_DIR = tempStateDir;
     process.env.CLAWDBOT_AGENT_DIR = path.join(tempStateDir, "custom-agent");
     process.env.PI_CODING_AGENT_DIR = process.env.CLAWDBOT_AGENT_DIR;
@@ -143,10 +131,7 @@ describe("setMinimaxApiKey", () => {
     const customAuthPath = authProfilePathFor(requireAgentDir());
     const raw = await fs.readFile(customAuthPath, "utf8");
     const parsed = JSON.parse(raw) as {
-      profiles?: Record<
-        string,
-        { type?: string; provider?: string; key?: string }
-      >;
+      profiles?: Record<string, { type?: string; provider?: string; key?: string }>;
     };
     expect(parsed.profiles?.["minimax:default"]).toMatchObject({
       type: "api_key",
@@ -155,16 +140,7 @@ describe("setMinimaxApiKey", () => {
     });
 
     await expect(
-      fs.readFile(
-        path.join(
-          tempStateDir,
-          "agents",
-          "main",
-          "agent",
-          "auth-profiles.json",
-        ),
-        "utf8",
-      ),
+      fs.readFile(path.join(tempStateDir, "agents", "main", "agent", "auth-profiles.json"), "utf8"),
     ).rejects.toThrow();
   });
 });
@@ -187,10 +163,7 @@ describe("applyAuthProfileConfig", () => {
       },
     );
 
-    expect(next.auth?.order?.anthropic).toEqual([
-      "anthropic:claude-cli",
-      "anthropic:default",
-    ]);
+    expect(next.auth?.order?.anthropic).toEqual(["anthropic:claude-cli", "anthropic:default"]);
   });
 });
 
@@ -205,9 +178,7 @@ describe("applyMinimaxApiConfig", () => {
 
   it("sets correct primary model", () => {
     const cfg = applyMinimaxApiConfig({}, "MiniMax-M2.1-lightning");
-    expect(cfg.agents?.defaults?.model?.primary).toBe(
-      "minimax/MiniMax-M2.1-lightning",
-    );
+    expect(cfg.agents?.defaults?.model?.primary).toBe("minimax/MiniMax-M2.1-lightning");
   });
 
   it("does not set reasoning for non-reasoning models", () => {
@@ -223,16 +194,12 @@ describe("applyMinimaxApiConfig", () => {
         },
       },
     });
-    expect(cfg.agents?.defaults?.model?.fallbacks).toEqual([
-      "anthropic/claude-opus-4-5",
-    ]);
+    expect(cfg.agents?.defaults?.model?.fallbacks).toEqual(["anthropic/claude-opus-4-5"]);
   });
 
   it("adds model alias", () => {
     const cfg = applyMinimaxApiConfig({}, "MiniMax-M2.1");
-    expect(cfg.agents?.defaults?.models?.["minimax/MiniMax-M2.1"]?.alias).toBe(
-      "Minimax",
-    );
+    expect(cfg.agents?.defaults?.models?.["minimax/MiniMax-M2.1"]?.alias).toBe("Minimax");
   });
 
   it("preserves existing model params when adding alias", () => {
@@ -251,9 +218,10 @@ describe("applyMinimaxApiConfig", () => {
       },
       "MiniMax-M2.1",
     );
-    expect(
-      cfg.agents?.defaults?.models?.["minimax/MiniMax-M2.1"],
-    ).toMatchObject({ alias: "Minimax", params: { custom: "value" } });
+    expect(cfg.agents?.defaults?.models?.["minimax/MiniMax-M2.1"]).toMatchObject({
+      alias: "Minimax",
+      params: { custom: "value" },
+    });
   });
 
   it("merges existing minimax provider models", () => {
@@ -279,9 +247,7 @@ describe("applyMinimaxApiConfig", () => {
         },
       },
     });
-    expect(cfg.models?.providers?.minimax?.baseUrl).toBe(
-      "https://api.minimax.io/anthropic",
-    );
+    expect(cfg.models?.providers?.minimax?.baseUrl).toBe("https://api.minimax.io/anthropic");
     expect(cfg.models?.providers?.minimax?.api).toBe("anthropic-messages");
     expect(cfg.models?.providers?.minimax?.apiKey).toBe("old-key");
     expect(cfg.models?.providers?.minimax?.models.map((m) => m.id)).toEqual([
@@ -330,9 +296,7 @@ describe("applyMinimaxApiProviderConfig", () => {
     const cfg = applyMinimaxApiProviderConfig({
       agents: { defaults: { model: { primary: "anthropic/claude-opus-4-5" } } },
     });
-    expect(cfg.agents?.defaults?.model?.primary).toBe(
-      "anthropic/claude-opus-4-5",
-    );
+    expect(cfg.agents?.defaults?.model?.primary).toBe("anthropic/claude-opus-4-5");
   });
 });
 
@@ -347,9 +311,7 @@ describe("applySyntheticConfig", () => {
 
   it("sets correct primary model", () => {
     const cfg = applySyntheticConfig({});
-    expect(cfg.agents?.defaults?.model?.primary).toBe(
-      SYNTHETIC_DEFAULT_MODEL_REF,
-    );
+    expect(cfg.agents?.defaults?.model?.primary).toBe(SYNTHETIC_DEFAULT_MODEL_REF);
   });
 
   it("merges existing synthetic provider models", () => {
@@ -375,9 +337,7 @@ describe("applySyntheticConfig", () => {
         },
       },
     });
-    expect(cfg.models?.providers?.synthetic?.baseUrl).toBe(
-      "https://api.synthetic.new/anthropic",
-    );
+    expect(cfg.models?.providers?.synthetic?.baseUrl).toBe("https://api.synthetic.new/anthropic");
     expect(cfg.models?.providers?.synthetic?.api).toBe("anthropic-messages");
     expect(cfg.models?.providers?.synthetic?.apiKey).toBe("old-key");
     const ids = cfg.models?.providers?.synthetic?.models.map((m) => m.id);
@@ -403,18 +363,14 @@ describe("applyOpencodeZenProviderConfig", () => {
         },
       },
     });
-    expect(
-      cfg.agents?.defaults?.models?.["opencode/claude-opus-4-5"]?.alias,
-    ).toBe("My Opus");
+    expect(cfg.agents?.defaults?.models?.["opencode/claude-opus-4-5"]?.alias).toBe("My Opus");
   });
 });
 
 describe("applyOpencodeZenConfig", () => {
   it("sets correct primary model", () => {
     const cfg = applyOpencodeZenConfig({});
-    expect(cfg.agents?.defaults?.model?.primary).toBe(
-      "opencode/claude-opus-4-5",
-    );
+    expect(cfg.agents?.defaults?.model?.primary).toBe("opencode/claude-opus-4-5");
   });
 
   it("preserves existing model fallbacks", () => {
@@ -425,9 +381,7 @@ describe("applyOpencodeZenConfig", () => {
         },
       },
     });
-    expect(cfg.agents?.defaults?.model?.fallbacks).toEqual([
-      "anthropic/claude-opus-4-5",
-    ]);
+    expect(cfg.agents?.defaults?.model?.fallbacks).toEqual(["anthropic/claude-opus-4-5"]);
   });
 });
 
@@ -448,18 +402,14 @@ describe("applyOpenrouterProviderConfig", () => {
         },
       },
     });
-    expect(
-      cfg.agents?.defaults?.models?.[OPENROUTER_DEFAULT_MODEL_REF]?.alias,
-    ).toBe("Router");
+    expect(cfg.agents?.defaults?.models?.[OPENROUTER_DEFAULT_MODEL_REF]?.alias).toBe("Router");
   });
 });
 
 describe("applyOpenrouterConfig", () => {
   it("sets correct primary model", () => {
     const cfg = applyOpenrouterConfig({});
-    expect(cfg.agents?.defaults?.model?.primary).toBe(
-      OPENROUTER_DEFAULT_MODEL_REF,
-    );
+    expect(cfg.agents?.defaults?.model?.primary).toBe(OPENROUTER_DEFAULT_MODEL_REF);
   });
 
   it("preserves existing model fallbacks", () => {
@@ -470,8 +420,6 @@ describe("applyOpenrouterConfig", () => {
         },
       },
     });
-    expect(cfg.agents?.defaults?.model?.fallbacks).toEqual([
-      "anthropic/claude-opus-4-5",
-    ]);
+    expect(cfg.agents?.defaults?.model?.fallbacks).toEqual(["anthropic/claude-opus-4-5"]);
   });
 });

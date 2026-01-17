@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
 import net from "node:net";
 import os from "node:os";
+import tls from "node:tls";
 
 import { resolveCanvasHostUrl } from "../../canvas-host-url.js";
 
-import {
-  type ConnectionState,
-  createNodeBridgeConnectionHandler,
-} from "./connection.js";
+import { type ConnectionState, createNodeBridgeConnectionHandler } from "./connection.js";
 import { createDisabledNodeBridgeServer } from "./disabled.js";
 import { encodeLine } from "./encode.js";
 import { shouldAlsoListenOnLoopback } from "./loopback.js";
@@ -20,13 +18,8 @@ import type {
   NodeBridgeServerOpts,
 } from "./types.js";
 
-export async function startNodeBridgeServer(
-  opts: NodeBridgeServerOpts,
-): Promise<NodeBridgeServer> {
-  if (
-    isNodeBridgeTestEnv() &&
-    process.env.CLAWDBOT_ENABLE_BRIDGE_IN_TESTS !== "1"
-  ) {
+export async function startNodeBridgeServer(opts: NodeBridgeServerOpts): Promise<NodeBridgeServer> {
+  if (isNodeBridgeTestEnv() && process.env.CLAWDBOT_ENABLE_BRIDGE_IN_TESTS !== "1") {
     return createDisabledNodeBridgeServer();
   }
 
@@ -55,7 +48,9 @@ export async function startNodeBridgeServer(
   const loopbackHost = "127.0.0.1";
 
   const listeners: Array<{ host: string; server: net.Server }> = [];
-  const primary = net.createServer(onConnection);
+  const createServer = () =>
+    opts.tls ? tls.createServer(opts.tls, onConnection) : net.createServer(onConnection);
+  const primary = createServer();
   await new Promise<void>((resolve, reject) => {
     const onError = (err: Error) => reject(err);
     primary.once("error", onError);
@@ -70,11 +65,10 @@ export async function startNodeBridgeServer(
   });
 
   const address = primary.address();
-  const port =
-    typeof address === "object" && address ? address.port : opts.port;
+  const port = typeof address === "object" && address ? address.port : opts.port;
 
   if (shouldAlsoListenOnLoopback(opts.host)) {
-    const loopback = net.createServer(onConnection);
+    const loopback = createServer();
     try {
       await new Promise<void>((resolve, reject) => {
         const onError = (err: Error) => reject(err);
@@ -137,16 +131,11 @@ export async function startNodeBridgeServer(
     invoke: async ({ nodeId, command, paramsJSON, timeoutMs }) => {
       const normalizedNodeId = String(nodeId ?? "").trim();
       const normalizedCommand = String(command ?? "").trim();
-      if (!normalizedNodeId)
-        throw new Error("INVALID_REQUEST: nodeId required");
-      if (!normalizedCommand)
-        throw new Error("INVALID_REQUEST: command required");
+      if (!normalizedNodeId) throw new Error("INVALID_REQUEST: nodeId required");
+      if (!normalizedCommand) throw new Error("INVALID_REQUEST: command required");
 
       const conn = connections.get(normalizedNodeId);
-      if (!conn)
-        throw new Error(
-          `UNAVAILABLE: node not connected (${normalizedNodeId})`,
-        );
+      if (!conn) throw new Error(`UNAVAILABLE: node not connected (${normalizedNodeId})`);
 
       const id = randomUUID();
       const timeout = Number.isFinite(timeoutMs) ? Number(timeoutMs) : 15_000;

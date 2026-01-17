@@ -69,8 +69,14 @@ The macOS app’s **Install CLI** button runs the same flow via npm/pnpm (bun no
 Label:
 - `com.clawdbot.gateway` (or `com.clawdbot.<profile>`)
 
+<<<<<<< HEAD
 Plist location (per-user):
 - `~/Library/LaunchAgents/com.clawdbot.gateway.plist` (or `.../com.clawdbot.<profile>.plist`)
+=======
+Plist location (per‑user):
+- `~/Library/LaunchAgents/com.clawdbot.gateway.plist`
+  (or `~/Library/LaunchAgents/com.clawdbot.<profile>.plist`)
+>>>>>>> upstream/main
 
 Manager:
 - The macOS app owns LaunchAgent install/update for the bundled gateway.

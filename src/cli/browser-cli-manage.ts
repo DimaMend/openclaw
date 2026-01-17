@@ -47,7 +47,10 @@ export function registerBrowserManageCommands(
             `cdpPort: ${status.cdpPort}`,
             `cdpUrl: ${status.cdpUrl ?? `http://127.0.0.1:${status.cdpPort}`}`,
             `browser: ${status.chosenBrowser ?? "unknown"}`,
+            `detectedBrowser: ${status.detectedBrowser ?? "unknown"}`,
+            `detectedPath: ${status.detectedExecutablePath ?? status.executablePath ?? "auto"}`,
             `profileColor: ${status.color}`,
+            ...(status.detectError ? [`detectError: ${status.detectError}`] : []),
           ].join("\n"),
         );
       } catch (err) {
@@ -71,9 +74,7 @@ export function registerBrowserManageCommands(
           return;
         }
         const name = status.profile ?? "clawd";
-        defaultRuntime.log(
-          info(`🦞 browser [${name}] running: ${status.running}`),
-        );
+        defaultRuntime.log(info(`🦞 browser [${name}] running: ${status.running}`));
       } catch (err) {
         defaultRuntime.error(danger(String(err)));
         defaultRuntime.exit(1);
@@ -95,9 +96,7 @@ export function registerBrowserManageCommands(
           return;
         }
         const name = status.profile ?? "clawd";
-        defaultRuntime.log(
-          info(`🦞 browser [${name}] running: ${status.running}`),
-        );
+        defaultRuntime.log(info(`🦞 browser [${name}] running: ${status.running}`));
       } catch (err) {
         defaultRuntime.error(danger(String(err)));
         defaultRuntime.exit(1);
@@ -149,8 +148,7 @@ export function registerBrowserManageCommands(
         defaultRuntime.log(
           tabs
             .map(
-              (t, i) =>
-                `${i + 1}. ${t.title || "(untitled)"}\n   ${t.url}\n   id: ${t.targetId}`,
+              (t, i) => `${i + 1}. ${t.title || "(untitled)"}\n   ${t.url}\n   id: ${t.targetId}`,
             )
             .join("\n"),
         );
@@ -184,8 +182,7 @@ export function registerBrowserManageCommands(
         defaultRuntime.log(
           tabs
             .map(
-              (t, i) =>
-                `${i + 1}. ${t.title || "(untitled)"}\n   ${t.url}\n   id: ${t.targetId}`,
+              (t, i) => `${i + 1}. ${t.title || "(untitled)"}\n   ${t.url}\n   id: ${t.targetId}`,
             )
             .join("\n"),
         );
@@ -257,9 +254,7 @@ export function registerBrowserManageCommands(
       const baseUrl = resolveBrowserControlUrl(parent?.url);
       const profile = parent?.browserProfile;
       const idx =
-        typeof index === "number" && Number.isFinite(index)
-          ? Math.floor(index) - 1
-          : undefined;
+        typeof index === "number" && Number.isFinite(index) ? Math.floor(index) - 1 : undefined;
       if (typeof idx === "number" && idx < 0) {
         defaultRuntime.error(danger("index must be >= 1"));
         defaultRuntime.exit(1);
@@ -372,9 +367,7 @@ export function registerBrowserManageCommands(
               const status = p.running ? "running" : "stopped";
               const tabs = p.running ? ` (${p.tabCount} tabs)` : "";
               const def = p.isDefault ? " [default]" : "";
-              const loc = p.isRemote
-                ? `cdpUrl: ${p.cdpUrl}`
-                : `port: ${p.cdpPort}`;
+              const loc = p.isRemote ? `cdpUrl: ${p.cdpUrl}` : `port: ${p.cdpPort}`;
               const remote = p.isRemote ? " [remote]" : "";
               return `${p.name}: ${status}${tabs}${def}${remote}\n  ${loc}, color: ${p.color}`;
             })
@@ -389,14 +382,12 @@ export function registerBrowserManageCommands(
   browser
     .command("create-profile")
     .description("Create a new browser profile")
-    .requiredOption(
-      "--name <name>",
-      "Profile name (lowercase, numbers, hyphens)",
-    )
+    .requiredOption("--name <name>", "Profile name (lowercase, numbers, hyphens)")
     .option("--color <hex>", "Profile color (hex format, e.g. #0066CC)")
     .option("--cdp-url <url>", "CDP URL for remote Chrome (http/https)")
+    .option("--driver <driver>", "Profile driver (clawd|extension). Default: clawd")
     .action(
-      async (opts: { name: string; color?: string; cdpUrl?: string }, cmd) => {
+      async (opts: { name: string; color?: string; cdpUrl?: string; driver?: string }, cmd) => {
         const parent = parentOpts(cmd);
         const baseUrl = resolveBrowserControlUrl(parent?.url);
         try {
@@ -404,17 +395,18 @@ export function registerBrowserManageCommands(
             name: opts.name,
             color: opts.color,
             cdpUrl: opts.cdpUrl,
+            driver: opts.driver === "extension" ? "extension" : undefined,
           });
           if (parent?.json) {
             defaultRuntime.log(JSON.stringify(result, null, 2));
             return;
           }
-          const loc = result.isRemote
-            ? `  cdpUrl: ${result.cdpUrl}`
-            : `  port: ${result.cdpPort}`;
+          const loc = result.isRemote ? `  cdpUrl: ${result.cdpUrl}` : `  port: ${result.cdpPort}`;
           defaultRuntime.log(
             info(
-              `🦞 Created profile "${result.profile}"\n${loc}\n  color: ${result.color}`,
+              `🦞 Created profile "${result.profile}"\n${loc}\n  color: ${result.color}${
+                opts.driver === "extension" ? "\n  driver: extension" : ""
+              }`,
             ),
           );
         } catch (err) {

@@ -1,4 +1,4 @@
-import type { ChatChannelId } from "../channels/registry.js";
+import type { ChannelId } from "../channels/plugins/types.js";
 import type { GatewayDaemonRuntime } from "./daemon-runtime.js";
 
 export type OnboardMode = "local" | "remote";
@@ -12,6 +12,7 @@ export type AuthChoice =
   | "openai-codex"
   | "openai-api-key"
   | "openrouter-api-key"
+  | "ai-gateway-api-key"
   | "moonshot-api-key"
   | "synthetic-api-key"
   | "codex-cli"
@@ -31,7 +32,7 @@ export type ResetScope = "config" | "config+creds+sessions" | "full";
 export type GatewayBind = "loopback" | "lan" | "auto" | "custom";
 export type TailscaleMode = "off" | "serve" | "funnel";
 export type NodeManagerChoice = "npm" | "pnpm" | "bun";
-export type ChannelChoice = ChatChannelId;
+export type ChannelChoice = ChannelId;
 // Legacy alias (pre-rename).
 export type ProviderChoice = ChannelChoice;
 
@@ -40,6 +41,8 @@ export type OnboardOptions = {
   flow?: "quickstart" | "advanced";
   workspace?: string;
   nonInteractive?: boolean;
+  /** Required for non-interactive onboarding; skips the interactive risk prompt when true. */
+  acceptRisk?: boolean;
   reset?: boolean;
   authChoice?: AuthChoice;
   /** Used when `authChoice=token` in non-interactive mode. */
@@ -53,6 +56,7 @@ export type OnboardOptions = {
   anthropicApiKey?: string;
   openaiApiKey?: string;
   openrouterApiKey?: string;
+  aiGatewayApiKey?: string;
   moonshotApiKey?: string;
   geminiApiKey?: string;
   zaiApiKey?: string;

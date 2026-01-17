@@ -1,17 +1,20 @@
 import { randomUUID } from "node:crypto";
-import { DEFAULT_CHAT_CHANNEL } from "../../channels/registry.js";
 import { agentCommand } from "../../commands/agent.js";
 import { loadConfig } from "../../config/config.js";
 import {
   resolveAgentIdFromSessionKey,
   resolveAgentMainSessionKey,
   type SessionEntry,
-  saveSessionStore,
+  updateSessionStore,
 } from "../../config/sessions.js";
 import { registerAgentRunContext } from "../../infra/agent-events.js";
-import { resolveOutboundTarget } from "../../infra/outbound/targets.js";
+import {
+  resolveAgentDeliveryPlan,
+  resolveAgentOutboundTarget,
+} from "../../infra/outbound/agent-delivery.js";
 import { defaultRuntime } from "../../runtime.js";
 import { resolveSendPolicy } from "../../sessions/send-policy.js";
+import { normalizeSessionDeliveryFields } from "../../utils/delivery-context.js";
 import {
   INTERNAL_MESSAGE_CHANNEL,
   isDeliverableMessageChannel,
@@ -60,6 +63,7 @@ export const agentHandlers: GatewayRequestHandlers = {
         content?: unknown;
       }>;
       channel?: string;
+      accountId?: string;
       lane?: string;
       extraSystemPrompt?: string;
       idempotencyKey: string;
@@ -98,37 +102,28 @@ export const agentHandlers: GatewayRequestHandlers = {
     let images: Array<{ type: "image"; data: string; mimeType: string }> = [];
     if (normalizedAttachments.length > 0) {
       try {
-        const parsed = await parseMessageWithAttachments(
-          message,
-          normalizedAttachments,
-          { maxBytes: 5_000_000, log: context.logGateway },
-        );
+        const parsed = await parseMessageWithAttachments(message, normalizedAttachments, {
+          maxBytes: 5_000_000,
+          log: context.logGateway,
+        });
         message = parsed.message.trim();
         images = parsed.images;
       } catch (err) {
-        respond(
-          false,
-          undefined,
-          errorShape(ErrorCodes.INVALID_REQUEST, String(err)),
-        );
+        respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, String(err)));
         return;
       }
     }
-    const rawChannel =
-      typeof request.channel === "string" ? request.channel.trim() : "";
+    const rawChannel = typeof request.channel === "string" ? request.channel.trim() : "";
     if (rawChannel) {
+      const isKnownGatewayChannel = (value: string): boolean => isGatewayMessageChannel(value);
       const normalized = normalizeMessageChannel(rawChannel);
-      if (
-        normalized &&
-        normalized !== "last" &&
-        !isGatewayMessageChannel(normalized)
-      ) {
+      if (normalized && normalized !== "last" && !isKnownGatewayChannel(normalized)) {
         respond(
           false,
           undefined,
           errorShape(
             ErrorCodes.INVALID_REQUEST,
-            `invalid agent params: unknown channel: ${normalized}`,
+            `invalid agent params: unknown channel: ${String(normalized)}`,
           ),
         );
         return;
@@ -145,13 +140,13 @@ export const agentHandlers: GatewayRequestHandlers = {
     let cfgForAgent: ReturnType<typeof loadConfig> | undefined;
 
     if (requestedSessionKey) {
-      const { cfg, storePath, store, entry, canonicalKey } =
-        loadSessionEntry(requestedSessionKey);
+      const { cfg, storePath, entry, canonicalKey } = loadSessionEntry(requestedSessionKey);
       cfgForAgent = cfg;
       const now = Date.now();
       const sessionId = entry?.sessionId ?? randomUUID();
       const labelValue = request.label?.trim() || entry?.label;
       const spawnedByValue = request.spawnedBy?.trim() || entry?.spawnedBy;
+      const deliveryFields = normalizeSessionDeliveryFields(entry);
       const nextEntry: SessionEntry = {
         sessionId,
         updatedAt: now,
@@ -161,8 +156,10 @@ export const agentHandlers: GatewayRequestHandlers = {
         systemSent: entry?.systemSent,
         sendPolicy: entry?.sendPolicy,
         skillsSnapshot: entry?.skillsSnapshot,
-        lastChannel: entry?.lastChannel,
-        lastTo: entry?.lastTo,
+        deliveryContext: deliveryFields.deliveryContext,
+        lastChannel: deliveryFields.lastChannel ?? entry?.lastChannel,
+        lastTo: deliveryFields.lastTo ?? entry?.lastTo,
+        lastAccountId: deliveryFields.lastAccountId ?? entry?.lastAccountId,
         modelOverride: entry?.modelOverride,
         providerOverride: entry?.providerOverride,
         label: labelValue,
@@ -180,10 +177,7 @@ export const agentHandlers: GatewayRequestHandlers = {
         respond(
           false,
           undefined,
-          errorShape(
-            ErrorCodes.INVALID_REQUEST,
-            "send blocked by session policy",
-          ),
+          errorShape(ErrorCodes.INVALID_REQUEST, "send blocked by session policy"),
         );
         return;
       }
@@ -191,16 +185,12 @@ export const agentHandlers: GatewayRequestHandlers = {
       const canonicalSessionKey = canonicalKey;
       const agentId = resolveAgentIdFromSessionKey(canonicalSessionKey);
       const mainSessionKey = resolveAgentMainSessionKey({ cfg, agentId });
-      if (store) {
-        store[canonicalSessionKey] = nextEntry;
-        if (storePath) {
-          await saveSessionStore(storePath, store);
-        }
+      if (storePath) {
+        await updateSessionStore(storePath, (store) => {
+          store[canonicalSessionKey] = nextEntry;
+        });
       }
-      if (
-        canonicalSessionKey === mainSessionKey ||
-        canonicalSessionKey === "global"
-      ) {
+      if (canonicalSessionKey === mainSessionKey || canonicalSessionKey === "global") {
         context.addChatRun(idem, {
           sessionKey: requestedSessionKey,
           clientRunId: idem,
@@ -212,63 +202,36 @@ export const agentHandlers: GatewayRequestHandlers = {
 
     const runId = idem;
 
-    const requestedChannel = normalizeMessageChannel(request.channel) ?? "last";
-
-    const lastChannel = sessionEntry?.lastChannel;
-    const lastTo =
-      typeof sessionEntry?.lastTo === "string"
-        ? sessionEntry.lastTo.trim()
-        : "";
-
     const wantsDelivery = request.deliver === true;
-
-    const resolvedChannel = (() => {
-      if (requestedChannel === "last") {
-        // WebChat is not a deliverable surface. Treat it as "unset" for routing,
-        // so VoiceWake and CLI callers don't get stuck with deliver=false.
-        if (lastChannel && lastChannel !== INTERNAL_MESSAGE_CHANNEL) {
-          return lastChannel;
-        }
-        return wantsDelivery ? DEFAULT_CHAT_CHANNEL : INTERNAL_MESSAGE_CHANNEL;
-      }
-
-      if (isGatewayMessageChannel(requestedChannel)) return requestedChannel;
-
-      if (lastChannel && lastChannel !== INTERNAL_MESSAGE_CHANNEL) {
-        return lastChannel;
-      }
-      return wantsDelivery ? DEFAULT_CHAT_CHANNEL : INTERNAL_MESSAGE_CHANNEL;
-    })();
-
     const explicitTo =
-      typeof request.to === "string" && request.to.trim()
-        ? request.to.trim()
-        : undefined;
-    const deliveryTargetMode = explicitTo
-      ? "explicit"
-      : isDeliverableMessageChannel(resolvedChannel)
-        ? "implicit"
-        : undefined;
-    let resolvedTo =
-      explicitTo ||
-      (isDeliverableMessageChannel(resolvedChannel)
-        ? lastTo || undefined
-        : undefined);
+      typeof request.to === "string" && request.to.trim() ? request.to.trim() : undefined;
+    const deliveryPlan = resolveAgentDeliveryPlan({
+      sessionEntry,
+      requestedChannel: request.channel,
+      explicitTo,
+      accountId: request.accountId,
+      wantsDelivery,
+    });
+
+    const resolvedChannel = deliveryPlan.resolvedChannel;
+    const deliveryTargetMode = deliveryPlan.deliveryTargetMode;
+    const resolvedAccountId = deliveryPlan.resolvedAccountId;
+    let resolvedTo = deliveryPlan.resolvedTo;
+
     if (!resolvedTo && isDeliverableMessageChannel(resolvedChannel)) {
       const cfg = cfgForAgent ?? loadConfig();
-      const fallback = resolveOutboundTarget({
-        channel: resolvedChannel,
+      const fallback = resolveAgentOutboundTarget({
         cfg,
-        accountId: sessionEntry?.lastAccountId ?? undefined,
-        mode: "implicit",
+        plan: deliveryPlan,
+        targetMode: "implicit",
+        validateExplicitTarget: false,
       });
-      if (fallback.ok) {
-        resolvedTo = fallback.to;
+      if (fallback.resolvedTarget?.ok) {
+        resolvedTo = fallback.resolvedTo;
       }
     }
 
-    const deliver =
-      request.deliver === true && resolvedChannel !== INTERNAL_MESSAGE_CHANNEL;
+    const deliver = request.deliver === true && resolvedChannel !== INTERNAL_MESSAGE_CHANNEL;
 
     const accepted = {
       runId,
@@ -294,6 +257,7 @@ export const agentHandlers: GatewayRequestHandlers = {
         deliver,
         deliveryTargetMode,
         channel: resolvedChannel,
+        accountId: resolvedAccountId,
         timeout: request.timeout?.toString(),
         bestEffortDeliver,
         messageChannel: resolvedChannel,

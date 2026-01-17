@@ -1,12 +1,7 @@
-import {
-  getChannelPlugin,
-  normalizeChannelId,
-} from "../channels/plugins/index.js";
+import { getChannelPlugin, normalizeChannelId } from "../channels/plugins/index.js";
 import { truncateUtf16Safe } from "../utils.js";
-import {
-  type MessagingToolSend,
-  normalizeTargetForProvider,
-} from "./pi-embedded-messaging.js";
+import { type MessagingToolSend } from "./pi-embedded-messaging.js";
+import { normalizeTargetForProvider } from "../infra/outbound/target-normalization.js";
 
 const TOOL_RESULT_MAX_CHARS = 8000;
 
@@ -39,6 +34,24 @@ export function sanitizeToolResult(result: unknown): unknown {
   return { ...record, content: sanitized };
 }
 
+export function extractToolResultText(result: unknown): string | undefined {
+  if (!result || typeof result !== "object") return undefined;
+  const record = result as Record<string, unknown>;
+  const content = Array.isArray(record.content) ? record.content : null;
+  if (!content) return undefined;
+  const texts = content
+    .map((item) => {
+      if (!item || typeof item !== "object") return undefined;
+      const entry = item as Record<string, unknown>;
+      if (entry.type !== "text" || typeof entry.text !== "string") return undefined;
+      const trimmed = entry.text.trim();
+      return trimmed ? trimmed : undefined;
+    })
+    .filter((value): value is string => Boolean(value));
+  if (texts.length === 0) return undefined;
+  return texts.join("\n");
+}
+
 export function isToolResultError(result: unknown): boolean {
   if (!result || typeof result !== "object") return false;
   const record = result as { details?: unknown };
@@ -56,18 +69,17 @@ export function extractMessagingToolSend(
 ): MessagingToolSend | undefined {
   // Provider docking: new provider tools must implement plugin.actions.extractToolSend.
   const action = typeof args.action === "string" ? args.action.trim() : "";
-  const accountIdRaw =
-    typeof args.accountId === "string" ? args.accountId.trim() : undefined;
+  const accountIdRaw = typeof args.accountId === "string" ? args.accountId.trim() : undefined;
   const accountId = accountIdRaw ? accountIdRaw : undefined;
   if (toolName === "message") {
     if (action !== "send" && action !== "thread-reply") return undefined;
     const toRaw = typeof args.to === "string" ? args.to : undefined;
     if (!toRaw) return undefined;
-    const providerRaw =
-      typeof args.provider === "string" ? args.provider.trim() : "";
-    const providerId = providerRaw ? normalizeChannelId(providerRaw) : null;
-    const provider =
-      providerId ?? (providerRaw ? providerRaw.toLowerCase() : "message");
+    const providerRaw = typeof args.provider === "string" ? args.provider.trim() : "";
+    const channelRaw = typeof args.channel === "string" ? args.channel.trim() : "";
+    const providerHint = providerRaw || channelRaw;
+    const providerId = providerHint ? normalizeChannelId(providerHint) : null;
+    const provider = providerId ?? (providerHint ? providerHint.toLowerCase() : "message");
     const to = normalizeTargetForProvider(provider, toRaw);
     return to ? { tool: toolName, provider, accountId, to } : undefined;
   }

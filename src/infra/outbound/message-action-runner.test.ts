@@ -18,6 +18,14 @@ const slackConfig = {
   },
 } as ClawdbotConfig;
 
+const whatsappConfig = {
+  channels: {
+    whatsapp: {
+      allowFrom: ["*"],
+    },
+  },
+} as ClawdbotConfig;
+
 describe("runMessageAction context isolation", () => {
   it("allows send when target matches current channel", async () => {
     const result = await runMessageAction({
@@ -28,18 +36,38 @@ describe("runMessageAction context isolation", () => {
         provider: "slack",
 =======
         channel: "slack",
+<<<<<<< HEAD
 >>>>>>> upstream/main
         to: "#C123",
+=======
+        target: "#C12345678",
+>>>>>>> upstream/main
         message: "hi",
       },
-      toolContext: { currentChannelId: "C123" },
+      toolContext: { currentChannelId: "C12345678" },
       dryRun: true,
     });
 
     expect(result.kind).toBe("send");
   });
 
-  it("blocks send when target differs from current channel", async () => {
+  it("allows media-only send when target matches current channel", async () => {
+    const result = await runMessageAction({
+      cfg: slackConfig,
+      action: "send",
+      params: {
+        channel: "slack",
+        target: "#C12345678",
+        media: "https://example.com/note.ogg",
+      },
+      toolContext: { currentChannelId: "C12345678" },
+      dryRun: true,
+    });
+
+    expect(result.kind).toBe("send");
+  });
+
+  it("requires message when no media hint is provided", async () => {
     await expect(
       runMessageAction({
         cfg: slackConfig,
@@ -49,31 +77,164 @@ describe("runMessageAction context isolation", () => {
           provider: "slack",
 =======
           channel: "slack",
+<<<<<<< HEAD
 >>>>>>> upstream/main
           to: "channel:C999",
+=======
+          target: "#C12345678",
+        },
+        toolContext: { currentChannelId: "C12345678" },
+        dryRun: true,
+      }),
+    ).rejects.toThrow(/message required/i);
+  });
+
+  it("blocks send when target differs from current channel", async () => {
+    const result = await runMessageAction({
+      cfg: slackConfig,
+      action: "send",
+      params: {
+        channel: "slack",
+        target: "channel:C99999999",
+        message: "hi",
+      },
+      toolContext: { currentChannelId: "C12345678", currentChannelProvider: "slack" },
+      dryRun: true,
+    });
+
+    expect(result.kind).toBe("send");
+  });
+
+  it("blocks thread-reply when channelId differs from current channel", async () => {
+    const result = await runMessageAction({
+      cfg: slackConfig,
+      action: "thread-reply",
+      params: {
+        channel: "slack",
+        target: "C99999999",
+        message: "hi",
+      },
+      toolContext: { currentChannelId: "C12345678", currentChannelProvider: "slack" },
+      dryRun: true,
+    });
+
+    expect(result.kind).toBe("action");
+  });
+
+  it("allows WhatsApp send when target matches current chat", async () => {
+    const result = await runMessageAction({
+      cfg: whatsappConfig,
+      action: "send",
+      params: {
+        channel: "whatsapp",
+        target: "123@g.us",
+        message: "hi",
+      },
+      toolContext: { currentChannelId: "123@g.us" },
+      dryRun: true,
+    });
+
+    expect(result.kind).toBe("send");
+  });
+
+  it("blocks WhatsApp send when target differs from current chat", async () => {
+    const result = await runMessageAction({
+      cfg: whatsappConfig,
+      action: "send",
+      params: {
+        channel: "whatsapp",
+        target: "456@g.us",
+        message: "hi",
+      },
+      toolContext: { currentChannelId: "123@g.us", currentChannelProvider: "whatsapp" },
+      dryRun: true,
+    });
+
+    expect(result.kind).toBe("send");
+  });
+
+  it("allows iMessage send when target matches current handle", async () => {
+    const result = await runMessageAction({
+      cfg: whatsappConfig,
+      action: "send",
+      params: {
+        channel: "imessage",
+        target: "imessage:+15551234567",
+        message: "hi",
+      },
+      toolContext: { currentChannelId: "imessage:+15551234567" },
+      dryRun: true,
+    });
+
+    expect(result.kind).toBe("send");
+  });
+
+  it("blocks iMessage send when target differs from current handle", async () => {
+    const result = await runMessageAction({
+      cfg: whatsappConfig,
+      action: "send",
+      params: {
+        channel: "imessage",
+        target: "imessage:+15551230000",
+        message: "hi",
+      },
+      toolContext: {
+        currentChannelId: "imessage:+15551234567",
+        currentChannelProvider: "imessage",
+      },
+      dryRun: true,
+    });
+
+    expect(result.kind).toBe("send");
+  });
+
+  it("blocks cross-provider sends by default", async () => {
+    await expect(
+      runMessageAction({
+        cfg: slackConfig,
+        action: "send",
+        params: {
+          channel: "telegram",
+          target: "telegram:@ops",
+>>>>>>> upstream/main
           message: "hi",
         },
-        toolContext: { currentChannelId: "C123" },
+        toolContext: { currentChannelId: "C12345678", currentChannelProvider: "slack" },
         dryRun: true,
       }),
     ).rejects.toThrow(/Cross-context messaging denied/);
   });
 
-  it("blocks thread-reply when channelId differs from current channel", async () => {
+  it("blocks same-provider cross-context when disabled", async () => {
+    const cfg = {
+      ...slackConfig,
+      tools: {
+        message: {
+          crossContext: {
+            allowWithinProvider: false,
+          },
+        },
+      },
+    } as ClawdbotConfig;
+
     await expect(
       runMessageAction({
-        cfg: slackConfig,
-        action: "thread-reply",
+        cfg,
+        action: "send",
         params: {
 <<<<<<< HEAD
           provider: "slack",
 =======
           channel: "slack",
+<<<<<<< HEAD
 >>>>>>> upstream/main
           channelId: "C999",
+=======
+          target: "channel:C99999999",
+>>>>>>> upstream/main
           message: "hi",
         },
-        toolContext: { currentChannelId: "C123" },
+        toolContext: { currentChannelId: "C12345678", currentChannelProvider: "slack" },
         dryRun: true,
       }),
     ).rejects.toThrow(/Cross-context messaging denied/);

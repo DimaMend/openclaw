@@ -11,6 +11,7 @@ const PREFERRED_PROVIDER_BY_AUTH_CHOICE: Partial<Record<AuthChoice, string>> = {
   chutes: "chutes",
   "openai-api-key": "openai",
   "openrouter-api-key": "openrouter",
+  "ai-gateway-api-key": "vercel-ai-gateway",
   "moonshot-api-key": "moonshot",
   "gemini-api-key": "google",
   "zai-api-key": "zai",
@@ -24,8 +25,6 @@ const PREFERRED_PROVIDER_BY_AUTH_CHOICE: Partial<Record<AuthChoice, string>> = {
   "opencode-zen": "opencode",
 };
 
-export function resolvePreferredProviderForAuthChoice(
-  choice: AuthChoice,
-): string | undefined {
+export function resolvePreferredProviderForAuthChoice(choice: AuthChoice): string | undefined {
   return PREFERRED_PROVIDER_BY_AUTH_CHOICE[choice];
 }

@@ -4,13 +4,11 @@ import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import chokidar, { type FSWatcher } from "chokidar";
 
-import {
-  resolveAgentDir,
-  resolveAgentWorkspaceDir,
-} from "../agents/agent-scope.js";
+import { resolveAgentDir, resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 import type { ResolvedMemorySearchConfig } from "../agents/memory-search.js";
 import { resolveMemorySearchConfig } from "../agents/memory-search.js";
 import type { ClawdbotConfig } from "../config/config.js";
+import { createSubsystemLogger } from "../logging.js";
 import { resolveUserPath, truncateUtf16Safe } from "../utils.js";
 import {
   createEmbeddingProvider,
@@ -48,6 +46,8 @@ type MemoryIndexMeta = {
 
 const META_KEY = "memory_index_meta_v1";
 const SNIPPET_MAX_CHARS = 700;
+
+const log = createSubsystemLogger("memory");
 
 const INDEX_CACHE = new Map<string, MemoryIndexManager>();
 
@@ -216,9 +216,7 @@ export class MemoryIndexManager {
     const files = this.db.prepare(`SELECT COUNT(*) as c FROM files`).get() as {
       c: number;
     };
-    const chunks = this.db
-      .prepare(`SELECT COUNT(*) as c FROM chunks`)
-      .get() as {
+    const chunks = this.db.prepare(`SELECT COUNT(*) as c FROM chunks`).get() as {
       c: number;
     };
     return {
@@ -230,9 +228,7 @@ export class MemoryIndexManager {
       provider: this.provider.id,
       model: this.provider.model,
       requestedProvider: this.requestedProvider,
-      fallback: this.fallbackReason
-        ? { from: "local", reason: this.fallbackReason }
-        : undefined,
+      fallback: this.fallbackReason ? { from: "local", reason: this.fallbackReason } : undefined,
     };
   }
 
@@ -321,7 +317,9 @@ export class MemoryIndexManager {
     if (!minutes || minutes <= 0 || this.intervalTimer) return;
     const ms = minutes * 60 * 1000;
     this.intervalTimer = setInterval(() => {
-      void this.sync({ reason: "interval" });
+      void this.sync({ reason: "interval" }).catch((err) => {
+        log.warn(`memory sync failed (interval): ${String(err)}`);
+      });
     }, ms);
   }
 
@@ -330,7 +328,9 @@ export class MemoryIndexManager {
     if (this.watchTimer) clearTimeout(this.watchTimer);
     this.watchTimer = setTimeout(() => {
       this.watchTimer = null;
-      void this.sync({ reason: "watch" });
+      void this.sync({ reason: "watch" }).catch((err) => {
+        log.warn(`memory sync failed (watch): ${String(err)}`);
+      });
     }, this.settings.sync.watchDebounceMs);
   }
 
@@ -342,9 +342,7 @@ export class MemoryIndexManager {
     embedding: number[];
   }> {
     const rows = this.db
-      .prepare(
-        `SELECT path, start_line, end_line, text, embedding FROM chunks WHERE model = ?`,
-      )
+      .prepare(`SELECT path, start_line, end_line, text, embedding FROM chunks WHERE model = ?`)
       .all(this.provider.model) as Array<{
       path: string;
       start_line: number;
@@ -381,9 +379,9 @@ export class MemoryIndexManager {
     const activePaths = new Set(fileEntries.map((entry) => entry.path));
 
     for (const entry of fileEntries) {
-      const record = this.db
-        .prepare(`SELECT hash FROM files WHERE path = ?`)
-        .get(entry.path) as { hash: string } | undefined;
+      const record = this.db.prepare(`SELECT hash FROM files WHERE path = ?`).get(entry.path) as
+        | { hash: string }
+        | undefined;
       if (!needsFullReindex && record?.hash === entry.hash) {
         continue;
       }
@@ -414,9 +412,9 @@ export class MemoryIndexManager {
   }
 
   private readMeta(): MemoryIndexMeta | null {
-    const row = this.db
-      .prepare(`SELECT value FROM meta WHERE key = ?`)
-      .get(META_KEY) as { value: string } | undefined;
+    const row = this.db.prepare(`SELECT value FROM meta WHERE key = ?`).get(META_KEY) as
+      | { value: string }
+      | undefined;
     if (!row?.value) return null;
     try {
       return JSON.parse(row.value) as MemoryIndexMeta;
@@ -437,9 +435,7 @@ export class MemoryIndexManager {
   private async indexFile(entry: MemoryFileEntry) {
     const content = await fs.readFile(entry.absPath, "utf-8");
     const chunks = chunkMarkdown(content, this.settings.chunking);
-    const embeddings = await this.provider.embedBatch(
-      chunks.map((chunk) => chunk.text),
-    );
+    const embeddings = await this.provider.embedBatch(chunks.map((chunk) => chunk.text));
     const now = Date.now();
     this.db.prepare(`DELETE FROM chunks WHERE path = ?`).run(entry.path);
     for (let i = 0; i < chunks.length; i++) {

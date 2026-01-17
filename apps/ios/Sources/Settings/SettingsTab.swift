@@ -412,9 +412,11 @@ struct SettingsTab: View {
                 modelIdentifier: self.modelIdentifier(),
                 caps: self.currentCaps(),
                 commands: self.currentCommands())
+            let tlsParams = self.resolveDiscoveredTLSParams(bridge: bridge)
             let token = try await BridgeClient().pairAndHello(
                 endpoint: bridge.endpoint,
                 hello: hello,
+                tls: tlsParams,
                 onStatus: { status in
                     Task { @MainActor in
                         statusStore.text = status
@@ -431,6 +433,7 @@ struct SettingsTab: View {
             self.appModel.connectToBridge(
                 endpoint: bridge.endpoint,
                 bridgeStableID: bridge.stableID,
+                tls: tlsParams,
                 hello: BridgeHello(
                     nodeId: self.instanceId,
                     displayName: self.displayName,
@@ -467,6 +470,8 @@ struct SettingsTab: View {
         defer { self.connectingBridgeID = nil }
 
         let endpoint: NWEndpoint = .hostPort(host: NWEndpoint.Host(host), port: port)
+        let stableID = BridgeEndpointID.stableID(endpoint)
+        let tlsParams = self.resolveManualTLSParams(stableID: stableID)
 
         do {
             let statusStore = self.connectStatus
@@ -497,6 +502,7 @@ struct SettingsTab: View {
             let token = try await BridgeClient().pairAndHello(
                 endpoint: endpoint,
                 hello: hello,
+                tls: tlsParams,
                 onStatus: { status in
                     Task { @MainActor in
                         statusStore.text = status
@@ -512,7 +518,8 @@ struct SettingsTab: View {
 
             self.appModel.connectToBridge(
                 endpoint: endpoint,
-                bridgeStableID: BridgeEndpointID.stableID(endpoint),
+                bridgeStableID: stableID,
+                tls: tlsParams,
                 hello: BridgeHello(
                     nodeId: self.instanceId,
                     displayName: self.displayName,
@@ -527,6 +534,47 @@ struct SettingsTab: View {
         } catch {
             self.connectStatus.text = "Failed: \(error.localizedDescription)"
         }
+    }
+
+    private func resolveDiscoveredTLSParams(
+        bridge: BridgeDiscoveryModel.DiscoveredBridge) -> BridgeTLSParams?
+    {
+        let stableID = bridge.stableID
+        let stored = BridgeTLSStore.loadFingerprint(stableID: stableID)
+
+        if bridge.tlsEnabled || bridge.tlsFingerprintSha256 != nil {
+            return BridgeTLSParams(
+                required: true,
+                expectedFingerprint: bridge.tlsFingerprintSha256 ?? stored,
+                allowTOFU: stored == nil,
+                storeKey: stableID)
+        }
+
+        if let stored {
+            return BridgeTLSParams(
+                required: true,
+                expectedFingerprint: stored,
+                allowTOFU: false,
+                storeKey: stableID)
+        }
+
+        return nil
+    }
+
+    private func resolveManualTLSParams(stableID: String) -> BridgeTLSParams? {
+        if let stored = BridgeTLSStore.loadFingerprint(stableID: stableID) {
+            return BridgeTLSParams(
+                required: true,
+                expectedFingerprint: stored,
+                allowTOFU: false,
+                storeKey: stableID)
+        }
+
+        return BridgeTLSParams(
+            required: false,
+            expectedFingerprint: nil,
+            allowTOFU: true,
+            storeKey: stableID)
     }
 
     private static func primaryIPv4Address() -> String? {

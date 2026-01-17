@@ -10,9 +10,7 @@ export const HookMappingSchema = z
       })
       .optional(),
     action: z.union([z.literal("wake"), z.literal("agent")]).optional(),
-    wakeMode: z
-      .union([z.literal("now"), z.literal("next-heartbeat")])
-      .optional(),
+    wakeMode: z.union([z.literal("now"), z.literal("next-heartbeat")]).optional(),
     name: z.string().optional(),
     sessionKey: z.string().optional(),
     messageTemplate: z.string().optional(),
@@ -43,6 +41,45 @@ export const HookMappingSchema = z
   })
   .optional();
 
+export const InternalHookHandlerSchema = z.object({
+  event: z.string(),
+  module: z.string(),
+  export: z.string().optional(),
+});
+
+const HookConfigSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    env: z.record(z.string(), z.string()).optional(),
+  })
+  .passthrough();
+
+const HookInstallRecordSchema = z
+  .object({
+    source: z.union([z.literal("npm"), z.literal("archive"), z.literal("path")]),
+    spec: z.string().optional(),
+    sourcePath: z.string().optional(),
+    installPath: z.string().optional(),
+    version: z.string().optional(),
+    installedAt: z.string().optional(),
+    hooks: z.array(z.string()).optional(),
+  })
+  .passthrough();
+
+export const InternalHooksSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    handlers: z.array(InternalHookHandlerSchema).optional(),
+    entries: z.record(z.string(), HookConfigSchema).optional(),
+    load: z
+      .object({
+        extraDirs: z.array(z.string()).optional(),
+      })
+      .optional(),
+    installs: z.record(z.string(), HookInstallRecordSchema).optional(),
+  })
+  .optional();
+
 export const HooksGmailSchema = z
   .object({
     account: z.string().optional(),
@@ -63,9 +100,7 @@ export const HooksGmailSchema = z
       .optional(),
     tailscale: z
       .object({
-        mode: z
-          .union([z.literal("off"), z.literal("serve"), z.literal("funnel")])
-          .optional(),
+        mode: z.union([z.literal("off"), z.literal("serve"), z.literal("funnel")]).optional(),
         path: z.string().optional(),
         target: z.string().optional(),
       })

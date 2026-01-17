@@ -26,6 +26,7 @@ actor BridgeSession {
 
     private(set) var state: State = .idle
     private var canvasHostUrl: String?
+    private var mainSessionKey: String?
 
     func currentCanvasHostUrl() -> String? {
         self.canvasHostUrl
@@ -68,15 +69,42 @@ actor BridgeSession {
     func connect(
         endpoint: NWEndpoint,
         hello: BridgeHello,
-        onConnected: (@Sendable (String) async -> Void)? = nil,
+        tls: BridgeTLSParams? = nil,
+        onConnected: (@Sendable (String, String?) async -> Void)? = nil,
         onInvoke: @escaping @Sendable (BridgeInvokeRequest) async -> BridgeInvokeResponse)
         async throws
     {
         await self.disconnect()
         self.state = .connecting
+        do {
+            try await self.connectOnce(
+                endpoint: endpoint,
+                hello: hello,
+                tls: tls,
+                onConnected: onConnected,
+                onInvoke: onInvoke)
+        } catch {
+            if let tls, !tls.required {
+                try await self.connectOnce(
+                    endpoint: endpoint,
+                    hello: hello,
+                    tls: nil,
+                    onConnected: onConnected,
+                    onInvoke: onInvoke)
+                return
+            }
+            throw error
+        }
+    }
 
-        let params = NWParameters.tcp
-        params.includePeerToPeer = true
+    private func connectOnce(
+        endpoint: NWEndpoint,
+        hello: BridgeHello,
+        tls: BridgeTLSParams?,
+        onConnected: (@Sendable (String, String?) async -> Void)?,
+        onInvoke: @escaping @Sendable (BridgeInvokeRequest) async -> BridgeInvokeResponse) async throws
+    {
+        let params = self.makeParameters(tls: tls)
         let connection = NWConnection(to: endpoint, using: params)
         let queue = DispatchQueue(label: "com.clawdbot.ios.bridge-session")
         self.connection = connection
@@ -107,7 +135,9 @@ actor BridgeSession {
             let ok = try self.decoder.decode(BridgeHelloOk.self, from: data)
             self.state = .connected(serverName: ok.serverName)
             self.canvasHostUrl = ok.canvasHostUrl?.trimmingCharacters(in: .whitespacesAndNewlines)
-            await onConnected?(ok.serverName)
+            let mainKey = ok.mainSessionKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+            self.mainSessionKey = (mainKey?.isEmpty == false) ? mainKey : nil
+            await onConnected?(ok.serverName, self.mainSessionKey)
         } else if base.type == "error" {
             let err = try self.decoder.decode(BridgeErrorFrame.self, from: data)
             self.state = .failed(message: "\(err.code): \(err.message)")
@@ -217,6 +247,7 @@ actor BridgeSession {
         self.queue = nil
         self.buffer = Data()
         self.canvasHostUrl = nil
+        self.mainSessionKey = nil
 
         let pending = self.pendingRPC.values
         self.pendingRPC.removeAll()
@@ -234,6 +265,10 @@ actor BridgeSession {
         self.state = .idle
     }
 
+    func currentMainSessionKey() -> String? {
+        self.mainSessionKey
+    }
+
     private func beginRPC(
         id: String,
         request: BridgeRPCRequest,
@@ -245,6 +280,18 @@ actor BridgeSession {
         } catch {
             await self.failRPC(id: id, error: error)
         }
+    }
+
+    private func makeParameters(tls: BridgeTLSParams?) -> NWParameters {
+        if let tlsOptions = makeBridgeTLSOptions(tls) {
+            let tcpOptions = NWProtocolTCP.Options()
+            let params = NWParameters(tls: tlsOptions, tcp: tcpOptions)
+            params.includePeerToPeer = true
+            return params
+        }
+        let params = NWParameters.tcp
+        params.includePeerToPeer = true
+        return params
     }
 
     private func timeoutRPC(id: String) async {

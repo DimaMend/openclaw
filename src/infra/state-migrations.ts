@@ -61,7 +61,15 @@ function isSurfaceGroupKey(key: string): boolean {
 }
 
 function isLegacyGroupKey(key: string): boolean {
-  return key.startsWith("group:") || key.includes("@g.us");
+  const trimmed = key.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("group:")) return true;
+  const lower = trimmed.toLowerCase();
+  if (!lower.includes("@g.us")) return false;
+  // Legacy WhatsApp group keys: bare JID or "whatsapp:<jid>" without explicit ":group:" kind.
+  if (!trimmed.includes(":")) return true;
+  if (lower.startsWith("whatsapp:") && !trimmed.includes(":group:")) return true;
+  return false;
 }
 
 function normalizeSessionKeyForAgent(key: string, agentId: string): string {
@@ -71,6 +79,22 @@ function normalizeSessionKeyForAgent(key: string, agentId: string): string {
   if (raw.toLowerCase().startsWith("subagent:")) {
     const rest = raw.slice("subagent:".length);
     return `agent:${normalizeAgentId(agentId)}:subagent:${rest}`;
+  }
+  if (raw.startsWith("group:")) {
+    const id = raw.slice("group:".length).trim();
+    if (!id) return raw;
+    const channel = id.toLowerCase().includes("@g.us") ? "whatsapp" : "unknown";
+    return `agent:${normalizeAgentId(agentId)}:${channel}:group:${id}`;
+  }
+  if (!raw.includes(":") && raw.toLowerCase().includes("@g.us")) {
+    return `agent:${normalizeAgentId(agentId)}:whatsapp:group:${raw}`;
+  }
+  if (raw.toLowerCase().startsWith("whatsapp:") && raw.toLowerCase().includes("@g.us")) {
+    const remainder = raw.slice("whatsapp:".length).trim();
+    const cleaned = remainder.replace(/^group:/i, "").trim();
+    if (cleaned && !isSurfaceGroupKey(raw)) {
+      return `agent:${normalizeAgentId(agentId)}:whatsapp:group:${cleaned}`;
+    }
   }
   if (isSurfaceGroupKey(raw)) {
     return `agent:${normalizeAgentId(agentId)}:${raw}`;
@@ -101,14 +125,19 @@ function pickLatestLegacyDirectEntry(
 }
 
 function normalizeSessionEntry(entry: SessionEntryLike): SessionEntry | null {
-  const sessionId =
-    typeof entry.sessionId === "string" ? entry.sessionId : null;
+  const sessionId = typeof entry.sessionId === "string" ? entry.sessionId : null;
   if (!sessionId) return null;
   const updatedAt =
     typeof entry.updatedAt === "number" && Number.isFinite(entry.updatedAt)
       ? entry.updatedAt
       : Date.now();
-  return { ...(entry as unknown as SessionEntry), sessionId, updatedAt };
+  const normalized = { ...(entry as unknown as SessionEntry), sessionId, updatedAt };
+  const rec = normalized as unknown as Record<string, unknown>;
+  if (typeof rec.groupChannel !== "string" && typeof rec.room === "string") {
+    rec.groupChannel = rec.room;
+  }
+  delete rec.room;
+  return normalized;
 }
 
 function emptyDirOrMissing(dir: string): boolean {
@@ -153,12 +182,7 @@ export async function detectLegacyStateMigrations(params: {
 
   const sessionsLegacyDir = path.join(stateDir, "sessions");
   const sessionsLegacyStorePath = path.join(sessionsLegacyDir, "sessions.json");
-  const sessionsTargetDir = path.join(
-    stateDir,
-    "agents",
-    targetAgentId,
-    "sessions",
-  );
+  const sessionsTargetDir = path.join(stateDir, "agents", targetAgentId, "sessions");
   const sessionsTargetStorePath = path.join(sessionsTargetDir, "sessions.json");
   const legacySessionEntries = safeReadDir(sessionsLegacyDir);
   const hasLegacySessions =
@@ -169,11 +193,7 @@ export async function detectLegacyStateMigrations(params: {
   const targetAgentDir = path.join(stateDir, "agents", targetAgentId, "agent");
   const hasLegacyAgentDir = existsDir(legacyAgentDir);
 
-  const targetWhatsAppAuthDir = path.join(
-    oauthDir,
-    "whatsapp",
-    DEFAULT_ACCOUNT_ID,
-  );
+  const targetWhatsAppAuthDir = path.join(oauthDir, "whatsapp", DEFAULT_ACCOUNT_ID);
   const hasLegacyWhatsAppAuth =
     fileExists(path.join(oauthDir, "creds.json")) &&
     !fileExists(path.join(targetWhatsAppAuthDir, "creds.json"));
@@ -186,9 +206,7 @@ export async function detectLegacyStateMigrations(params: {
     preview.push(`- Agent dir: ${legacyAgentDir} → ${targetAgentDir}`);
   }
   if (hasLegacyWhatsAppAuth) {
-    preview.push(
-      `- WhatsApp auth: ${oauthDir} → ${targetWhatsAppAuthDir} (keep oauth.json)`,
-    );
+    preview.push(`- WhatsApp auth: ${oauthDir} → ${targetWhatsAppAuthDir} (keep oauth.json)`);
   }
 
   return {
@@ -277,9 +295,7 @@ async function migrateLegacySessions(
       normalized[key] = normalizedEntry;
     }
     await saveSessionStore(detected.sessions.targetStorePath, normalized);
-    changes.push(
-      `Merged sessions store → ${detected.sessions.targetStorePath}`,
-    );
+    changes.push(`Merged sessions store → ${detected.sessions.targetStorePath}`);
   }
 
   const entries = safeReadDir(detected.sessions.legacyDir);
@@ -291,9 +307,7 @@ async function migrateLegacySessions(
     if (fileExists(to)) continue;
     try {
       fs.renameSync(from, to);
-      changes.push(
-        `Moved ${entry.name} → agents/${detected.targetAgentId}/sessions`,
-      );
+      changes.push(`Moved ${entry.name} → agents/${detected.targetAgentId}/sessions`);
     } catch (err) {
       warnings.push(`Failed moving ${from}: ${String(err)}`);
     }
@@ -310,9 +324,7 @@ async function migrateLegacySessions(
   }
 
   removeDirIfEmpty(detected.sessions.legacyDir);
-  const legacyLeft = safeReadDir(detected.sessions.legacyDir).filter((e) =>
-    e.isFile(),
-  );
+  const legacyLeft = safeReadDir(detected.sessions.legacyDir).filter((e) => e.isFile());
   if (legacyLeft.length > 0) {
     const backupDir = `${detected.sessions.legacyDir}.legacy-${now()}`;
     try {
@@ -343,9 +355,7 @@ export async function migrateLegacyAgentDir(
     if (fs.existsSync(to)) continue;
     try {
       fs.renameSync(from, to);
-      changes.push(
-        `Moved agent file ${entry.name} → agents/${detected.targetAgentId}/agent`,
-      );
+      changes.push(`Moved agent file ${entry.name} → agents/${detected.targetAgentId}/agent`);
     } catch (err) {
       warnings.push(`Failed moving ${from}: ${String(err)}`);
     }
@@ -408,16 +418,8 @@ export async function runLegacyStateMigrations(params: {
   const agentDir = await migrateLegacyAgentDir(detected, now);
   const whatsappAuth = await migrateLegacyWhatsAppAuth(detected);
   return {
-    changes: [
-      ...sessions.changes,
-      ...agentDir.changes,
-      ...whatsappAuth.changes,
-    ],
-    warnings: [
-      ...sessions.warnings,
-      ...agentDir.warnings,
-      ...whatsappAuth.warnings,
-    ],
+    changes: [...sessions.changes, ...agentDir.changes, ...whatsappAuth.changes],
+    warnings: [...sessions.warnings, ...agentDir.warnings, ...whatsappAuth.warnings],
   };
 }
 
@@ -475,17 +477,11 @@ export async function autoMigrateLegacyState(params: {
 
   const logger = params.log ?? createSubsystemLogger("state-migrations");
   if (changes.length > 0) {
-    logger.info(
-      `Auto-migrated legacy state:\n${changes
-        .map((entry) => `- ${entry}`)
-        .join("\n")}`,
-    );
+    logger.info(`Auto-migrated legacy state:\n${changes.map((entry) => `- ${entry}`).join("\n")}`);
   }
   if (warnings.length > 0) {
     logger.warn(
-      `Legacy state migration warnings:\n${warnings
-        .map((entry) => `- ${entry}`)
-        .join("\n")}`,
+      `Legacy state migration warnings:\n${warnings.map((entry) => `- ${entry}`).join("\n")}`,
     );
   }
 

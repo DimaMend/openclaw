@@ -1,19 +1,10 @@
 import { z } from "zod";
 import { ToolsSchema } from "./zod-schema.agent-runtime.js";
-import {
-  AgentsSchema,
-  AudioSchema,
-  BindingsSchema,
-  BroadcastSchema,
-} from "./zod-schema.agents.js";
+import { AgentsSchema, AudioSchema, BindingsSchema, BroadcastSchema } from "./zod-schema.agents.js";
 import { HexColorSchema, ModelsConfigSchema } from "./zod-schema.core.js";
-import { HookMappingSchema, HooksGmailSchema } from "./zod-schema.hooks.js";
+import { HookMappingSchema, HooksGmailSchema, InternalHooksSchema } from "./zod-schema.hooks.js";
 import { ChannelsSchema } from "./zod-schema.providers.js";
-import {
-  CommandsSchema,
-  MessagesSchema,
-  SessionSchema,
-} from "./zod-schema.session.js";
+import { CommandsSchema, MessagesSchema, SessionSchema } from "./zod-schema.session.js";
 
 <<<<<<< HEAD
 import { parseDurationMs } from "../cli/parse-duration.js";
@@ -1491,9 +1482,7 @@ export const ClawdbotSchema = z
         lastRunVersion: z.string().optional(),
         lastRunCommit: z.string().optional(),
         lastRunCommand: z.string().optional(),
-        lastRunMode: z
-          .union([z.literal("local"), z.literal("remote")])
-          .optional(),
+        lastRunMode: z.union([z.literal("local"), z.literal("remote")]).optional(),
       })
       .optional(),
     logging: z
@@ -1524,9 +1513,7 @@ export const ClawdbotSchema = z
         consoleStyle: z
           .union([z.literal("pretty"), z.literal("compact"), z.literal("json")])
           .optional(),
-        redactSensitive: z
-          .union([z.literal("off"), z.literal("tools")])
-          .optional(),
+        redactSensitive: z.union([z.literal("off"), z.literal("tools")]).optional(),
         redactPatterns: z.array(z.string()).optional(),
       })
       .optional(),
@@ -1534,7 +1521,10 @@ export const ClawdbotSchema = z
       .object({
         enabled: z.boolean().optional(),
         controlUrl: z.string().optional(),
+        controlToken: z.string().optional(),
         cdpUrl: z.string().optional(),
+        remoteCdpTimeoutMs: z.number().int().nonnegative().optional(),
+        remoteCdpHandshakeTimeoutMs: z.number().int().nonnegative().optional(),
         color: z.string().optional(),
         executablePath: z.string().optional(),
         headless: z.boolean().optional(),
@@ -1545,14 +1535,12 @@ export const ClawdbotSchema = z
           .record(
             z
               .string()
-              .regex(
-                /^[a-z0-9-]+$/,
-                "Profile names must be alphanumeric with hyphens only",
-              ),
+              .regex(/^[a-z0-9-]+$/, "Profile names must be alphanumeric with hyphens only"),
             z
               .object({
                 cdpPort: z.number().int().min(1).max(65535).optional(),
                 cdpUrl: z.string().optional(),
+                driver: z.union([z.literal("clawd"), z.literal("extension")]).optional(),
                 color: HexColorSchema,
               })
               .refine((value) => value.cdpPort || value.cdpUrl, {
@@ -1574,11 +1562,7 @@ export const ClawdbotSchema = z
             z.string(),
             z.object({
               provider: z.string(),
-              mode: z.union([
-                z.literal("api_key"),
-                z.literal("oauth"),
-                z.literal("token"),
-              ]),
+              mode: z.union([z.literal("api_key"), z.literal("oauth"), z.literal("token")]),
               email: z.string().optional(),
             }),
           )
@@ -1587,9 +1571,7 @@ export const ClawdbotSchema = z
         cooldowns: z
           .object({
             billingBackoffHours: z.number().positive().optional(),
-            billingBackoffHoursByProvider: z
-              .record(z.string(), z.number().positive())
-              .optional(),
+            billingBackoffHoursByProvider: z.record(z.string(), z.number().positive()).optional(),
             billingMaxHours: z.number().positive().optional(),
             failureWindowHours: z.number().positive().optional(),
           })
@@ -1622,6 +1604,7 @@ export const ClawdbotSchema = z
         transformsDir: z.string().optional(),
         mappings: z.array(HookMappingSchema).optional(),
         gmail: HooksGmailSchema,
+        internal: InternalHooksSchema,
       })
       .optional(),
     web: z
@@ -1645,12 +1628,16 @@ export const ClawdbotSchema = z
         enabled: z.boolean().optional(),
         port: z.number().int().positive().optional(),
         bind: z
-          .union([
-            z.literal("auto"),
-            z.literal("lan"),
-            z.literal("tailnet"),
-            z.literal("loopback"),
-          ])
+          .union([z.literal("auto"), z.literal("lan"), z.literal("tailnet"), z.literal("loopback")])
+          .optional(),
+        tls: z
+          .object({
+            enabled: z.boolean().optional(),
+            autoGenerate: z.boolean().optional(),
+            certPath: z.string().optional(),
+            keyPath: z.string().optional(),
+            caPath: z.string().optional(),
+          })
           .optional(),
       })
       .optional(),
@@ -1686,12 +1673,7 @@ export const ClawdbotSchema = z
         port: z.number().int().positive().optional(),
         mode: z.union([z.literal("local"), z.literal("remote")]).optional(),
         bind: z
-          .union([
-            z.literal("auto"),
-            z.literal("lan"),
-            z.literal("tailnet"),
-            z.literal("loopback"),
-          ])
+          .union([z.literal("auto"), z.literal("lan"), z.literal("tailnet"), z.literal("loopback")])
           .optional(),
         controlUi: z
           .object({
@@ -1701,9 +1683,7 @@ export const ClawdbotSchema = z
           .optional(),
         auth: z
           .object({
-            mode: z
-              .union([z.literal("token"), z.literal("password")])
-              .optional(),
+            mode: z.union([z.literal("token"), z.literal("password")]).optional(),
             token: z.string().optional(),
             password: z.string().optional(),
             allowTailscale: z.boolean().optional(),
@@ -1711,13 +1691,7 @@ export const ClawdbotSchema = z
           .optional(),
         tailscale: z
           .object({
-            mode: z
-              .union([
-                z.literal("off"),
-                z.literal("serve"),
-                z.literal("funnel"),
-              ])
-              .optional(),
+            mode: z.union([z.literal("off"), z.literal("serve"), z.literal("funnel")]).optional(),
             resetOnExit: z.boolean().optional(),
           })
           .optional(),
@@ -1764,18 +1738,15 @@ export const ClawdbotSchema = z
         load: z
           .object({
             extraDirs: z.array(z.string()).optional(),
+            watch: z.boolean().optional(),
+            watchDebounceMs: z.number().int().min(0).optional(),
           })
           .optional(),
         install: z
           .object({
             preferBrew: z.boolean().optional(),
             nodeManager: z
-              .union([
-                z.literal("npm"),
-                z.literal("pnpm"),
-                z.literal("yarn"),
-                z.literal("bun"),
-              ])
+              .union([z.literal("npm"), z.literal("pnpm"), z.literal("yarn"), z.literal("bun")])
               .optional(),
           })
           .optional(),
@@ -1810,6 +1781,21 @@ export const ClawdbotSchema = z
               .object({
                 enabled: z.boolean().optional(),
                 config: z.record(z.string(), z.unknown()).optional(),
+              })
+              .passthrough(),
+          )
+          .optional(),
+        installs: z
+          .record(
+            z.string(),
+            z
+              .object({
+                source: z.union([z.literal("npm"), z.literal("archive"), z.literal("path")]),
+                spec: z.string().optional(),
+                sourcePath: z.string().optional(),
+                installPath: z.string().optional(),
+                version: z.string().optional(),
+                installedAt: z.string().optional(),
               })
               .passthrough(),
           )

@@ -5,7 +5,7 @@ import {
   GroupChatSchema,
   HumanDelaySchema,
   IdentitySchema,
-  ToolsAudioTranscriptionSchema,
+  ToolsMediaSchema,
 } from "./zod-schema.core.js";
 
 export const HeartbeatSchema = z
@@ -77,6 +77,7 @@ export const SandboxDockerSchema = z
     apparmorProfile: z.string().optional(),
     dns: z.array(z.string()).optional(),
     extraHosts: z.array(z.string()).optional(),
+    binds: z.array(z.string()).optional(),
   })
   .optional();
 
@@ -113,14 +114,43 @@ export const ToolPolicySchema = z
   })
   .optional();
 
-export const ToolProfileSchema = z
-  .union([
-    z.literal("minimal"),
-    z.literal("coding"),
-    z.literal("messaging"),
-    z.literal("full"),
-  ])
+export const ToolsWebSearchSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    provider: z.union([z.literal("brave")]).optional(),
+    apiKey: z.string().optional(),
+    maxResults: z.number().int().positive().optional(),
+    timeoutSeconds: z.number().int().positive().optional(),
+    cacheTtlMinutes: z.number().nonnegative().optional(),
+  })
   .optional();
+
+export const ToolsWebFetchSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    maxChars: z.number().int().positive().optional(),
+    timeoutSeconds: z.number().int().positive().optional(),
+    cacheTtlMinutes: z.number().nonnegative().optional(),
+    userAgent: z.string().optional(),
+  })
+  .optional();
+
+export const ToolsWebSchema = z
+  .object({
+    search: ToolsWebSearchSchema,
+    fetch: ToolsWebFetchSchema,
+  })
+  .optional();
+
+export const ToolProfileSchema = z
+  .union([z.literal("minimal"), z.literal("coding"), z.literal("messaging"), z.literal("full")])
+  .optional();
+
+export const ToolPolicyWithProfileSchema = z.object({
+  allow: z.array(z.string()).optional(),
+  deny: z.array(z.string()).optional(),
+  profile: ToolProfileSchema,
+});
 
 // Provider docking: allowlists keyed by provider id (no schema updates when adding providers).
 export const ElevatedAllowFromSchema = z
@@ -129,18 +159,10 @@ export const ElevatedAllowFromSchema = z
 
 export const AgentSandboxSchema = z
   .object({
-    mode: z
-      .union([z.literal("off"), z.literal("non-main"), z.literal("all")])
-      .optional(),
-    workspaceAccess: z
-      .union([z.literal("none"), z.literal("ro"), z.literal("rw")])
-      .optional(),
-    sessionToolsVisibility: z
-      .union([z.literal("spawned"), z.literal("all")])
-      .optional(),
-    scope: z
-      .union([z.literal("session"), z.literal("agent"), z.literal("shared")])
-      .optional(),
+    mode: z.union([z.literal("off"), z.literal("non-main"), z.literal("all")]).optional(),
+    workspaceAccess: z.union([z.literal("none"), z.literal("ro"), z.literal("rw")]).optional(),
+    sessionToolsVisibility: z.union([z.literal("spawned"), z.literal("all")]).optional(),
+    scope: z.union([z.literal("session"), z.literal("agent"), z.literal("shared")]).optional(),
     perSession: z.boolean().optional(),
     workspaceRoot: z.string().optional(),
     docker: SandboxDockerSchema,
@@ -154,6 +176,7 @@ export const AgentToolsSchema = z
     profile: ToolProfileSchema,
     allow: z.array(z.string()).optional(),
     deny: z.array(z.string()).optional(),
+    byProvider: z.record(z.string(), ToolPolicyWithProfileSchema).optional(),
     elevated: z
       .object({
         enabled: z.boolean().optional(),
@@ -232,6 +255,7 @@ export const AgentEntrySchema = z.object({
   model: AgentModelSchema.optional(),
   memorySearch: MemorySearchSchema,
   humanDelay: HumanDelaySchema.optional(),
+  heartbeat: HeartbeatSchema,
   identity: IdentitySchema,
   groupChat: GroupChatSchema,
   subagents: z
@@ -257,9 +281,30 @@ export const ToolsSchema = z
     profile: ToolProfileSchema,
     allow: z.array(z.string()).optional(),
     deny: z.array(z.string()).optional(),
-    audio: z
+    byProvider: z.record(z.string(), ToolPolicyWithProfileSchema).optional(),
+    web: ToolsWebSchema,
+    media: ToolsMediaSchema,
+    message: z
       .object({
-        transcription: ToolsAudioTranscriptionSchema,
+        allowCrossContextSend: z.boolean().optional(),
+        crossContext: z
+          .object({
+            allowWithinProvider: z.boolean().optional(),
+            allowAcrossProviders: z.boolean().optional(),
+            marker: z
+              .object({
+                enabled: z.boolean().optional(),
+                prefix: z.string().optional(),
+                suffix: z.string().optional(),
+              })
+              .optional(),
+          })
+          .optional(),
+        broadcast: z
+          .object({
+            enabled: z.boolean().optional(),
+          })
+          .optional(),
       })
       .optional(),
     agentToAgent: z
@@ -279,19 +324,13 @@ export const ToolsSchema = z
         backgroundMs: z.number().int().positive().optional(),
         timeoutSec: z.number().int().positive().optional(),
         cleanupMs: z.number().int().positive().optional(),
+        notifyOnExit: z.boolean().optional(),
         applyPatch: z
           .object({
             enabled: z.boolean().optional(),
             allowModels: z.array(z.string()).optional(),
           })
           .optional(),
-      })
-      .optional(),
-    bash: z
-      .object({
-        backgroundMs: z.number().int().positive().optional(),
-        timeoutSec: z.number().int().positive().optional(),
-        cleanupMs: z.number().int().positive().optional(),
       })
       .optional(),
     subagents: z

@@ -26,6 +26,7 @@ They run immediately, are stripped before the model sees the message, and the re
 {
   commands: {
     native: "auto",
+    nativeSkills: "auto",
     text: true,
     bash: false,
     bashForegroundMs: 2000,
@@ -43,6 +44,9 @@ They run immediately, are stripped before the model sees the message, and the re
   - Auto: on for Discord/Telegram; off for Slack (until you add slash commands); ignored for providers without native support.
   - Set `channels.discord.commands.native`, `channels.telegram.commands.native`, or `channels.slack.commands.native` to override per provider (bool or `"auto"`).
   - `false` clears previously registered commands on Discord/Telegram at startup. Slack commands are managed in the Slack app and are not removed automatically.
+- `commands.nativeSkills` (default `"auto"`) registers **skill** commands natively when supported.
+  - Auto: on for Discord/Telegram; off for Slack (Slack requires creating a slash command per skill).
+  - Set `channels.discord.commands.nativeSkills`, `channels.telegram.commands.nativeSkills`, or `channels.slack.commands.nativeSkills` to override per provider (bool or `"auto"`).
 - `commands.bash` (default `false`) enables `! <cmd>` to run host shell commands (`/bash <cmd>` is an alias; requires `tools.elevated` allowlists).
 - `commands.bashForegroundMs` (default `2000`) controls how long bash waits before switching to background mode (`0` backgrounds immediately).
 - `commands.config` (default `false`) enables `/config` (reads/writes `clawdbot.json`).
@@ -54,7 +58,8 @@ They run immediately, are stripped before the model sees the message, and the re
 Text + native (when enabled):
 - `/help`
 - `/commands`
-- `/status` (show current status; includes a short provider usage/quota line when available)
+- `/status` (show current status; includes provider usage/quota for the current model provider when available)
+- `/context [list|detail|json]` (explain “context”; `detail` shows per-file + per-tool + per-skill + system prompt size)
 - `/usage` (alias: `/status`)
 - `/whoami` (alias: `/id`)
 - `/config show|get|set|unset` (persist config to disk, owner-only; requires `commands.config: true`)
@@ -62,14 +67,14 @@ Text + native (when enabled):
 - `/cost on|off` (toggle per-response usage line)
 - `/stop`
 - `/restart`
-- `/dock-telegram` (switch replies to Telegram)
-- `/dock-discord` (switch replies to Discord)
-- `/dock-slack` (switch replies to Slack)
+- `/dock-telegram` (alias: `/dock_telegram`) (switch replies to Telegram)
+- `/dock-discord` (alias: `/dock_discord`) (switch replies to Discord)
+- `/dock-slack` (alias: `/dock_slack`) (switch replies to Slack)
 - `/activation mention|always` (groups only)
 - `/send on|off|inherit` (owner-only)
 - `/reset` or `/new`
-- `/think <off|minimal|low|medium|high|xhigh>` (GPT-5.2 + Codex models only; aliases: `/thinking`, `/t`)
-- `/verbose on|off` (alias: `/v`)
+- `/think <off|minimal|low|medium|high|xhigh>` (dynamic choices by model/provider; aliases: `/thinking`, `/t`)
+- `/verbose on|full|off` (alias: `/v`)
 - `/reasoning on|off|stream` (alias: `/reason`; when on, sends a separate message prefixed `Reasoning:`; `stream` = Telegram draft only)
 - `/elevated on|off` (alias: `/elev`)
 - `/model <name>` (alias: `/models`; or `/<alias>` from `agents.defaults.models.*.alias`)
@@ -90,12 +95,17 @@ Notes:
 - `/verbose` is meant for debugging and extra visibility; keep it **off** in normal use.
 - `/reasoning` (and `/verbose`) are risky in group settings: they may reveal internal reasoning or tool output you did not intend to expose. Prefer leaving them off, especially in group chats.
 - **Fast path:** command-only messages from allowlisted senders are handled immediately (bypass queue + model).
-- **Inline shortcuts (allowlisted senders only):** `/help`, `/commands`, `/status` (`/usage`), `/whoami` (`/id`) also work when embedded in text.
+- **Group mention gating:** command-only messages from allowlisted senders bypass mention requirements.
+- **Inline shortcuts (allowlisted senders only):** certain commands also work when embedded in a normal message and are stripped before the model sees the remaining text.
+  - Example: `hey /status` triggers a status reply, and the remaining text continues through the normal flow.
+  - Currently: `/help`, `/commands`, `/status` (`/usage`), `/whoami` (`/id`).
 - Unauthorized command-only messages are silently ignored, and inline `/...` tokens are treated as plain text.
+- **Skill commands:** `user-invocable` skills are exposed as slash commands. Names are sanitized to `a-z0-9_` (max 32 chars); collisions get numeric suffixes (e.g. `_2`).
+- **Native command arguments:** Discord uses autocomplete for dynamic options (and button menus when you omit required args). Telegram and Slack show a button menu when a command supports choices and you omit the arg.
 
 ## Usage vs cost (what shows where)
 
-- **Provider usage/quota** (example: “Claude 80% left”) shows up in `/status` when provider usage tracking is enabled.
+- **Provider usage/quota** (example: “Claude 80% left”) shows up in `/status` for the current model provider when usage tracking is enabled.
 - **Per-response tokens/cost** is controlled by `/cost on|off` (appended to normal replies).
 - `/model status` is about **models/auth/endpoints**, not usage.
 
@@ -163,4 +173,4 @@ Notes:
   - Slack: `agent:<agentId>:slack:slash:<userId>` (prefix configurable via `channels.slack.slashCommand.sessionPrefix`)
   - Telegram: `telegram:slash:<userId>` (targets the chat session via `CommandTargetSessionKey`)
 - **`/stop`** targets the active chat session so it can abort the current run.
-- **Slack:** `channels.slack.slashCommand` is still supported for a single `/clawd`-style command. If you enable `commands.native`, you must create one Slack slash command per built-in command (same names as `/help`).
+- **Slack:** `channels.slack.slashCommand` is still supported for a single `/clawd`-style command. If you enable `commands.native`, you must create one Slack slash command per built-in command (same names as `/help`). Command argument menus for Slack are delivered as ephemeral Block Kit buttons.

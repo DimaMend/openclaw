@@ -2,10 +2,7 @@ import { chunkMarkdownText } from "../../auto-reply/chunk.js";
 import type { ClawdbotConfig } from "../../config/config.js";
 import { writeConfigFile } from "../../config/config.js";
 import { shouldLogVerbose } from "../../globals.js";
-import {
-  DEFAULT_ACCOUNT_ID,
-  normalizeAccountId,
-} from "../../routing/session-key.js";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";
 import {
   listTelegramAccountIds,
   type ResolvedTelegramAccount,
@@ -20,14 +17,16 @@ import { probeTelegram } from "../../telegram/probe.js";
 import { sendMessageTelegram } from "../../telegram/send.js";
 import { resolveTelegramToken } from "../../telegram/token.js";
 import { getChatChannelMeta } from "../registry.js";
+import { TelegramConfigSchema } from "../../config/zod-schema.providers-core.js";
 import { telegramMessageActions } from "./actions/telegram.js";
+import { buildChannelConfigSchema } from "./config-schema.js";
 import {
   deleteAccountFromConfigSection,
   setAccountEnabledInConfigSection,
 } from "./config-helpers.js";
 import { resolveTelegramGroupRequireMention } from "./group-mentions.js";
 import { formatPairingApproveHint } from "./helpers.js";
-import { normalizeTelegramMessagingTarget } from "./normalize-target.js";
+import { looksLikeTelegramTargetId, normalizeTelegramMessagingTarget } from "./normalize-target.js";
 import { telegramOnboardingAdapter } from "./onboarding/telegram.js";
 import { PAIRING_APPROVED_MESSAGE } from "./pairing-message.js";
 import {
@@ -36,9 +35,29 @@ import {
 } from "./setup-helpers.js";
 import { collectTelegramStatusIssues } from "./status-issues/telegram.js";
 import type { ChannelPlugin } from "./types.js";
+import {
+  listTelegramDirectoryGroupsFromConfig,
+  listTelegramDirectoryPeersFromConfig,
+} from "./directory-config.js";
 
 const meta = getChatChannelMeta("telegram");
 
+function parseReplyToMessageId(replyToId?: string | null) {
+  if (!replyToId) return undefined;
+  const parsed = Number.parseInt(replyToId, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseThreadId(threadId?: string | number | null) {
+  if (threadId == null) return undefined;
+  if (typeof threadId === "number") {
+    return Number.isFinite(threadId) ? Math.trunc(threadId) : undefined;
+  }
+  const trimmed = threadId.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number.parseInt(trimmed, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
 export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
   id: "telegram",
   meta: {
@@ -64,10 +83,10 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
     blockStreaming: true,
   },
   reload: { configPrefixes: ["channels.telegram"] },
+  configSchema: buildChannelConfigSchema(TelegramConfigSchema),
   config: {
     listAccountIds: (cfg) => listTelegramAccountIds(cfg),
-    resolveAccount: (cfg, accountId) =>
-      resolveTelegramAccount({ cfg, accountId }),
+    resolveAccount: (cfg, accountId) => resolveTelegramAccount({ cfg, accountId }),
     defaultAccountId: (cfg) => resolveDefaultTelegramAccountId(cfg),
     setAccountEnabled: ({ cfg, accountId, enabled }) =>
       setAccountEnabledInConfigSection({
@@ -93,8 +112,8 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
       tokenSource: account.tokenSource,
     }),
     resolveAllowFrom: ({ cfg, accountId }) =>
-      (resolveTelegramAccount({ cfg, accountId }).config.allowFrom ?? []).map(
-        (entry) => String(entry),
+      (resolveTelegramAccount({ cfg, accountId }).config.allowFrom ?? []).map((entry) =>
+        String(entry),
       ),
     formatAllowFrom: ({ allowFrom }) =>
       allowFrom
@@ -105,11 +124,8 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
   },
   security: {
     resolveDmPolicy: ({ cfg, accountId, account }) => {
-      const resolvedAccountId =
-        accountId ?? account.accountId ?? DEFAULT_ACCOUNT_ID;
-      const useAccountPath = Boolean(
-        cfg.channels?.telegram?.accounts?.[resolvedAccountId],
-      );
+      const resolvedAccountId = accountId ?? account.accountId ?? DEFAULT_ACCOUNT_ID;
+      const useAccountPath = Boolean(cfg.channels?.telegram?.accounts?.[resolvedAccountId]);
       const basePath = useAccountPath
         ? `channels.telegram.accounts.${resolvedAccountId}.`
         : "channels.telegram.";
@@ -141,11 +157,19 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
     resolveRequireMention: resolveTelegramGroupRequireMention,
   },
   threading: {
-    resolveReplyToMode: ({ cfg }) =>
-      cfg.channels?.telegram?.replyToMode ?? "first",
+    resolveReplyToMode: ({ cfg }) => cfg.channels?.telegram?.replyToMode ?? "first",
   },
   messaging: {
     normalizeTarget: normalizeTelegramMessagingTarget,
+    targetResolver: {
+      looksLikeId: looksLikeTelegramTargetId,
+      hint: "<chatId>",
+    },
+  },
+  directory: {
+    self: async () => null,
+    listPeers: async (params) => listTelegramDirectoryPeersFromConfig(params),
+    listGroups: async (params) => listTelegramDirectoryGroupsFromConfig(params),
   },
   actions: telegramMessageActions,
   setup: {
@@ -162,7 +186,7 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
         return "TELEGRAM_BOT_TOKEN can only be used for the default account.";
       }
       if (!input.useEnv && !input.token && !input.tokenFile) {
-        return "Telegram requires --token or --token-file (or --use-env).";
+        return "Telegram requires token or --token-file (or --use-env).";
       }
       return null;
     },
@@ -227,53 +251,27 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
     deliveryMode: "direct",
     chunker: chunkMarkdownText,
     textChunkLimit: 4000,
-    resolveTarget: ({ to }) => {
-      const trimmed = to?.trim();
-      if (!trimmed) {
-        return {
-          ok: false,
-          error: new Error("Delivering to Telegram requires --to <chatId>"),
-        };
-      }
-      return { ok: true, to: trimmed };
-    },
     sendText: async ({ to, text, accountId, deps, replyToId, threadId }) => {
       const send = deps?.sendTelegram ?? sendMessageTelegram;
-      const replyToMessageId = replyToId
-        ? Number.parseInt(replyToId, 10)
-        : undefined;
-      const resolvedReplyToMessageId = Number.isFinite(replyToMessageId)
-        ? replyToMessageId
-        : undefined;
+      const replyToMessageId = parseReplyToMessageId(replyToId);
+      const messageThreadId = parseThreadId(threadId);
       const result = await send(to, text, {
         verbose: false,
-        messageThreadId: threadId ?? undefined,
-        replyToMessageId: resolvedReplyToMessageId,
+        messageThreadId,
+        replyToMessageId,
         accountId: accountId ?? undefined,
       });
       return { channel: "telegram", ...result };
     },
-    sendMedia: async ({
-      to,
-      text,
-      mediaUrl,
-      accountId,
-      deps,
-      replyToId,
-      threadId,
-    }) => {
+    sendMedia: async ({ to, text, mediaUrl, accountId, deps, replyToId, threadId }) => {
       const send = deps?.sendTelegram ?? sendMessageTelegram;
-      const replyToMessageId = replyToId
-        ? Number.parseInt(replyToId, 10)
-        : undefined;
-      const resolvedReplyToMessageId = Number.isFinite(replyToMessageId)
-        ? replyToMessageId
-        : undefined;
+      const replyToMessageId = parseReplyToMessageId(replyToId);
+      const messageThreadId = parseThreadId(threadId);
       const result = await send(to, text, {
         verbose: false,
         mediaUrl,
-        messageThreadId: threadId ?? undefined,
-        replyToMessageId: resolvedReplyToMessageId,
+        messageThreadId,
+        replyToMessageId,
         accountId: accountId ?? undefined,
       });
       return { channel: "telegram", ...result };
@@ -307,11 +305,7 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
         cfg.channels?.telegram?.groups;
       const { groupIds, unresolvedGroups, hasWildcardUnmentionedGroups } =
         collectTelegramUnmentionedGroupIds(groups);
-      if (
-        !groupIds.length &&
-        unresolvedGroups === 0 &&
-        !hasWildcardUnmentionedGroups
-      ) {
+      if (!groupIds.length && unresolvedGroups === 0 && !hasWildcardUnmentionedGroups) {
         return undefined;
       }
       const botId =
@@ -345,9 +339,7 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
         cfg.channels?.telegram?.groups;
       const allowUnmentionedGroups =
         Boolean(
-          groups?.["*"] &&
-            (groups["*"] as { requireMention?: boolean }).requireMention ===
-              false,
+          groups?.["*"] && (groups["*"] as { requireMention?: boolean }).requireMention === false,
         ) ||
         Object.entries(groups ?? {}).some(
           ([key, value]) =>
@@ -366,8 +358,7 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
         lastStartAt: runtime?.lastStartAt ?? null,
         lastStopAt: runtime?.lastStopAt ?? null,
         lastError: runtime?.lastError ?? null,
-        mode:
-          runtime?.mode ?? (account.config.webhookUrl ? "webhook" : "polling"),
+        mode: runtime?.mode ?? (account.config.webhookUrl ? "webhook" : "polling"),
         probe,
         audit,
         allowUnmentionedGroups,
@@ -387,18 +378,12 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
         if (username) telegramBotLabel = ` (@${username})`;
       } catch (err) {
         if (shouldLogVerbose()) {
-          ctx.log?.debug?.(
-            `[${account.accountId}] bot probe failed: ${String(err)}`,
-          );
+          ctx.log?.debug?.(`[${account.accountId}] bot probe failed: ${String(err)}`);
         }
       }
-      ctx.log?.info(
-        `[${account.accountId}] starting provider${telegramBotLabel}`,
-      );
+      ctx.log?.info(`[${account.accountId}] starting provider${telegramBotLabel}`);
       // Lazy import: the monitor pulls the reply pipeline; avoid ESM init cycles.
-      const { monitorTelegramProvider } = await import(
-        "../../telegram/monitor.js"
-      );
+      const { monitorTelegramProvider } = await import("../../telegram/monitor.js");
       return monitorTelegramProvider({
         token,
         accountId: account.accountId,
@@ -414,9 +399,7 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
     logoutAccount: async ({ accountId, cfg }) => {
       const envToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
       const nextCfg = { ...cfg } as ClawdbotConfig;
-      const nextTelegram = cfg.channels?.telegram
-        ? { ...cfg.channels.telegram }
-        : undefined;
+      const nextTelegram = cfg.channels?.telegram ? { ...cfg.channels.telegram } : undefined;
       let cleared = false;
       let changed = false;
       if (nextTelegram) {

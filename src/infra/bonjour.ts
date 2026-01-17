@@ -16,6 +16,8 @@ export type GatewayBonjourAdvertiseOpts = {
   sshPort?: number;
   bridgePort?: number;
   canvasPort?: number;
+  bridgeTlsEnabled?: boolean;
+  bridgeTlsFingerprintSha256?: string;
   tailnetDns?: string;
   cliPath?: string;
 };
@@ -66,8 +68,7 @@ function serviceSummary(label: string, svc: BonjourService): string {
   } catch {
     // ignore
   }
-  const state =
-    typeof svc.serviceState === "string" ? svc.serviceState : "unknown";
+  const state = typeof svc.serviceState === "string" ? svc.serviceState : "unknown";
   return `${label} fqdn=${fqdn} host=${hostname} port=${port} state=${state}`;
 }
 
@@ -107,6 +108,12 @@ export async function startGatewayBonjourAdvertiser(
   }
   if (typeof opts.canvasPort === "number" && opts.canvasPort > 0) {
     txtBase.canvasPort = String(opts.canvasPort);
+  }
+  if (opts.bridgeTlsEnabled) {
+    txtBase.bridgeTls = "1";
+    if (opts.bridgeTlsFingerprintSha256) {
+      txtBase.bridgeTlsSha256 = opts.bridgeTlsFingerprintSha256;
+    }
   }
   if (typeof opts.tailnetDns === "string" && opts.tailnetDns.trim()) {
     txtBase.tailnetDns = opts.tailnetDns.trim();
@@ -157,23 +164,16 @@ export async function startGatewayBonjourAdvertiser(
     try {
       svc.on("name-change", (name: unknown) => {
         const next = typeof name === "string" ? name : String(name);
-        logWarn(
-          `bonjour: ${label} name conflict resolved; newName=${JSON.stringify(next)}`,
-        );
+        logWarn(`bonjour: ${label} name conflict resolved; newName=${JSON.stringify(next)}`);
       });
       svc.on("hostname-change", (nextHostname: unknown) => {
-        const next =
-          typeof nextHostname === "string"
-            ? nextHostname
-            : String(nextHostname);
+        const next = typeof nextHostname === "string" ? nextHostname : String(nextHostname);
         logWarn(
           `bonjour: ${label} hostname conflict resolved; newHostname=${JSON.stringify(next)}`,
         );
       });
     } catch (err) {
-      logDebug(
-        `bonjour: failed to attach listeners for ${label}: ${String(err)}`,
-      );
+      logDebug(`bonjour: failed to attach listeners for ${label}: ${String(err)}`);
     }
   }
 
@@ -207,8 +207,7 @@ export async function startGatewayBonjourAdvertiser(
     for (const { label, svc } of services) {
       const stateUnknown = (svc as { serviceState?: unknown }).serviceState;
       if (typeof stateUnknown !== "string") continue;
-      if (stateUnknown === "announced" || stateUnknown === "announcing")
-        continue;
+      if (stateUnknown === "announced" || stateUnknown === "announcing") continue;
 
       let key = label;
       try {

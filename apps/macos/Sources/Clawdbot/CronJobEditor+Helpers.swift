@@ -195,6 +195,7 @@ extension CronJobEditor {
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         var root: [String: Any] = [
             "name": name,
             "enabled": self.enabled,
@@ -208,6 +209,17 @@ extension CronJobEditor {
 >>>>>>> upstream/main
         if self.scheduleKind == .at {
             root["deleteAfterRun"] = self.deleteAfterRun
+=======
+    func applyDeleteAfterRun(
+        to root: inout [String: Any],
+        scheduleKind: ScheduleKind? = nil,
+        deleteAfterRun: Bool? = nil)
+    {
+        let resolvedSchedule = scheduleKind ?? self.scheduleKind
+        let resolvedDelete = deleteAfterRun ?? self.deleteAfterRun
+        if resolvedSchedule == .at {
+            root["deleteAfterRun"] = resolvedDelete
+>>>>>>> upstream/main
         } else if self.job?.deleteAfterRun != nil {
             root["deleteAfterRun"] = false
 <<<<<<< HEAD

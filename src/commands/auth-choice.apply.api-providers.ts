@@ -1,17 +1,11 @@
-import {
-  ensureAuthProfileStore,
-  resolveAuthProfileOrder,
-} from "../agents/auth-profiles.js";
+import { ensureAuthProfileStore, resolveAuthProfileOrder } from "../agents/auth-profiles.js";
 import { resolveEnvApiKey } from "../agents/model-auth.js";
 import {
   formatApiKeyPreview,
   normalizeApiKeyInput,
   validateApiKeyInput,
 } from "./auth-choice.api-key.js";
-import type {
-  ApplyAuthChoiceParams,
-  ApplyAuthChoiceResult,
-} from "./auth-choice.apply.js";
+import type { ApplyAuthChoiceParams, ApplyAuthChoiceResult } from "./auth-choice.apply.js";
 import { applyDefaultModelChoice } from "./auth-choice.default-model.js";
 import {
   applyGoogleGeminiModelDefault,
@@ -27,15 +21,19 @@ import {
   applyOpenrouterProviderConfig,
   applySyntheticConfig,
   applySyntheticProviderConfig,
+  applyVercelAiGatewayConfig,
+  applyVercelAiGatewayProviderConfig,
   applyZaiConfig,
   MOONSHOT_DEFAULT_MODEL_REF,
   OPENROUTER_DEFAULT_MODEL_REF,
   SYNTHETIC_DEFAULT_MODEL_REF,
+  VERCEL_AI_GATEWAY_DEFAULT_MODEL_REF,
   setGeminiApiKey,
   setMoonshotApiKey,
   setOpencodeZenApiKey,
   setOpenrouterApiKey,
   setSyntheticApiKey,
+  setVercelAiGatewayApiKey,
   setZaiApiKey,
   ZAI_DEFAULT_MODEL_REF,
 } from "./onboard-auth.js";
@@ -63,12 +61,8 @@ export async function applyAuthChoiceApiProviders(
       store,
       provider: "openrouter",
     });
-    const existingProfileId = profileOrder.find((profileId) =>
-      Boolean(store.profiles[profileId]),
-    );
-    const existingCred = existingProfileId
-      ? store.profiles[existingProfileId]
-      : undefined;
+    const existingProfileId = profileOrder.find((profileId) => Boolean(store.profiles[profileId]));
+    const existingCred = existingProfileId ? store.profiles[existingProfileId] : undefined;
     let profileId = "openrouter:default";
     let mode: "api_key" | "oauth" | "token" = "api_key";
     let hasCredential = false;
@@ -103,10 +97,7 @@ export async function applyAuthChoiceApiProviders(
         message: "Enter OpenRouter API key",
         validate: validateApiKeyInput,
       });
-      await setOpenrouterApiKey(
-        normalizeApiKeyInput(String(key)),
-        params.agentDir,
-      );
+      await setOpenrouterApiKey(normalizeApiKeyInput(String(key)), params.agentDir);
       hasCredential = true;
     }
 
@@ -134,6 +125,48 @@ export async function applyAuthChoiceApiProviders(
     return { config: nextConfig, agentModelOverride };
   }
 
+  if (params.authChoice === "ai-gateway-api-key") {
+    let hasCredential = false;
+    const envKey = resolveEnvApiKey("vercel-ai-gateway");
+    if (envKey) {
+      const useExisting = await params.prompter.confirm({
+        message: `Use existing AI_GATEWAY_API_KEY (${envKey.source}, ${formatApiKeyPreview(envKey.apiKey)})?`,
+        initialValue: true,
+      });
+      if (useExisting) {
+        await setVercelAiGatewayApiKey(envKey.apiKey, params.agentDir);
+        hasCredential = true;
+      }
+    }
+    if (!hasCredential) {
+      const key = await params.prompter.text({
+        message: "Enter Vercel AI Gateway API key",
+        validate: validateApiKeyInput,
+      });
+      await setVercelAiGatewayApiKey(normalizeApiKeyInput(String(key)), params.agentDir);
+    }
+    nextConfig = applyAuthProfileConfig(nextConfig, {
+      profileId: "vercel-ai-gateway:default",
+      provider: "vercel-ai-gateway",
+      mode: "api_key",
+    });
+    {
+      const applied = await applyDefaultModelChoice({
+        config: nextConfig,
+        setDefaultModel: params.setDefaultModel,
+        defaultModel: VERCEL_AI_GATEWAY_DEFAULT_MODEL_REF,
+        applyDefaultConfig: applyVercelAiGatewayConfig,
+        applyProviderConfig: applyVercelAiGatewayProviderConfig,
+        noteDefault: VERCEL_AI_GATEWAY_DEFAULT_MODEL_REF,
+        noteAgentModel,
+        prompter: params.prompter,
+      });
+      nextConfig = applied.config;
+      agentModelOverride = applied.agentModelOverride ?? agentModelOverride;
+    }
+    return { config: nextConfig, agentModelOverride };
+  }
+
   if (params.authChoice === "moonshot-api-key") {
     let hasCredential = false;
     const envKey = resolveEnvApiKey("moonshot");
@@ -152,10 +185,7 @@ export async function applyAuthChoiceApiProviders(
         message: "Enter Moonshot API key",
         validate: validateApiKeyInput,
       });
-      await setMoonshotApiKey(
-        normalizeApiKeyInput(String(key)),
-        params.agentDir,
-      );
+      await setMoonshotApiKey(normalizeApiKeyInput(String(key)), params.agentDir);
     }
     nextConfig = applyAuthProfileConfig(nextConfig, {
       profileId: "moonshot:default",
@@ -260,9 +290,7 @@ export async function applyAuthChoiceApiProviders(
                 ...config.agents?.defaults?.models,
                 [ZAI_DEFAULT_MODEL_REF]: {
                   ...config.agents?.defaults?.models?.[ZAI_DEFAULT_MODEL_REF],
-                  alias:
-                    config.agents?.defaults?.models?.[ZAI_DEFAULT_MODEL_REF]
-                      ?.alias ?? "GLM",
+                  alias: config.agents?.defaults?.models?.[ZAI_DEFAULT_MODEL_REF]?.alias ?? "GLM",
                 },
               },
             },
@@ -332,10 +360,7 @@ export async function applyAuthChoiceApiProviders(
         message: "Enter OpenCode Zen API key",
         validate: validateApiKeyInput,
       });
-      await setOpencodeZenApiKey(
-        normalizeApiKeyInput(String(key)),
-        params.agentDir,
-      );
+      await setOpencodeZenApiKey(normalizeApiKeyInput(String(key)), params.agentDir);
     }
     nextConfig = applyAuthProfileConfig(nextConfig, {
       profileId: "opencode:default",

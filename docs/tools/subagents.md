@@ -43,14 +43,28 @@ Auto-archive:
 - Auto-archive is best-effort; pending timers are lost if the gateway restarts.
 - `runTimeoutSeconds` does **not** auto-archive; it only stops the run. The session remains until auto-archive.
 
+## Authentication
+
+Sub-agent auth is resolved by **agent id**, not by session type:
+- The sub-agent session key is `agent:<agentId>:subagent:<uuid>`.
+- The auth store is loaded from that agent’s `agentDir`.
+- The main agent’s auth profiles are merged in as a **fallback**; agent profiles override main profiles on conflicts.
+
+Note: the merge is additive, so main profiles are always available as fallbacks. Fully isolated auth per agent is not supported yet.
+
 ## Announce
 
 Sub-agents report back via an announce step:
 - The announce step runs inside the sub-agent session (not the requester session).
 - If the sub-agent replies exactly `ANNOUNCE_SKIP`, nothing is posted.
 - Otherwise the announce reply is posted to the requester chat channel via the gateway `send` method.
+- Announce messages are normalized to a stable template:
+  - `Status:` derived from the run outcome (`success`, `error`, `timeout`, or `unknown`).
+  - `Result:` the summary content from the announce step (or `(not available)` if missing).
+  - `Notes:` error details and other useful context.
+- `Status` is not inferred from model output; it comes from runtime outcome signals.
 
-Announce payloads include a stats line at the end:
+Announce payloads include a stats line at the end (even when wrapped):
 - Runtime (e.g., `runtime 5m12s`)
 - Token usage (input/output/total)
 - Estimated cost when model pricing is configured (`models.providers.*.models[].cost`)
@@ -93,6 +107,10 @@ Override via config:
 Sub-agents use a dedicated in-process queue lane:
 - Lane name: `subagent`
 - Concurrency: `agents.defaults.subagents.maxConcurrent` (default `1`)
+
+## Stopping
+
+- Sending `/stop` in the requester chat aborts the requester session and stops any active sub-agent runs spawned from it.
 
 ## Limitations
 

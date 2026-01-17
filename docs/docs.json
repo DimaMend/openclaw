@@ -46,6 +46,22 @@
       "destination": "/concepts/messages"
     },
     {
+      "source": "/context",
+      "destination": "/concepts/context"
+    },
+    {
+      "source": "/context/",
+      "destination": "/concepts/context"
+    },
+    {
+      "source": "/compaction",
+      "destination": "/concepts/compaction"
+    },
+    {
+      "source": "/compaction/",
+      "destination": "/concepts/compaction"
+    },
+    {
       "source": "/minimax",
       "destination": "/providers/minimax"
     },
@@ -190,6 +206,14 @@
       "destination": "/channels/troubleshooting"
     },
     {
+      "source": "/providers/zalo",
+      "destination": "/channels/zalo"
+    },
+    {
+      "source": "/providers/zalo/",
+      "destination": "/channels/zalo"
+    },
+    {
       "source": "/providers/whatsapp",
       "destination": "/channels/whatsapp"
     },
@@ -204,6 +228,14 @@
     {
       "source": "/sandbox/",
       "destination": "/cli/sandbox"
+    },
+    {
+      "source": "/sandboxing",
+      "destination": "/gateway/sandboxing"
+    },
+    {
+      "source": "/sandboxing/",
+      "destination": "/gateway/sandboxing"
     },
     {
       "source": "/AGENTS.default",
@@ -542,14 +574,6 @@
       "destination": "/concepts/channel-routing"
     },
     {
-      "source": "/refactor/provider-plugin",
-      "destination": "/refactor/channel-plugin"
-    },
-    {
-      "source": "/refactor/provider-plugin/",
-      "destination": "/refactor/channel-plugin"
-    },
-    {
       "source": "/queue",
       "destination": "/concepts/queue"
     },
@@ -710,6 +734,22 @@
       "destination": "/start/wizard"
     },
     {
+      "source": "/install/node",
+      "destination": "/install#nodejs--npm-path-sanity"
+    },
+    {
+      "source": "/install/node/",
+      "destination": "/install#nodejs--npm-path-sanity"
+    },
+    {
+      "source": "/start/faq",
+      "destination": "/help"
+    },
+    {
+      "source": "/start/faq/",
+      "destination": "/help"
+    },
+    {
       "source": "/oauth",
       "destination": "/concepts/oauth"
     }
@@ -724,7 +764,6 @@
           "start/wizard",
           "start/setup",
           "start/pairing",
-          "start/faq",
           "start/clawd",
           "start/showcase",
           "start/hubs",
@@ -733,11 +772,20 @@
         ]
       },
       {
+        "group": "Help",
+        "pages": [
+          "help/index",
+          "help/troubleshooting",
+          "help/faq"
+        ]
+      },
+      {
         "group": "Install & Updates",
         "pages": [
           "install/index",
           "install/installer",
           "install/updating",
+          "install/uninstall",
           "install/ansible",
           "install/nix",
           "install/docker",
@@ -748,8 +796,39 @@
         "group": "CLI",
         "pages": [
           "cli/index",
+          "cli/setup",
+          "cli/onboard",
+          "cli/configure",
+          "cli/doctor",
+          "cli/dashboard",
+          "cli/reset",
+          "cli/uninstall",
+          "cli/browser",
           "cli/message",
+          "cli/agent",
+          "cli/agents",
+          "cli/status",
+          "cli/health",
+          "cli/sessions",
+          "cli/channels",
+          "cli/directory",
+          "cli/skills",
+          "cli/plugins",
+          "cli/memory",
+          "cli/models",
+          "cli/logs",
+          "cli/nodes",
           "cli/gateway",
+          "cli/daemon",
+          "cli/tui",
+          "cli/voicecall",
+          "cli/wake",
+          "cli/cron",
+          "cli/dns",
+          "cli/docs",
+          "cli/hooks",
+          "cli/pairing",
+          "cli/security",
           "cli/update",
           "cli/sandbox"
         ]
@@ -761,6 +840,7 @@
           "concepts/agent",
           "concepts/agent-loop",
           "concepts/system-prompt",
+          "concepts/context",
           "token-use",
           "concepts/oauth",
           "concepts/agent-workspace",
@@ -775,6 +855,7 @@
           "concepts/channel-routing",
           "concepts/messages",
           "concepts/streaming",
+          "concepts/markdown-formatting",
           "concepts/groups",
           "concepts/group-messages",
           "concepts/typing-indicators",
@@ -798,14 +879,18 @@
           "gateway/gateway-lock",
           "environment",
           "gateway/configuration",
+          "gateway/multiple-gateways",
           "gateway/configuration-examples",
           "gateway/authentication",
           "gateway/openai-http-api",
+          "gateway/cli-backends",
+          "gateway/local-models",
           "gateway/background-process",
           "gateway/health",
           "gateway/heartbeat",
           "gateway/doctor",
           "gateway/logging",
+          "logging",
           "gateway/security",
           "gateway/sandbox-vs-tool-policy-vs-elevated",
           "gateway/sandboxing",
@@ -840,6 +925,9 @@
           "channels/signal",
           "channels/imessage",
           "channels/msteams",
+          "channels/matrix",
+          "channels/zalo",
+          "channels/zalouser",
           "broadcast-groups",
           "channels/troubleshooting",
           "channels/location"
@@ -852,9 +940,11 @@
           "providers/models",
           "providers/openai",
           "providers/anthropic",
+          "bedrock",
           "providers/moonshot",
           "providers/minimax",
           "providers/openrouter",
+          "providers/synthetic",
           "providers/opencode",
           "providers/glm",
           "providers/zai"
@@ -875,10 +965,15 @@
         "pages": [
           "tools",
           "plugin",
+          "plugins/voice-call",
+          "plugins/zalouser",
           "tools/exec",
+          "tools/web",
           "tools/apply-patch",
           "tools/elevated",
           "tools/browser",
+          "tools/browser-login",
+          "tools/chrome-extension",
           "tools/browser-linux-troubleshooting",
           "tools/slash-commands",
           "tools/thinking",
@@ -956,16 +1051,6 @@
           "reference/templates/SOUL",
           "reference/templates/TOOLS",
           "reference/templates/USER"
-        ]
-      },
-      {
-        "group": "Experiments & Proposals",
-        "pages": [
-          "experiments/onboarding-config-protocol",
-          "experiments/plans/cron-add-hardening",
-          "experiments/plans/group-policy-hardening",
-          "experiments/proposals/model-config",
-          "experiments/research/memory"
         ]
       }
     ]

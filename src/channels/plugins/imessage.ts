@@ -7,11 +7,10 @@ import {
 } from "../../imessage/accounts.js";
 import { probeIMessage } from "../../imessage/probe.js";
 import { sendMessageIMessage } from "../../imessage/send.js";
-import {
-  DEFAULT_ACCOUNT_ID,
-  normalizeAccountId,
-} from "../../routing/session-key.js";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";
 import { getChatChannelMeta } from "../registry.js";
+import { IMessageConfigSchema } from "../../config/zod-schema.providers-core.js";
+import { buildChannelConfigSchema } from "./config-schema.js";
 import {
   deleteAccountFromConfigSection,
   setAccountEnabledInConfigSection,
@@ -47,10 +46,10 @@ export const imessagePlugin: ChannelPlugin<ResolvedIMessageAccount> = {
     media: true,
   },
   reload: { configPrefixes: ["channels.imessage"] },
+  configSchema: buildChannelConfigSchema(IMessageConfigSchema),
   config: {
     listAccountIds: (cfg) => listIMessageAccountIds(cfg),
-    resolveAccount: (cfg, accountId) =>
-      resolveIMessageAccount({ cfg, accountId }),
+    resolveAccount: (cfg, accountId) => resolveIMessageAccount({ cfg, accountId }),
     defaultAccountId: (cfg) => resolveDefaultIMessageAccountId(cfg),
     setAccountEnabled: ({ cfg, accountId, enabled }) =>
       setAccountEnabledInConfigSection({
@@ -75,19 +74,16 @@ export const imessagePlugin: ChannelPlugin<ResolvedIMessageAccount> = {
       configured: account.configured,
     }),
     resolveAllowFrom: ({ cfg, accountId }) =>
-      (resolveIMessageAccount({ cfg, accountId }).config.allowFrom ?? []).map(
-        (entry) => String(entry),
+      (resolveIMessageAccount({ cfg, accountId }).config.allowFrom ?? []).map((entry) =>
+        String(entry),
       ),
     formatAllowFrom: ({ allowFrom }) =>
       allowFrom.map((entry) => String(entry).trim()).filter(Boolean),
   },
   security: {
     resolveDmPolicy: ({ cfg, accountId, account }) => {
-      const resolvedAccountId =
-        accountId ?? account.accountId ?? DEFAULT_ACCOUNT_ID;
-      const useAccountPath = Boolean(
-        cfg.channels?.imessage?.accounts?.[resolvedAccountId],
-      );
+      const resolvedAccountId = accountId ?? account.accountId ?? DEFAULT_ACCOUNT_ID;
+      const useAccountPath = Boolean(cfg.channels?.imessage?.accounts?.[resolvedAccountId]);
       const basePath = useAccountPath
         ? `channels.imessage.accounts.${resolvedAccountId}.`
         : "channels.imessage.";
@@ -109,6 +105,18 @@ export const imessagePlugin: ChannelPlugin<ResolvedIMessageAccount> = {
   },
   groups: {
     resolveRequireMention: resolveIMessageGroupRequireMention,
+  },
+  messaging: {
+    targetResolver: {
+      looksLikeId: (raw) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return false;
+        if (/^(imessage:|chat_id:)/i.test(trimmed)) return true;
+        if (trimmed.includes("@")) return true;
+        return /^\+?\d{3,}$/.test(trimmed);
+      },
+      hint: "<handle|chat_id:ID>",
+    },
   },
   setup: {
     resolveAccountId: ({ accountId }) => normalizeAccountId(accountId),
@@ -176,18 +184,6 @@ export const imessagePlugin: ChannelPlugin<ResolvedIMessageAccount> = {
     deliveryMode: "direct",
     chunker: chunkText,
     textChunkLimit: 4000,
-    resolveTarget: ({ to }) => {
-      const trimmed = to?.trim();
-      if (!trimmed) {
-        return {
-          ok: false,
-          error: new Error(
-            "Delivering to iMessage requires --to <handle|chat_id:ID>",
-          ),
-        };
-      }
-      return { ok: true, to: trimmed };
-    },
     sendText: async ({ cfg, to, text, accountId, deps }) => {
       const send = deps?.sendIMessage ?? sendMessageIMessage;
       const maxBytes = resolveChannelMediaMaxBytes({
@@ -232,8 +228,7 @@ export const imessagePlugin: ChannelPlugin<ResolvedIMessageAccount> = {
     },
     collectStatusIssues: (accounts) =>
       accounts.flatMap((account) => {
-        const lastError =
-          typeof account.lastError === "string" ? account.lastError.trim() : "";
+        const lastError = typeof account.lastError === "string" ? account.lastError.trim() : "";
         if (!lastError) return [];
         return [
           {
@@ -287,9 +282,7 @@ export const imessagePlugin: ChannelPlugin<ResolvedIMessageAccount> = {
         `[${account.accountId}] starting provider (${cliPath}${dbPath ? ` db=${dbPath}` : ""})`,
       );
       // Lazy import: the monitor pulls the reply pipeline; avoid ESM init cycles.
-      const { monitorIMessageProvider } = await import(
-        "../../imessage/index.js"
-      );
+      const { monitorIMessageProvider } = await import("../../imessage/index.js");
       return monitorIMessageProvider({
         accountId: account.accountId,
         config: ctx.cfg,

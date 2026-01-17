@@ -112,6 +112,7 @@ struct LowCoverageHelperTests {
         _ = PresenceReporter._testPrimaryIPv4Address()
     }
 
+<<<<<<< HEAD
     @Test func gatewayLaunchAgentHelpers() async throws {
         await TestIsolation.withEnvValues(
             [
@@ -130,6 +131,8 @@ struct LowCoverageHelperTests {
             }
     }
 
+=======
+>>>>>>> upstream/main
     @Test func portGuardianParsesListenersAndBuildsReports() {
         let output = """
         p123

@@ -5,22 +5,12 @@ import { Routes } from "discord-api-types/v10";
 
 import { loadConfig } from "../config/config.js";
 import type { RetryConfig } from "../infra/retry.js";
-import {
-  createDiscordRetryRunner,
-  type RetryRunner,
-} from "../infra/retry-policy.js";
-import {
-  normalizePollDurationHours,
-  normalizePollInput,
-  type PollInput,
-} from "../polls.js";
+import { createDiscordRetryRunner, type RetryRunner } from "../infra/retry-policy.js";
+import { normalizePollDurationHours, normalizePollInput, type PollInput } from "../polls.js";
 import { loadWebMedia } from "../web/media.js";
 import { resolveDiscordAccount } from "./accounts.js";
 import { chunkDiscordText } from "./chunk.js";
-import {
-  fetchChannelPermissionsDiscord,
-  isThreadChannelType,
-} from "./send.permissions.js";
+import { fetchChannelPermissionsDiscord, isThreadChannelType } from "./send.permissions.js";
 import { DiscordSendError } from "./send.types.js";
 import { normalizeDiscordToken } from "./token.js";
 
@@ -51,11 +41,7 @@ type DiscordClientOpts = {
   verbose?: boolean;
 };
 
-function resolveToken(params: {
-  explicit?: string;
-  accountId: string;
-  fallbackToken?: string;
-}) {
+function resolveToken(params: { explicit?: string; accountId: string; fallbackToken?: string }) {
   const explicit = normalizeDiscordToken(params.explicit);
   if (explicit) return explicit;
   const fallback = normalizeDiscordToken(params.fallbackToken);
@@ -124,9 +110,7 @@ function parseRecipient(raw: string): DiscordRecipient {
   if (trimmed.startsWith("@")) {
     const candidate = trimmed.slice(1);
     if (!/^\d+$/.test(candidate)) {
-      throw new Error(
-        "Discord DMs require a user id (use user:<id> or a <@id> mention)",
-      );
+      throw new Error("Discord DMs require a user id (use user:<id> or a <@id> mention)");
     }
     return { kind: "user", id: candidate };
   }
@@ -268,13 +252,12 @@ async function sendDiscordText(
   replyTo: string | undefined,
   request: DiscordRequest,
   maxLinesPerMessage?: number,
+  embeds?: unknown[],
 ) {
   if (!text.trim()) {
     throw new Error("Message must be non-empty for Discord sends");
   }
-  const messageReference = replyTo
-    ? { message_id: replyTo, fail_if_not_exists: false }
-    : undefined;
+  const messageReference = replyTo ? { message_id: replyTo, fail_if_not_exists: false } : undefined;
   const chunks = chunkDiscordText(text, {
     maxChars: DISCORD_TEXT_LIMIT,
     maxLines: maxLinesPerMessage,
@@ -283,7 +266,11 @@ async function sendDiscordText(
     const res = (await request(
       () =>
         rest.post(Routes.channelMessages(channelId), {
-          body: { content: chunks[0], message_reference: messageReference },
+          body: {
+            content: chunks[0],
+            message_reference: messageReference,
+            ...(embeds?.length ? { embeds } : {}),
+          },
         }) as Promise<{ id: string; channel_id: string }>,
       "text",
     )) as { id: string; channel_id: string };
@@ -298,6 +285,7 @@ async function sendDiscordText(
           body: {
             content: chunk,
             message_reference: isFirst ? messageReference : undefined,
+            ...(isFirst && embeds?.length ? { embeds } : {}),
           },
         }) as Promise<{ id: string; channel_id: string }>,
       "text",
@@ -318,6 +306,7 @@ async function sendDiscordMedia(
   replyTo: string | undefined,
   request: DiscordRequest,
   maxLinesPerMessage?: number,
+  embeds?: unknown[],
 ) {
   const media = await loadWebMedia(mediaUrl);
   const chunks = text
@@ -327,15 +316,14 @@ async function sendDiscordMedia(
       })
     : [];
   const caption = chunks[0] ?? "";
-  const messageReference = replyTo
-    ? { message_id: replyTo, fail_if_not_exists: false }
-    : undefined;
+  const messageReference = replyTo ? { message_id: replyTo, fail_if_not_exists: false } : undefined;
   const res = (await request(
     () =>
       rest.post(Routes.channelMessages(channelId), {
         body: {
           content: caption || undefined,
           message_reference: messageReference,
+          ...(embeds?.length ? { embeds } : {}),
           files: [
             {
               data: media.buffer,
@@ -348,32 +336,19 @@ async function sendDiscordMedia(
   )) as { id: string; channel_id: string };
   for (const chunk of chunks.slice(1)) {
     if (!chunk.trim()) continue;
-    await sendDiscordText(
-      rest,
-      channelId,
-      chunk,
-      undefined,
-      request,
-      maxLinesPerMessage,
-    );
+    await sendDiscordText(rest, channelId, chunk, undefined, request, maxLinesPerMessage);
   }
   return res;
 }
 
-function buildReactionIdentifier(emoji: {
-  id?: string | null;
-  name?: string | null;
-}) {
+function buildReactionIdentifier(emoji: { id?: string | null; name?: string | null }) {
   if (emoji.id && emoji.name) {
     return `${emoji.name}:${emoji.id}`;
   }
   return emoji.name ?? "";
 }
 
-function formatReactionEmoji(emoji: {
-  id?: string | null;
-  name?: string | null;
-}) {
+function formatReactionEmoji(emoji: { id?: string | null; name?: string | null }) {
   return buildReactionIdentifier(emoji);
 }
 

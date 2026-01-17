@@ -9,6 +9,7 @@ import {
   normalizeAgentId,
   parseAgentSessionKey,
 } from "../../routing/session-key.js";
+import { normalizeDeliveryContext } from "../../utils/delivery-context.js";
 import type { GatewayMessageChannel } from "../../utils/message-channel.js";
 import { resolveAgentConfig } from "../agent-scope.js";
 import { AGENT_LANE_SUBAGENT } from "../lanes.js";
@@ -48,6 +49,7 @@ function normalizeModelSelection(value: unknown): string | undefined {
 export function createSessionsSpawnTool(opts?: {
   agentSessionKey?: string;
   agentChannel?: GatewayMessageChannel;
+  agentAccountId?: string;
   sandboxed?: boolean;
 }): AnyAgentTool {
   return {
@@ -66,16 +68,18 @@ export function createSessionsSpawnTool(opts?: {
         params.cleanup === "keep" || params.cleanup === "delete"
           ? (params.cleanup as "keep" | "delete")
           : "keep";
+      const requesterOrigin = normalizeDeliveryContext({
+        channel: opts?.agentChannel,
+        accountId: opts?.agentAccountId,
+      });
       const runTimeoutSeconds = (() => {
         const explicit =
-          typeof params.runTimeoutSeconds === "number" &&
-          Number.isFinite(params.runTimeoutSeconds)
+          typeof params.runTimeoutSeconds === "number" && Number.isFinite(params.runTimeoutSeconds)
             ? Math.max(0, Math.floor(params.runTimeoutSeconds))
             : undefined;
         if (explicit !== undefined) return explicit;
         const legacy =
-          typeof params.timeoutSeconds === "number" &&
-          Number.isFinite(params.timeoutSeconds)
+          typeof params.timeoutSeconds === "number" && Number.isFinite(params.timeoutSeconds)
             ? Math.max(0, Math.floor(params.timeoutSeconds))
             : undefined;
         return legacy ?? 0;
@@ -86,10 +90,7 @@ export function createSessionsSpawnTool(opts?: {
       const cfg = loadConfig();
       const { mainKey, alias } = resolveMainSessionAlias(cfg);
       const requesterSessionKey = opts?.agentSessionKey;
-      if (
-        typeof requesterSessionKey === "string" &&
-        isSubagentSessionKey(requesterSessionKey)
-      ) {
+      if (typeof requesterSessionKey === "string" && isSubagentSessionKey(requesterSessionKey)) {
         return jsonResult({
           status: "forbidden",
           error: "sessions_spawn is not allowed from sub-agent sessions",
@@ -115,9 +116,7 @@ export function createSessionsSpawnTool(opts?: {
         ? normalizeAgentId(requestedAgentId)
         : requesterAgentId;
       if (targetAgentId !== requesterAgentId) {
-        const allowAgents =
-          resolveAgentConfig(cfg, requesterAgentId)?.subagents?.allowAgents ??
-          [];
+        const allowAgents = resolveAgentConfig(cfg, requesterAgentId)?.subagents?.allowAgents ?? [];
         const allowAny = allowAgents.some((value) => value.trim() === "*");
         const normalizedTargetId = targetAgentId.toLowerCase();
         const allowSet = new Set(
@@ -154,14 +153,9 @@ export function createSessionsSpawnTool(opts?: {
           modelApplied = true;
         } catch (err) {
           const messageText =
-            err instanceof Error
-              ? err.message
-              : typeof err === "string"
-                ? err
-                : "error";
+            err instanceof Error ? err.message : typeof err === "string" ? err : "error";
           const recoverable =
-            messageText.includes("invalid model") ||
-            messageText.includes("model not allowed");
+            messageText.includes("invalid model") || messageText.includes("model not allowed");
           if (!recoverable) {
             return jsonResult({
               status: "error",
@@ -174,7 +168,7 @@ export function createSessionsSpawnTool(opts?: {
       }
       const childSystemPrompt = buildSubagentSystemPrompt({
         requesterSessionKey,
-        requesterChannel: opts?.agentChannel,
+        requesterOrigin,
         childSessionKey,
         label: label || undefined,
         task,
@@ -188,7 +182,7 @@ export function createSessionsSpawnTool(opts?: {
           params: {
             message: task,
             sessionKey: childSessionKey,
-            channel: opts?.agentChannel,
+            channel: requesterOrigin?.channel,
             idempotencyKey: childIdem,
             deliver: false,
             lane: AGENT_LANE_SUBAGENT,
@@ -204,11 +198,7 @@ export function createSessionsSpawnTool(opts?: {
         }
       } catch (err) {
         const messageText =
-          err instanceof Error
-            ? err.message
-            : typeof err === "string"
-              ? err
-              : "error";
+          err instanceof Error ? err.message : typeof err === "string" ? err : "error";
         return jsonResult({
           status: "error",
           error: messageText,
@@ -221,7 +211,7 @@ export function createSessionsSpawnTool(opts?: {
         runId: childRunId,
         childSessionKey,
         requesterSessionKey: requesterInternalKey,
-        requesterChannel: opts?.agentChannel,
+        requesterOrigin,
         requesterDisplayKey,
         task,
         cleanup,

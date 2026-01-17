@@ -3,10 +3,12 @@ import { GatewayIntents, GatewayPlugin } from "@buape/carbon/gateway";
 import { Routes } from "discord-api-types/v10";
 import { resolveTextChunkLimit } from "../../auto-reply/chunk.js";
 import { listNativeCommandSpecsForConfig } from "../../auto-reply/commands-registry.js";
+import { listSkillCommandsForAgents } from "../../auto-reply/skill-commands.js";
 import type { HistoryEntry } from "../../auto-reply/reply/history.js";
 import {
   isNativeCommandsExplicitlyDisabled,
   resolveNativeCommandsEnabled,
+  resolveNativeSkillsEnabled,
 } from "../../config/commands.js";
 import type { ClawdbotConfig, ReplyToMode } from "../../config/config.js";
 import { loadConfig } from "../../config/config.js";
@@ -15,10 +17,7 @@ import { getChildLogger } from "../../logging.js";
 import type { RuntimeEnv } from "../../runtime.js";
 import { resolveDiscordAccount } from "../accounts.js";
 import { attachDiscordGatewayLogging } from "../gateway-logging.js";
-import {
-  getDiscordGatewayEmitter,
-  waitForDiscordGatewayStop,
-} from "../monitor.gateway.js";
+import { getDiscordGatewayEmitter, waitForDiscordGatewayStop } from "../monitor.gateway.js";
 import { fetchDiscordApplicationId } from "../probe.js";
 import { normalizeDiscordToken } from "../token.js";
 import {
@@ -44,8 +43,7 @@ export type MonitorDiscordOpts = {
 function summarizeAllowList(list?: Array<string | number>) {
   if (!list || list.length === 0) return "any";
   const sample = list.slice(0, 4).map((entry) => String(entry));
-  const suffix =
-    list.length > sample.length ? ` (+${list.length - sample.length})` : "";
+  const suffix = list.length > sample.length ? ` (+${list.length - sample.length})` : "";
   return `${sample.join(", ")}${suffix}`;
 }
 
@@ -53,8 +51,7 @@ function summarizeGuilds(entries?: Record<string, unknown>) {
   if (!entries || Object.keys(entries).length === 0) return "any";
   const keys = Object.keys(entries);
   const sample = keys.slice(0, 4);
-  const suffix =
-    keys.length > sample.length ? ` (+${keys.length - sample.length})` : "";
+  const suffix = keys.length > sample.length ? ` (+${keys.length - sample.length})` : "";
   return `${sample.join(", ")}${suffix}`;
 }
 
@@ -84,17 +81,13 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
   const guildEntries = discordCfg.guilds;
   const groupPolicy = discordCfg.groupPolicy ?? "open";
   const allowFrom = dmConfig?.allowFrom;
-  const mediaMaxBytes =
-    (opts.mediaMaxMb ?? discordCfg.mediaMaxMb ?? 8) * 1024 * 1024;
+  const mediaMaxBytes = (opts.mediaMaxMb ?? discordCfg.mediaMaxMb ?? 8) * 1024 * 1024;
   const textLimit = resolveTextChunkLimit(cfg, "discord", account.accountId, {
     fallbackLimit: 2000,
   });
   const historyLimit = Math.max(
     0,
-    opts.historyLimit ??
-      discordCfg.historyLimit ??
-      cfg.messages?.groupChat?.historyLimit ??
-      20,
+    opts.historyLimit ?? discordCfg.historyLimit ?? cfg.messages?.groupChat?.historyLimit ?? 20,
   );
   const replyToMode = opts.replyToMode ?? discordCfg.replyToMode ?? "off";
   const dmEnabled = dmConfig?.enabled ?? true;
@@ -106,6 +99,11 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
     providerSetting: discordCfg.commands?.native,
     globalSetting: cfg.commands?.native,
   });
+  const nativeSkillsEnabled = resolveNativeSkillsEnabled({
+    providerId: "discord",
+    providerSetting: discordCfg.commands?.nativeSkills,
+    globalSetting: cfg.commands?.nativeSkills,
+  });
   const nativeDisabledExplicit = isNativeCommandsExplicitlyDisabled({
     providerSetting: discordCfg.commands?.native,
     globalSetting: cfg.commands?.native,
@@ -116,7 +114,7 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
 
   if (shouldLogVerbose()) {
     logVerbose(
-      `discord: config dm=${dmEnabled ? "on" : "off"} dmPolicy=${dmPolicy} allowFrom=${summarizeAllowList(allowFrom)} groupDm=${groupDmEnabled ? "on" : "off"} groupDmChannels=${summarizeAllowList(groupDmChannels)} groupPolicy=${groupPolicy} guilds=${summarizeGuilds(guildEntries)} historyLimit=${historyLimit} mediaMaxMb=${Math.round(mediaMaxBytes / (1024 * 1024))} native=${nativeEnabled ? "on" : "off"} accessGroups=${useAccessGroups ? "on" : "off"}`,
+      `discord: config dm=${dmEnabled ? "on" : "off"} dmPolicy=${dmPolicy} allowFrom=${summarizeAllowList(allowFrom)} groupDm=${groupDmEnabled ? "on" : "off"} groupDmChannels=${summarizeAllowList(groupDmChannels)} groupPolicy=${groupPolicy} guilds=${summarizeGuilds(guildEntries)} historyLimit=${historyLimit} mediaMaxMb=${Math.round(mediaMaxBytes / (1024 * 1024))} native=${nativeEnabled ? "on" : "off"} nativeSkills=${nativeSkillsEnabled ? "on" : "off"} accessGroups=${useAccessGroups ? "on" : "off"}`,
     );
   }
 
@@ -125,9 +123,9 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
     throw new Error("Failed to resolve Discord application id");
   }
 
-  const commandSpecs = nativeEnabled
-    ? listNativeCommandSpecsForConfig(cfg)
-    : [];
+  const skillCommands =
+    nativeEnabled && nativeSkillsEnabled ? listSkillCommandsForAgents({ cfg }) : [];
+  const commandSpecs = nativeEnabled ? listNativeCommandSpecsForConfig(cfg, { skillCommands }) : [];
   const commands = commandSpecs.map((spec) =>
     createDiscordNativeCommand({
       command: spec,
@@ -147,11 +145,6 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
       publicKey: "a",
       token,
       autoDeploy: nativeEnabled,
-      eventQueue: {
-        // Auto-threading (create thread + generate reply + post) can exceed the default
-        // 30s listener timeout in some environments.
-        listenerTimeout: 120_000,
-      },
     },
     {
       commands,
@@ -190,9 +183,7 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
     const botUser = await client.fetchUser("@me");
     botUserId = botUser?.id;
   } catch (err) {
-    runtime.error?.(
-      danger(`discord: failed to fetch bot identity: ${String(err)}`),
-    );
+    runtime.error?.(danger(`discord: failed to fetch bot identity: ${String(err)}`));
   }
 
   const messageHandler = createDiscordMessageHandler({
@@ -214,10 +205,7 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
     guildEntries,
   });
 
-  registerDiscordListener(
-    client.listeners,
-    new DiscordMessageListener(messageHandler, logger),
-  );
+  registerDiscordListener(client.listeners, new DiscordMessageListener(messageHandler, logger));
   registerDiscordListener(
     client.listeners,
     new DiscordReactionListener({
@@ -285,8 +273,7 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
       shouldStopOnError: (err) => {
         const message = String(err);
         return (
-          message.includes("Max reconnect attempts") ||
-          message.includes("Fatal Gateway error")
+          message.includes("Max reconnect attempts") || message.includes("Fatal Gateway error")
         );
       },
     });
@@ -303,16 +290,11 @@ async function clearDiscordNativeCommands(params: {
   runtime: RuntimeEnv;
 }) {
   try {
-    await params.client.rest.put(
-      Routes.applicationCommands(params.applicationId),
-      {
-        body: [],
-      },
-    );
+    await params.client.rest.put(Routes.applicationCommands(params.applicationId), {
+      body: [],
+    });
     logVerbose("discord: cleared native commands (commands.native=false)");
   } catch (err) {
-    params.runtime.error?.(
-      danger(`discord: failed to clear native commands: ${String(err)}`),
-    );
+    params.runtime.error?.(danger(`discord: failed to clear native commands: ${String(err)}`));
   }
 }

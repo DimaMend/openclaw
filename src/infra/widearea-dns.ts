@@ -23,10 +23,7 @@ function dnsLabel(raw: string, fallback: string): string {
 }
 
 function txtQuote(value: string): string {
-  const escaped = value
-    .replaceAll("\\", "\\\\")
-    .replaceAll('"', '\\"')
-    .replaceAll("\n", "\\n");
+  const escaped = value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", "\\n");
   return `"${escaped}"`;
 }
 
@@ -74,6 +71,8 @@ export type WideAreaBridgeZoneOpts = {
   displayName: string;
   tailnetIPv4: string;
   tailnetIPv6?: string;
+  bridgeTlsEnabled?: boolean;
+  bridgeTlsFingerprintSha256?: string;
   instanceLabel?: string;
   hostLabel?: string;
   tailnetDns?: string;
@@ -84,10 +83,7 @@ export type WideAreaBridgeZoneOpts = {
 function renderZone(opts: WideAreaBridgeZoneOpts & { serial: number }): string {
   const hostname = os.hostname().split(".")[0] ?? "clawdbot";
   const hostLabel = dnsLabel(opts.hostLabel ?? hostname, "clawdbot");
-  const instanceLabel = dnsLabel(
-    opts.instanceLabel ?? `${hostname}-bridge`,
-    "clawdbot-bridge",
-  );
+  const instanceLabel = dnsLabel(opts.instanceLabel ?? `${hostname}-bridge`, "clawdbot-bridge");
 
   const txt = [
     `displayName=${opts.displayName.trim() || hostname}`,
@@ -96,6 +92,12 @@ function renderZone(opts: WideAreaBridgeZoneOpts & { serial: number }): string {
   ];
   if (typeof opts.gatewayPort === "number" && opts.gatewayPort > 0) {
     txt.push(`gatewayPort=${opts.gatewayPort}`);
+  }
+  if (opts.bridgeTlsEnabled) {
+    txt.push(`bridgeTls=1`);
+    if (opts.bridgeTlsFingerprintSha256) {
+      txt.push(`bridgeTlsSha256=${opts.bridgeTlsFingerprintSha256}`);
+    }
   }
   if (opts.tailnetDns?.trim()) {
     txt.push(`tailnetDns=${opts.tailnetDns.trim()}`);
@@ -120,22 +122,14 @@ function renderZone(opts: WideAreaBridgeZoneOpts & { serial: number }): string {
     records.push(`${hostLabel} IN AAAA ${opts.tailnetIPv6}`);
   }
 
-  records.push(
-    `_clawdbot-bridge._tcp IN PTR ${instanceLabel}._clawdbot-bridge._tcp`,
-  );
-  records.push(
-    `${instanceLabel}._clawdbot-bridge._tcp IN SRV 0 0 ${opts.bridgePort} ${hostLabel}`,
-  );
-  records.push(
-    `${instanceLabel}._clawdbot-bridge._tcp IN TXT ${txt.map(txtQuote).join(" ")}`,
-  );
+  records.push(`_clawdbot-bridge._tcp IN PTR ${instanceLabel}._clawdbot-bridge._tcp`);
+  records.push(`${instanceLabel}._clawdbot-bridge._tcp IN SRV 0 0 ${opts.bridgePort} ${hostLabel}`);
+  records.push(`${instanceLabel}._clawdbot-bridge._tcp IN TXT ${txt.map(txtQuote).join(" ")}`);
 
   const contentBody = `${records.join("\n")}\n`;
   const hashBody = `${records
     .map((line) =>
-      line === soaLine
-        ? `@ IN SOA ns1 hostmaster SERIAL 7200 3600 1209600 60`
-        : line,
+      line === soaLine ? `@ IN SOA ns1 hostmaster SERIAL 7200 3600 1209600 60` : line,
     )
     .join("\n")}\n`;
   const contentHash = computeContentHash(hashBody);

@@ -9,6 +9,45 @@ read_when:
 
 This page describes the current CLI behavior. If commands change, update this doc.
 
+## Command pages
+
+- [`setup`](/cli/setup)
+- [`onboard`](/cli/onboard)
+- [`configure`](/cli/configure)
+- [`config`](/cli/config)
+- [`doctor`](/cli/doctor)
+- [`dashboard`](/cli/dashboard)
+- [`reset`](/cli/reset)
+- [`uninstall`](/cli/uninstall)
+- [`update`](/cli/update)
+- [`message`](/cli/message)
+- [`agent`](/cli/agent)
+- [`agents`](/cli/agents)
+- [`status`](/cli/status)
+- [`health`](/cli/health)
+- [`sessions`](/cli/sessions)
+- [`gateway`](/cli/gateway)
+- [`daemon`](/cli/daemon)
+- [`logs`](/cli/logs)
+- [`models`](/cli/models)
+- [`memory`](/cli/memory)
+- [`nodes`](/cli/nodes)
+- [`sandbox`](/cli/sandbox)
+- [`tui`](/cli/tui)
+- [`browser`](/cli/browser)
+- [`wake`](/cli/wake)
+- [`cron`](/cli/cron)
+- [`dns`](/cli/dns)
+- [`docs`](/cli/docs)
+- [`hooks`](/cli/hooks)
+- [`webhooks`](/cli/webhooks)
+- [`pairing`](/cli/pairing)
+- [`plugins`](/cli/plugins) (plugin commands)
+- [`channels`](/cli/channels)
+- [`security`](/cli/security)
+- [`skills`](/cli/skills)
+- [`voicecall`](/cli/voicecall) (plugin; if installed)
+
 ## Global flags
 
 - `--dev`: isolate state under `~/.clawdbot-dev` and shift default ports.
@@ -46,8 +85,19 @@ Palette source of truth: `src/terminal/palette.ts` (aka “lobster seam”).
 clawdbot [--dev] [--profile <name>] <command>
   setup
   onboard
-  configure (alias: config)
+  configure
+  config
+    get
+    set
+    unset
   doctor
+<<<<<<< HEAD
+=======
+  security
+    audit
+  reset
+  uninstall
+>>>>>>> upstream/main
   update
   channels
     list
@@ -166,6 +216,14 @@ clawdbot [--dev] [--profile <name>] <command>
     console
     pdf
   hooks
+    list
+    info
+    check
+    enable
+    disable
+    install
+    update
+  webhooks
     gmail setup|run
   pairing
     list
@@ -177,6 +235,12 @@ clawdbot [--dev] [--profile <name>] <command>
 ```
 
 Note: plugins can add additional top-level commands (for example `clawdbot voicecall`).
+
+## Security
+
+- `clawdbot security audit` — audit config + local state for common security foot-guns.
+- `clawdbot security audit --deep` — best-effort live Gateway probe.
+- `clawdbot security audit --fix` — tighten safe defaults and chmod state/config.
 
 ## Plugins
 
@@ -231,7 +295,7 @@ Options:
 - `--non-interactive`
 - `--mode <local|remote>`
 - `--flow <quickstart|advanced>`
-- `--auth-choice <setup-token|claude-cli|token|openai-codex|openai-api-key|openrouter-api-key|moonshot-api-key|codex-cli|antigravity|gemini-api-key|zai-api-key|apiKey|minimax-api|opencode-zen|skip>`
+- `--auth-choice <setup-token|claude-cli|token|openai-codex|openai-api-key|openrouter-api-key|ai-gateway-api-key|moonshot-api-key|codex-cli|antigravity|gemini-api-key|zai-api-key|apiKey|minimax-api|opencode-zen|skip>`
 - `--token-provider <id>` (non-interactive; used with `--auth-choice token`)
 - `--token <token>` (non-interactive; used with `--auth-choice token`)
 - `--token-profile-id <id>` (non-interactive; default: `<provider>:manual`)
@@ -239,6 +303,7 @@ Options:
 - `--anthropic-api-key <key>`
 - `--openai-api-key <key>`
 - `--openrouter-api-key <key>`
+- `--ai-gateway-api-key <key>`
 - `--moonshot-api-key <key>`
 - `--gemini-api-key <key>`
 - `--zai-api-key <key>`
@@ -263,8 +328,17 @@ Options:
 - `--node-manager <npm|pnpm|bun>` (pnpm recommended; bun not recommended for Gateway runtime)
 - `--json`
 
-### `configure` / `config`
+### `configure`
 Interactive configuration wizard (models, channels, skills, gateway).
+
+### `config`
+Non-interactive config helpers (get/set/unset). Running `clawdbot config` with no
+subcommand launches the wizard.
+
+Subcommands:
+- `config get <path>`: print a config value (dot/bracket path).
+- `config set <path> <value>`: set a value (JSON5 or raw string).
+- `config unset <path>`: remove a value.
 
 ### `doctor`
 Health checks + quick fixes (config + gateway + legacy services).
@@ -368,12 +442,12 @@ Subcommands:
 - `pairing list <channel> [--json]`
 - `pairing approve <channel> <code> [--notify]`
 
-### `hooks gmail`
+### `webhooks gmail`
 Gmail Pub/Sub hook setup + runner. See [/automation/gmail-pubsub](/automation/gmail-pubsub).
 
 Subcommands:
-- `hooks gmail setup` (requires `--account <email>`; supports `--project`, `--topic`, `--subscription`, `--label`, `--hook-url`, `--hook-token`, `--push-token`, `--bind`, `--port`, `--path`, `--include-body`, `--max-bytes`, `--renew-minutes`, `--tailscale`, `--tailscale-path`, `--tailscale-target`, `--push-endpoint`, `--json`)
-- `hooks gmail run` (runtime overrides for the same flags)
+- `webhooks gmail setup` (requires `--account <email>`; supports `--project`, `--topic`, `--subscription`, `--label`, `--hook-url`, `--hook-token`, `--push-token`, `--bind`, `--port`, `--path`, `--include-body`, `--max-bytes`, `--renew-minutes`, `--tailscale`, `--tailscale-path`, `--tailscale-target`, `--push-endpoint`, `--json`)
+- `webhooks gmail run` (runtime overrides for the same flags)
 
 ### `dns setup`
 Wide-area discovery DNS helper (CoreDNS + Tailscale). See [/gateway/discovery](/gateway/discovery).
@@ -400,8 +474,8 @@ Subcommands:
 - `message event <list|create>`
 
 Examples:
-- `clawdbot message send --to +15555550123 --message "Hi"`
-- `clawdbot message poll --channel discord --to channel:123 --poll-question "Snack?" --poll-option Pizza --poll-option Sushi`
+- `clawdbot message send --target +15555550123 --message "Hi"`
+- `clawdbot message poll --channel discord --target channel:123 --poll-question "Snack?" --poll-option Pizza --poll-option Sushi`
 
 ### `agent`
 Run one agent turn via the Gateway (or `--local` embedded).
@@ -413,7 +487,7 @@ Options:
 - `--to <dest>` (for session key and optional delivery)
 - `--session-id <id>`
 - `--thinking <off|minimal|low|medium|high|xhigh>` (GPT-5.2 + Codex models only)
-- `--verbose <on|off>`
+- `--verbose <on|full|off>`
 - `--channel <whatsapp|telegram|discord|slack|signal|imessage>`
 - `--local`
 - `--deliver`
@@ -533,8 +607,9 @@ Notes:
 - `daemon status` supports `--no-probe`, `--deep`, and `--json` for scripting.
 - `daemon status` also surfaces legacy or extra gateway services when it can detect them (`--deep` adds system-level scans). Profile-named Clawdbot services are treated as first-class and aren't flagged as "extra".
 - `daemon status` prints which config path the CLI uses vs which config the daemon likely uses (service env), plus the resolved probe target URL.
+- `daemon install|uninstall|start|stop|restart` support `--json` for scripting (default output stays human-friendly).
 - `daemon install` defaults to Node runtime; bun is **not recommended** (WhatsApp/Telegram bugs).
-- `daemon install` options: `--port`, `--runtime`, `--token`, `--force`.
+- `daemon install` options: `--port`, `--runtime`, `--token`, `--force`, `--json`.
 
 ### `logs`
 Tail Gateway file logs via RPC.
@@ -563,7 +638,11 @@ Subcommands:
 
 Common RPCs:
 - `config.apply` (validate + write config + restart + wake)
+- `config.patch` (merge a partial update without clobbering unrelated keys)
 - `update.run` (run update + restart + wake)
+
+Tip: when calling `config.set`/`config.apply`/`config.patch` directly, pass `baseHash` from
+`config.get` if a config already exists.
 
 ## Models
 
@@ -720,7 +799,7 @@ Location:
 
 ## Browser
 
-Browser control CLI (dedicated Chrome/Chromium). See [/tools/browser](/tools/browser).
+Browser control CLI (dedicated Chrome/Brave/Edge/Chromium). See [`clawdbot browser`](/cli/browser) and the [Browser tool](/tools/browser).
 
 Common options:
 - `--url <controlUrl>`

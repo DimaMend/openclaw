@@ -1,8 +1,5 @@
 import { chunkText } from "../../auto-reply/chunk.js";
-import {
-  DEFAULT_ACCOUNT_ID,
-  normalizeAccountId,
-} from "../../routing/session-key.js";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";
 import {
   listSignalAccountIds,
   type ResolvedSignalAccount,
@@ -13,13 +10,15 @@ import { probeSignal } from "../../signal/probe.js";
 import { sendMessageSignal } from "../../signal/send.js";
 import { normalizeE164 } from "../../utils.js";
 import { getChatChannelMeta } from "../registry.js";
+import { SignalConfigSchema } from "../../config/zod-schema.providers-core.js";
+import { buildChannelConfigSchema } from "./config-schema.js";
 import {
   deleteAccountFromConfigSection,
   setAccountEnabledInConfigSection,
 } from "./config-helpers.js";
 import { formatPairingApproveHint } from "./helpers.js";
 import { resolveChannelMediaMaxBytes } from "./media-limits.js";
-import { normalizeSignalMessagingTarget } from "./normalize-target.js";
+import { looksLikeSignalTargetId, normalizeSignalMessagingTarget } from "./normalize-target.js";
 import { signalOnboardingAdapter } from "./onboarding/signal.js";
 import { PAIRING_APPROVED_MESSAGE } from "./pairing-message.js";
 import {
@@ -51,10 +50,10 @@ export const signalPlugin: ChannelPlugin<ResolvedSignalAccount> = {
     blockStreamingCoalesceDefaults: { minChars: 1500, idleMs: 1000 },
   },
   reload: { configPrefixes: ["channels.signal"] },
+  configSchema: buildChannelConfigSchema(SignalConfigSchema),
   config: {
     listAccountIds: (cfg) => listSignalAccountIds(cfg),
-    resolveAccount: (cfg, accountId) =>
-      resolveSignalAccount({ cfg, accountId }),
+    resolveAccount: (cfg, accountId) => resolveSignalAccount({ cfg, accountId }),
     defaultAccountId: (cfg) => resolveDefaultSignalAccountId(cfg),
     setAccountEnabled: ({ cfg, accountId, enabled }) =>
       setAccountEnabledInConfigSection({
@@ -69,14 +68,7 @@ export const signalPlugin: ChannelPlugin<ResolvedSignalAccount> = {
         cfg,
         sectionKey: "signal",
         accountId,
-        clearBaseFields: [
-          "account",
-          "httpUrl",
-          "httpHost",
-          "httpPort",
-          "cliPath",
-          "name",
-        ],
+        clearBaseFields: ["account", "httpUrl", "httpHost", "httpPort", "cliPath", "name"],
       }),
     isConfigured: (account) => account.configured,
     describeAccount: (account) => ({
@@ -87,25 +79,20 @@ export const signalPlugin: ChannelPlugin<ResolvedSignalAccount> = {
       baseUrl: account.baseUrl,
     }),
     resolveAllowFrom: ({ cfg, accountId }) =>
-      (resolveSignalAccount({ cfg, accountId }).config.allowFrom ?? []).map(
-        (entry) => String(entry),
+      (resolveSignalAccount({ cfg, accountId }).config.allowFrom ?? []).map((entry) =>
+        String(entry),
       ),
     formatAllowFrom: ({ allowFrom }) =>
       allowFrom
         .map((entry) => String(entry).trim())
         .filter(Boolean)
-        .map((entry) =>
-          entry === "*" ? "*" : normalizeE164(entry.replace(/^signal:/i, "")),
-        )
+        .map((entry) => (entry === "*" ? "*" : normalizeE164(entry.replace(/^signal:/i, ""))))
         .filter(Boolean),
   },
   security: {
     resolveDmPolicy: ({ cfg, accountId, account }) => {
-      const resolvedAccountId =
-        accountId ?? account.accountId ?? DEFAULT_ACCOUNT_ID;
-      const useAccountPath = Boolean(
-        cfg.channels?.signal?.accounts?.[resolvedAccountId],
-      );
+      const resolvedAccountId = accountId ?? account.accountId ?? DEFAULT_ACCOUNT_ID;
+      const useAccountPath = Boolean(cfg.channels?.signal?.accounts?.[resolvedAccountId]);
       const basePath = useAccountPath
         ? `channels.signal.accounts.${resolvedAccountId}.`
         : "channels.signal.";
@@ -115,8 +102,7 @@ export const signalPlugin: ChannelPlugin<ResolvedSignalAccount> = {
         policyPath: `${basePath}dmPolicy`,
         allowFromPath: basePath,
         approveHint: formatPairingApproveHint("signal"),
-        normalizeEntry: (raw) =>
-          normalizeE164(raw.replace(/^signal:/i, "").trim()),
+        normalizeEntry: (raw) => normalizeE164(raw.replace(/^signal:/i, "").trim()),
       };
     },
     collectWarnings: ({ account }) => {
@@ -129,6 +115,10 @@ export const signalPlugin: ChannelPlugin<ResolvedSignalAccount> = {
   },
   messaging: {
     normalizeTarget: normalizeSignalMessagingTarget,
+    targetResolver: {
+      looksLikeId: looksLikeSignalTargetId,
+      hint: "<E.164|group:ID|signal:group:ID|signal:+E.164>",
+    },
   },
   setup: {
     resolveAccountId: ({ accountId }) => normalizeAccountId(accountId),
@@ -210,18 +200,6 @@ export const signalPlugin: ChannelPlugin<ResolvedSignalAccount> = {
     deliveryMode: "direct",
     chunker: chunkText,
     textChunkLimit: 4000,
-    resolveTarget: ({ to }) => {
-      const trimmed = to?.trim();
-      if (!trimmed) {
-        return {
-          ok: false,
-          error: new Error(
-            "Delivering to Signal requires --to <E.164|group:ID|signal:group:ID|signal:+E.164>",
-          ),
-        };
-      }
-      return { ok: true, to: trimmed };
-    },
     sendText: async ({ cfg, to, text, accountId, deps }) => {
       const send = deps?.sendSignal ?? sendMessageSignal;
       const maxBytes = resolveChannelMediaMaxBytes({
@@ -264,8 +242,7 @@ export const signalPlugin: ChannelPlugin<ResolvedSignalAccount> = {
     },
     collectStatusIssues: (accounts) =>
       accounts.flatMap((account) => {
-        const lastError =
-          typeof account.lastError === "string" ? account.lastError.trim() : "";
+        const lastError = typeof account.lastError === "string" ? account.lastError.trim() : "";
         if (!lastError) return [];
         return [
           {
@@ -312,9 +289,7 @@ export const signalPlugin: ChannelPlugin<ResolvedSignalAccount> = {
         accountId: account.accountId,
         baseUrl: account.baseUrl,
       });
-      ctx.log?.info(
-        `[${account.accountId}] starting provider (${account.baseUrl})`,
-      );
+      ctx.log?.info(`[${account.accountId}] starting provider (${account.baseUrl})`);
       // Lazy import: the monitor pulls the reply pipeline; avoid ESM init cycles.
       const { monitorSignalProvider } = await import("../../signal/index.js");
       return monitorSignalProvider({

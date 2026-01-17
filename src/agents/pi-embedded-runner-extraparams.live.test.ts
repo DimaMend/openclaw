@@ -30,7 +30,7 @@ describeLive("pi embedded extra params (live)", () => {
 
     const agent = { streamFn: streamSimple };
 
-    applyExtraParamsToAgent(agent, cfg, "openai", model.id, "off");
+    applyExtraParamsToAgent(agent, cfg, "openai", model.id);
 
     const stream = agent.streamFn(
       model,
@@ -38,8 +38,7 @@ describeLive("pi embedded extra params (live)", () => {
         messages: [
           {
             role: "user",
-            content:
-              "Write the alphabet letters A through Z as words separated by commas.",
+            content: "Write the alphabet letters A through Z as words separated by commas.",
             timestamp: Date.now(),
           },
         ],

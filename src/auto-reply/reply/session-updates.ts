@@ -1,12 +1,19 @@
 import crypto from "node:crypto";
 
 import { buildWorkspaceSkillSnapshot } from "../../agents/skills.js";
+import { ensureSkillsWatcher, getSkillsSnapshotVersion } from "../../agents/skills/refresh.js";
 import type { ClawdbotConfig } from "../../config/config.js";
+<<<<<<< HEAD
 import { type SessionEntry, saveSessionStore } from "../../config/sessions.js";
 <<<<<<< HEAD
 import { buildProviderSummary } from "../../infra/provider-summary.js";
 =======
 import { buildChannelSummary } from "../../infra/channel-summary.js";
+>>>>>>> upstream/main
+=======
+import { type SessionEntry, updateSessionStore } from "../../config/sessions.js";
+import { buildChannelSummary } from "../../infra/channel-summary.js";
+import { getRemoteSkillEligibility } from "../../infra/skills-remote.js";
 >>>>>>> upstream/main
 import { drainSystemEventEntries } from "../../infra/system-events.js";
 
@@ -29,16 +36,17 @@ export async function prependSystemEvents(params: {
     return trimmed;
   };
 
-  const formatSystemEventTimestamp = (ts: number) =>
-    new Date(ts).toLocaleString("en-US", {
-      hour12: false,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
+  const formatSystemEventTimestamp = (ts: number) => {
+    const date = new Date(ts);
+    if (Number.isNaN(date.getTime())) return "unknown-time";
+    const yyyy = String(date.getUTCFullYear()).padStart(4, "0");
+    const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(date.getUTCDate()).padStart(2, "0");
+    const hh = String(date.getUTCHours()).padStart(2, "0");
+    const min = String(date.getUTCMinutes()).padStart(2, "0");
+    const sec = String(date.getUTCSeconds()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}:${sec}Z`;
+  };
 
   const systemLines: string[] = [];
   const queued = drainSystemEventEntries(params.sessionKey);
@@ -91,6 +99,11 @@ export async function ensureSkillSnapshot(params: {
 
   let nextEntry = sessionEntry;
   let systemSent = sessionEntry?.systemSent ?? false;
+  const remoteEligibility = getRemoteSkillEligibility();
+  const snapshotVersion = getSkillsSnapshotVersion(workspaceDir);
+  ensureSkillsWatcher({ workspaceDir, config: cfg });
+  const shouldRefreshSnapshot =
+    snapshotVersion > 0 && (nextEntry?.skillsSnapshot?.version ?? 0) < snapshotVersion;
 
   if (isFirstTurnInSession && sessionStore && sessionKey) {
     const current = nextEntry ??
@@ -99,10 +112,12 @@ export async function ensureSkillSnapshot(params: {
         updatedAt: Date.now(),
       };
     const skillSnapshot =
-      isFirstTurnInSession || !current.skillsSnapshot
+      isFirstTurnInSession || !current.skillsSnapshot || shouldRefreshSnapshot
         ? buildWorkspaceSkillSnapshot(workspaceDir, {
             config: cfg,
             skillFilter,
+            eligibility: { remote: remoteEligibility },
+            snapshotVersion,
           })
         : current.skillsSnapshot;
     nextEntry = {
@@ -114,25 +129,35 @@ export async function ensureSkillSnapshot(params: {
     };
     sessionStore[sessionKey] = { ...sessionStore[sessionKey], ...nextEntry };
     if (storePath) {
-      await saveSessionStore(storePath, sessionStore);
+      await updateSessionStore(storePath, (store) => {
+        store[sessionKey] = { ...store[sessionKey], ...nextEntry };
+      });
     }
     systemSent = true;
   }
 
-  const skillsSnapshot =
-    nextEntry?.skillsSnapshot ??
-    (isFirstTurnInSession
-      ? undefined
-      : buildWorkspaceSkillSnapshot(workspaceDir, {
-          config: cfg,
-          skillFilter,
-        }));
+  const skillsSnapshot = shouldRefreshSnapshot
+    ? buildWorkspaceSkillSnapshot(workspaceDir, {
+        config: cfg,
+        skillFilter,
+        eligibility: { remote: remoteEligibility },
+        snapshotVersion,
+      })
+    : (nextEntry?.skillsSnapshot ??
+      (isFirstTurnInSession
+        ? undefined
+        : buildWorkspaceSkillSnapshot(workspaceDir, {
+            config: cfg,
+            skillFilter,
+            eligibility: { remote: remoteEligibility },
+            snapshotVersion,
+          })));
   if (
     skillsSnapshot &&
     sessionStore &&
     sessionKey &&
     !isFirstTurnInSession &&
-    !nextEntry?.skillsSnapshot
+    (!nextEntry?.skillsSnapshot || shouldRefreshSnapshot)
   ) {
     const current = nextEntry ?? {
       sessionId: sessionId ?? crypto.randomUUID(),
@@ -146,7 +171,9 @@ export async function ensureSkillSnapshot(params: {
     };
     sessionStore[sessionKey] = { ...sessionStore[sessionKey], ...nextEntry };
     if (storePath) {
-      await saveSessionStore(storePath, sessionStore);
+      await updateSessionStore(storePath, (store) => {
+        store[sessionKey] = { ...store[sessionKey], ...nextEntry };
+      });
     }
   }
 
@@ -160,13 +187,7 @@ export async function incrementCompactionCount(params: {
   storePath?: string;
   now?: number;
 }): Promise<number | undefined> {
-  const {
-    sessionEntry,
-    sessionStore,
-    sessionKey,
-    storePath,
-    now = Date.now(),
-  } = params;
+  const { sessionEntry, sessionStore, sessionKey, storePath, now = Date.now() } = params;
   if (!sessionStore || !sessionKey) return undefined;
   const entry = sessionStore[sessionKey] ?? sessionEntry;
   if (!entry) return undefined;
@@ -177,7 +198,13 @@ export async function incrementCompactionCount(params: {
     updatedAt: now,
   };
   if (storePath) {
-    await saveSessionStore(storePath, sessionStore);
+    await updateSessionStore(storePath, (store) => {
+      store[sessionKey] = {
+        ...store[sessionKey],
+        compactionCount: nextCount,
+        updatedAt: now,
+      };
+    });
   }
   return nextCount;
 }

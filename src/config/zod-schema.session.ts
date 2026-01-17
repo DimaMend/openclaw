@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   GroupChatSchema,
+  InboundDebounceSchema,
   NativeCommandsSettingSchema,
   QueueSchema,
 } from "./zod-schema.core.js";
@@ -9,6 +10,10 @@ import {
 export const SessionSchema = z
   .object({
     scope: z.union([z.literal("per-sender"), z.literal("global")]).optional(),
+    dmScope: z
+      .union([z.literal("main"), z.literal("per-peer"), z.literal("per-channel-peer")])
+      .optional(),
+    identityLinks: z.record(z.string(), z.array(z.string())).optional(),
     resetTriggers: z.array(z.string()).optional(),
     idleMinutes: z.number().int().positive().optional(),
     heartbeatIdleMinutes: z.number().int().positive().optional(),
@@ -34,11 +39,7 @@ export const SessionSchema = z
                 .object({
                   channel: z.string().optional(),
                   chatType: z
-                    .union([
-                      z.literal("direct"),
-                      z.literal("group"),
-                      z.literal("room"),
-                    ])
+                    .union([z.literal("direct"), z.literal("group"), z.literal("channel")])
                     .optional(),
                   keyPrefix: z.string().optional(),
                 })
@@ -62,10 +63,9 @@ export const MessagesSchema = z
     responsePrefix: z.string().optional(),
     groupChat: GroupChatSchema,
     queue: QueueSchema,
+    inbound: InboundDebounceSchema,
     ackReaction: z.string().optional(),
-    ackReactionScope: z
-      .enum(["group-mentions", "group-all", "direct", "all"])
-      .optional(),
+    ackReactionScope: z.enum(["group-mentions", "group-all", "direct", "all"]).optional(),
     removeAckAfterReply: z.boolean().optional(),
   })
   .optional();
@@ -73,6 +73,7 @@ export const MessagesSchema = z
 export const CommandsSchema = z
   .object({
     native: NativeCommandsSettingSchema.optional().default("auto"),
+    nativeSkills: NativeCommandsSettingSchema.optional().default("auto"),
     text: z.boolean().optional(),
     bash: z.boolean().optional(),
     bashForegroundMs: z.number().int().min(0).max(30_000).optional(),
@@ -82,4 +83,4 @@ export const CommandsSchema = z
     useAccessGroups: z.boolean().optional(),
   })
   .optional()
-  .default({ native: "auto" });
+  .default({ native: "auto", nativeSkills: "auto" });

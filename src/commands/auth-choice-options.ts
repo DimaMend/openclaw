@@ -1,8 +1,5 @@
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
-import {
-  CLAUDE_CLI_PROFILE_ID,
-  CODEX_CLI_PROFILE_ID,
-} from "../agents/auth-profiles.js";
+import { CLAUDE_CLI_PROFILE_ID, CODEX_CLI_PROFILE_ID } from "../agents/auth-profiles.js";
 import { colorize, isRich, theme } from "../terminal/theme.js";
 import type { AuthChoice } from "./onboard-types.js";
 
@@ -17,6 +14,7 @@ export type AuthChoiceGroupId =
   | "anthropic"
   | "google"
   | "openrouter"
+  | "ai-gateway"
   | "moonshot"
   | "zai"
   | "opencode-zen"
@@ -45,7 +43,7 @@ const AUTH_CHOICE_GROUP_DEFS: {
   {
     value: "anthropic",
     label: "Anthropic",
-    hint: "Claude CLI + API key",
+    hint: "Claude Code CLI + API key",
     choices: ["claude-cli", "setup-token", "token", "apiKey"],
   },
   {
@@ -73,6 +71,12 @@ const AUTH_CHOICE_GROUP_DEFS: {
     choices: ["openrouter-api-key"],
   },
   {
+    value: "ai-gateway",
+    label: "Vercel AI Gateway",
+    hint: "API key",
+    choices: ["ai-gateway-api-key"],
+  },
+  {
     value: "moonshot",
     label: "Moonshot AI",
     hint: "Kimi K2 preview",
@@ -92,10 +96,7 @@ const AUTH_CHOICE_GROUP_DEFS: {
   },
 ];
 
-function formatOAuthHint(
-  expires?: number,
-  opts?: { allowStale?: boolean },
-): string {
+function formatOAuthHint(expires?: number, opts?: { allowStale?: boolean }): string {
   const rich = isRich();
   if (!expires) {
     return colorize(rich, theme.muted, "token unavailable");
@@ -144,13 +145,13 @@ export function buildAuthChoiceOptions(params: {
   if (claudeCli?.type === "oauth" || claudeCli?.type === "token") {
     options.push({
       value: "claude-cli",
-      label: "Anthropic token (Claude CLI)",
+      label: "Anthropic token (Claude Code CLI)",
       hint: formatOAuthHint(claudeCli.expires),
     });
   } else if (params.includeClaudeCliIfMissing && platform === "darwin") {
     options.push({
       value: "claude-cli",
-      label: "Anthropic token (Claude CLI)",
+      label: "Anthropic token (Claude Code CLI)",
       hint: "requires Keychain access",
     });
   }
@@ -174,6 +175,10 @@ export function buildAuthChoiceOptions(params: {
   options.push({ value: "chutes", label: "Chutes (OAuth)" });
   options.push({ value: "openai-api-key", label: "OpenAI API key" });
   options.push({ value: "openrouter-api-key", label: "OpenRouter API key" });
+  options.push({
+    value: "ai-gateway-api-key",
+    label: "Vercel AI Gateway API key",
+  });
   options.push({ value: "moonshot-api-key", label: "Moonshot AI API key" });
   options.push({ value: "synthetic-api-key", label: "Synthetic API key" });
   options.push({

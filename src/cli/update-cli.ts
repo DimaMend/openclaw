@@ -28,6 +28,7 @@ const STEP_LABELS: Record<string, string> = {
   "ui:build": "Building UI",
   "clawdbot doctor": "Running doctor checks",
   "git rev-parse HEAD (after)": "Verifying update",
+  "global update": "Updating via package manager",
 };
 
 function getStepLabel(step: UpdateStepInfo): string {
@@ -59,8 +60,7 @@ function createUpdateProgress(enabled: boolean): ProgressController {
 
       const label = getStepLabel(step);
       const duration = theme.muted(`(${formatDuration(step.durationMs)})`);
-      const icon =
-        step.exitCode === 0 ? theme.success("\u2713") : theme.error("\u2717");
+      const icon = step.exitCode === 0 ? theme.success("\u2713") : theme.error("\u2717");
 
       currentSpinner.stop(`${icon} ${label} ${duration}`);
       currentSpinner = null;
@@ -110,11 +110,7 @@ function printResult(result: UpdateRunResult, opts: PrintResultOptions) {
   }
 
   const statusColor =
-    result.status === "ok"
-      ? theme.success
-      : result.status === "skipped"
-        ? theme.warn
-        : theme.error;
+    result.status === "ok" ? theme.success : result.status === "skipped" ? theme.warn : theme.error;
 
   defaultRuntime.log("");
   defaultRuntime.log(
@@ -128,8 +124,7 @@ function printResult(result: UpdateRunResult, opts: PrintResultOptions) {
   }
 
   if (result.before?.version || result.before?.sha) {
-    const before =
-      result.before.version ?? result.before.sha?.slice(0, 8) ?? "";
+    const before = result.before.version ?? result.before.sha?.slice(0, 8) ?? "";
     defaultRuntime.log(`  Before: ${theme.muted(before)}`);
   }
   if (result.after?.version || result.after?.sha) {
@@ -157,15 +152,11 @@ function printResult(result: UpdateRunResult, opts: PrintResultOptions) {
   }
 
   defaultRuntime.log("");
-  defaultRuntime.log(
-    `Total time: ${theme.muted(formatDuration(result.durationMs))}`,
-  );
+  defaultRuntime.log(`Total time: ${theme.muted(formatDuration(result.durationMs))}`);
 }
 
 export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
-  const timeoutMs = opts.timeout
-    ? Number.parseInt(opts.timeout, 10) * 1000
-    : undefined;
+  const timeoutMs = opts.timeout ? Number.parseInt(opts.timeout, 10) * 1000 : undefined;
 
   if (timeoutMs !== undefined && (Number.isNaN(timeoutMs) || timeoutMs <= 0)) {
     defaultRuntime.error("--timeout must be a positive integer (seconds)");
@@ -216,13 +207,11 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
     if (result.reason === "not-git-install") {
       defaultRuntime.log(
         theme.warn(
-          "Skipped: this Clawdbot install isn't a git checkout. Update via your package manager, then run `clawdbot doctor` and `clawdbot daemon restart`.",
+          "Skipped: this Clawdbot install isn't a git checkout, and the package manager couldn't be detected. Update via your package manager, then run `clawdbot doctor` and `clawdbot daemon restart`.",
         ),
       );
       defaultRuntime.log(
-        theme.muted(
-          "Examples: `npm i -g clawdbot@latest`, `pnpm add -g clawdbot@latest`, or `bun add -g clawdbot@latest`",
-        ),
+        theme.muted("Examples: `npm i -g clawdbot@latest` or `pnpm add -g clawdbot@latest`"),
       );
     }
     defaultRuntime.exit(0);
@@ -255,19 +244,23 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
       if (!opts.json) {
         defaultRuntime.log(theme.warn(`Daemon restart failed: ${String(err)}`));
         defaultRuntime.log(
-          theme.muted(
-            "You may need to restart the daemon manually: clawdbot daemon restart",
-          ),
+          theme.muted("You may need to restart the daemon manually: clawdbot daemon restart"),
         );
       }
     }
   } else if (!opts.json) {
     defaultRuntime.log("");
-    defaultRuntime.log(
-      theme.muted(
-        "Tip: Run `clawdbot daemon restart` to apply updates to a running gateway.",
-      ),
-    );
+    if (result.mode === "npm" || result.mode === "pnpm") {
+      defaultRuntime.log(
+        theme.muted(
+          "Tip: Run `clawdbot doctor`, then `clawdbot daemon restart` to apply updates to a running gateway.",
+        ),
+      );
+    } else {
+      defaultRuntime.log(
+        theme.muted("Tip: Run `clawdbot daemon restart` to apply updates to a running gateway."),
+      );
+    }
   }
 }
 
@@ -276,15 +269,8 @@ export function registerUpdateCli(program: Command) {
     .command("update")
     .description("Update Clawdbot to the latest version")
     .option("--json", "Output result as JSON", false)
-    .option(
-      "--restart",
-      "Restart the gateway daemon after a successful update",
-      false,
-    )
-    .option(
-      "--timeout <seconds>",
-      "Timeout for each update step in seconds (default: 1200)",
-    )
+    .option("--restart", "Restart the gateway daemon after a successful update", false)
+    .option("--timeout <seconds>", "Timeout for each update step in seconds (default: 1200)")
     .addHelpText(
       "after",
       () =>
@@ -297,10 +283,10 @@ Examples:
 
 Notes:
   - For git installs: fetches, rebases, installs deps, builds, and runs doctor
-  - For global installs: use npm/pnpm/bun to reinstall (see docs/install/updating.md)
+  - For global installs: auto-updates via detected package manager when possible (see docs/install/updating.md)
   - Skips update if the working directory has uncommitted changes
 
-${theme.muted("Docs:")} ${formatDocsLink("/updating", "docs.clawd.bot/updating")}`,
+${theme.muted("Docs:")} ${formatDocsLink("/cli/update", "docs.clawd.bot/cli/update")}`,
     )
     .action(async (opts) => {
       try {
