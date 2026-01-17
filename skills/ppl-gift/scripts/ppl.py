@@ -304,6 +304,20 @@ class PPLGiftAPI:
             resp = self._request('GET', 'groups')
         return resp.get('data', [])
     
+    # Gifts
+    def search_gifts(self, contact_id: str = None, query: str = None) -> List[Dict]:
+        """Search gifts for contact with proper pagination"""
+        if contact_id:
+            # Get all gifts and filter by contact (better than using contact_id filter)
+            resp = self._request('GET', 'gifts?limit=100')
+            all_gifts = resp.get('data', [])
+            return [gift for gift in all_gifts if gift.get('contact', {}).get('id') == int(contact_id)]
+        elif query:
+            resp = self._request('GET', f'gifts?query={requests.utils.quote(query)}&limit=100')
+        else:
+            resp = self._request('GET', 'gifts?limit=100')
+        return resp.get('data', [])
+    
     # Calls
     def log_call(self, contact_id: str, summary: str, duration_minutes: int = None, 
                 call_type: str = "received") -> Dict:
@@ -764,6 +778,43 @@ class PPLGiftCLI:
         
         entry_id = journal_entry.get('id')
         print(f"✅ Created journal entry with ID: {entry_id}")
+    
+    def search_gifts(self, args):
+        """Search gifts"""
+        contact_id = args.contact_id
+        query = args.query
+        
+        gifts = self.api.search_gifts(contact_id=contact_id, query=query)
+        
+        if not gifts:
+            if contact_id:
+                print(f"No gifts found for contact ID: {contact_id}")
+            elif query:
+                print(f"No gifts found for query: {query}")
+            else:
+                print("No gifts found")
+            return
+        
+        print(f"Found {len(gifts)} gift(s):")
+        print()
+        
+        # Sort by ID (newest first)
+        gifts_sorted = sorted(gifts, key=lambda x: x.get('id', 0), reverse=True)
+        
+        for gift in gifts_sorted:
+            name = gift.get('name', 'Unknown')
+            status = gift.get('status', 'Unknown')
+            gift_id = gift.get('id', 'Unknown ID')
+            contact = gift.get('contact', {})
+            contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+            
+            status_emoji = '💡' if status == 'idea' else '✅'
+            
+            print(f"{status_emoji} {name}")
+            print(f"   ID: {gift_id}")
+            print(f"   Contact: {contact_name}")
+            print(f"   Status: {status.title()}")
+            print()
 
 
 def main():
@@ -871,6 +922,20 @@ Examples:
     search_tags_parser = subparsers.add_parser('search-tags', help='Search tags')
     search_tags_parser.add_argument('query', nargs='?', help='Tag search query')
     
+    # Add gift command
+    add_gift_parser = subparsers.add_parser('add-gift', help='Add gift idea for contact')
+    add_gift_parser.add_argument('contact_id', help='Contact ID')
+    add_gift_parser.add_argument('--title', required=True, help='Gift title/name')
+    add_gift_parser.add_argument('--description', help='Gift description')
+    add_gift_parser.add_argument('--url', help='Gift URL')
+    add_gift_parser.add_argument('--price', help='Gift price')
+    
+    # Search gifts command
+    search_gifts_parser = subparsers.add_parser('search-gifts', help='Search gifts')
+    search_gifts_group = search_gifts_parser.add_mutually_exclusive_group()
+    search_gifts_group.add_argument('--contact-id', help='Contact ID to search gifts for')
+    search_gifts_group.add_argument('--query', help='Gift search query')
+    
     # Create conversation command
     conversation_parser = subparsers.add_parser('create-conversation', help='Create conversation')
     conversation_parser.add_argument('contact_id', help='Contact ID')
@@ -938,6 +1003,10 @@ Examples:
             cli.create_tag(args)
         elif args.command == 'search-tags':
             cli.search_tags(args)
+        elif args.command == 'add-gift':
+            cli.add_gift(args)
+        elif args.command == 'search-gifts':
+            cli.search_gifts(args)
         elif args.command == 'create-conversation':
             cli.create_conversation(args)
         elif args.command == 'search-conversations':
