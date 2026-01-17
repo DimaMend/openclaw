@@ -14,7 +14,6 @@ import type { ClawdbotConfig } from "../../config/config.js";
 import type { SessionEntry, SessionScope } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import {
-  formatUsageSummaryLine,
   formatUsageWindowSummary,
   loadProviderUsageSummary,
   resolveUsageProviderId,
