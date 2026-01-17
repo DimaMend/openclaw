@@ -18,6 +18,9 @@ export async function runGatewayLoop(params: {
     process.removeListener("SIGTERM", onSigterm);
     process.removeListener("SIGINT", onSigint);
     process.removeListener("SIGUSR1", onSigusr1);
+    // Note: For terminal state cleanup on exit (e.g., restoring normal mode),
+    // ensure any terminal resources are properly restored before runtime.exit().
+    // Related to issue #837 regarding Ctrl+C escape sequences.
   };
 
   const request = (action: GatewayRunSignalAction, signal: string) => {
