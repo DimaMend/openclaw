@@ -55,6 +55,10 @@ function normalizeProviderModelId(provider: string, model: string): string {
 export function parseModelRef(raw: string, defaultProvider: string): ModelRef | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
+  // Note: Uses the FIRST "/" to split provider from model. This allows
+  // model IDs to contain "/" (e.g., OpenRouter's "moonshotai/kimi-k2").
+  // Format: "provider/model" where model can be hierarchical.
+  // Related to issue #1019 for OpenRouter model parsing.
   const slash = trimmed.indexOf("/");
   if (slash === -1) {
     const provider = normalizeProviderId(defaultProvider);
