@@ -1,3 +1,10 @@
+---
+summary: "Runtime secret scanning plan (off/redact/block + overflow handling)"
+owner: "clawdbot"
+status: "draft"
+last_updated: "2026-01-18"
+---
+
 # Runtime Secret Scanning Plan (Off / Redact / Block)
 
 ## Goals
