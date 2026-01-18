@@ -35,6 +35,10 @@
     - **Heuristics**: sensitive key names + assignments / headers / JSON fields.
   - Precompile regexes with RE2; keep pattern table as data.
   - Redaction helper for producing safe previews (mask middle).
+  - **Refactor existing log redaction** into this module:
+    - Move shared pattern definitions + masking into `src/security/secret-scan`.
+    - Keep `src/logging/redact.ts` as a thin wrapper so existing config
+      (`logging.redactSensitive`, `logging.redactPatterns`) keeps working.
 - Tests (`*.test.ts`):
   - Format detector coverage.
   - Entropy thresholds (positive/negative cases).
