@@ -4,6 +4,10 @@
     "morning-email-rollup": {
       "version": "2.0.0",
       "installedAt": 1768587669505
+    },
+    "gog": {
+      "version": "1.0.0",
+      "installedAt": 1768686150134
     }
   }
 }
