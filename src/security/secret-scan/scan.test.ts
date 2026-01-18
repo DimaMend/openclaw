@@ -26,6 +26,15 @@ describe("scanText", () => {
     expect(result.redactedText).toBe("TOKEN=abcdef…ghij");
   });
 
+  it("redacts overlapping keyword matches without leaking", () => {
+    const input = 'password = "super secret value"';
+    const result = scanText(input, { config: { mode: "redact" } });
+    expect(result.blocked).toBe(false);
+    expect(result.redactedText).toBeDefined();
+    expect(result.redactedText).not.toContain("secret value");
+    expect(result.redactedText).not.toContain("super secret value");
+  });
+
   it("blocks on overflow when overflow policy is block", () => {
     const input = "a".repeat(20);
     const result = scanText(input, {

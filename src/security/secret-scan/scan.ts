@@ -6,6 +6,7 @@ import {
 } from "./constants.js";
 import { addEntropyDetections, addRegexDetections } from "./detectors/index.js";
 import type { Redaction } from "./detectors/index.js";
+import { maskToken, redactPemBlock } from "./redact.js";
 import type {
   SecretScanMatch,
   SecretScanOptions,
@@ -47,11 +48,36 @@ function applyRedactions(text: string, redactions: Redaction[]): string {
     if (a.start !== b.start) return a.start - b.start;
     return b.end - a.end;
   });
+  const merged: Redaction[] = [];
+  for (const redaction of sorted) {
+    const last = merged[merged.length - 1];
+    if (!last) {
+      merged.push({ ...redaction });
+      continue;
+    }
+    if (redaction.start <= last.end) {
+      if (redaction.end <= last.end) continue;
+      const start = last.start;
+      const end = redaction.end;
+      const slice = text.slice(start, end);
+      const replacement = slice.includes("PRIVATE KEY-----")
+        ? redactPemBlock(slice)
+        : maskToken(slice);
+      merged[merged.length - 1] = {
+        start,
+        end,
+        replacement,
+        detector: last.detector,
+      };
+      continue;
+    }
+    merged.push({ ...redaction });
+  }
+
   let out = "";
   let cursor = 0;
-  for (const redaction of sorted) {
+  for (const redaction of merged) {
     if (redaction.end <= cursor) continue;
-    if (redaction.start < cursor) continue;
     out += text.slice(cursor, redaction.start);
     out += redaction.replacement;
     cursor = redaction.end;
