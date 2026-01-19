@@ -10,5 +10,5 @@ OUTPUT=$("$SCRIPT" 2>&1) || true
 
 # Only notify if files were archived (script outputs nothing if no files)
 if [ -n "$OUTPUT" ]; then
-    "$CLAWDBOT" agent --agent main --message "$OUTPUT" --deliver --reply-channel telegram --reply-to 1191367022
+    "$CLAWDBOT" agent --agent main --message "$OUTPUT" --deliver --reply-channel telegram --reply-account steve --reply-to 1191367022
 fi

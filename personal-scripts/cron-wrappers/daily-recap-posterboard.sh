@@ -10,7 +10,7 @@ OUTPUT=$("$SCRIPT" 2>&1) || true
 
 # Send output via clawdbot agent
 if [ -n "$OUTPUT" ]; then
-    "$CLAWDBOT" agent --agent main --message "$OUTPUT" --deliver --reply-channel telegram --reply-to 1191367022
+    "$CLAWDBOT" agent --agent main --message "$OUTPUT" --deliver --reply-channel telegram --reply-account steve --reply-to 1191367022
 else
-    "$CLAWDBOT" agent --agent main --message "⚠️ daily-recap produced no output" --deliver --reply-channel telegram --reply-to 1191367022
+    "$CLAWDBOT" agent --agent main --message "⚠️ daily-recap produced no output" --deliver --reply-channel telegram --reply-account steve --reply-to 1191367022
 fi

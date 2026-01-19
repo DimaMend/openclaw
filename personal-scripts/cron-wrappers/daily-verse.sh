@@ -12,8 +12,8 @@ if [ -n "$OUTPUT" ]; then
     if [ -f /tmp/votd.jpg ]; then
         "$CLAWDBOT" agent --agent main --message "$OUTPUT
 
-MEDIA:/tmp/votd.jpg" --deliver --reply-channel telegram --reply-to 1191367022
+MEDIA:/tmp/votd.jpg" --deliver --reply-channel telegram --reply-account steve --reply-to 1191367022
     else
-        "$CLAWDBOT" agent --agent main --message "$OUTPUT" --deliver --reply-channel telegram --reply-to 1191367022
+        "$CLAWDBOT" agent --agent main --message "$OUTPUT" --deliver --reply-channel telegram --reply-account steve --reply-to 1191367022
     fi
 fi
