@@ -60,13 +60,35 @@ function ensureExperimentalWarningSuppressed(): boolean {
 function normalizeWindowsArgv(argv: string[]): string[] {
   if (process.platform !== "win32") return argv;
   if (argv.length < 3) return argv;
-  const execPath = process.execPath;
+  const stripControlChars = (value: string): string => {
+    let out = "";
+    for (let i = 0; i < value.length; i += 1) {
+      const code = value.charCodeAt(i);
+      if (code >= 32 && code !== 127) {
+        out += value[i];
+      }
+    }
+    return out;
+  };
+  const normalizeArg = (value: string): string =>
+    stripControlChars(value)
+      .replace(/^['"]+|['"]+$/g, "")
+      .trim();
+  const normalizeCandidate = (value: string): string =>
+    normalizeArg(value).replace(/^\\\\\\?\\/, "");
+  const execPath = normalizeCandidate(process.execPath);
   const execPathLower = execPath.toLowerCase();
   const execBase = path.basename(execPath).toLowerCase();
   const isExecPath = (value: string | undefined): boolean => {
     if (!value) return false;
-    const lower = value.toLowerCase();
-    return lower === execPathLower || path.basename(lower) === execBase;
+    const lower = normalizeCandidate(value).toLowerCase();
+    return (
+      lower === execPathLower ||
+      path.basename(lower) === execBase ||
+      lower.endsWith("\\node.exe") ||
+      lower.endsWith("/node.exe") ||
+      lower.includes("node.exe")
+    );
   };
   const arg1 = path.basename(argv[1] ?? "").toLowerCase();
   const arg2 = path.basename(argv[2] ?? "").toLowerCase();
