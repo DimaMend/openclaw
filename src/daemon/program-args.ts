@@ -8,6 +8,24 @@ type GatewayProgramArgs = {
 
 type GatewayRuntimePreference = "auto" | "node" | "bun";
 
+function isPnpmScriptInvocation(env: NodeJS.ProcessEnv): boolean {
+  const userAgent = env.npm_config_user_agent ?? "";
+  const lifecycleEvent = env.npm_lifecycle_event ?? "";
+  return userAgent.includes("pnpm/") && lifecycleEvent === "clawdbot";
+}
+
+function resolvePnpmScriptRoot(env: NodeJS.ProcessEnv): string | null {
+  const fromPnpm = env.PNPM_SCRIPT_SRC_DIR?.trim();
+  if (fromPnpm) return path.resolve(fromPnpm);
+  const initCwd = env.INIT_CWD?.trim();
+  if (initCwd) return path.resolve(initCwd);
+  try {
+    return process.cwd();
+  } catch {
+    return null;
+  }
+}
+
 function isNodeRuntime(execPath: string): boolean {
   const base = path.basename(execPath).toLowerCase();
   return base === "node" || base === "node.exe";
@@ -134,8 +152,29 @@ async function resolveBinaryPath(binary: string): Promise<string> {
     if (binary === "bun") {
       throw new Error("Bun not found in PATH. Install bun: https://bun.sh");
     }
+    if (binary === "pnpm") {
+      throw new Error("pnpm not found in PATH. Install pnpm or enable corepack.");
+    }
     throw new Error("Node not found in PATH. Install Node 22+.");
   }
+}
+
+async function resolvePnpmProgramArguments(): Promise<GatewayProgramArgs | null> {
+  if (!isPnpmScriptInvocation(process.env)) return null;
+  const repoRoot = resolvePnpmScriptRoot(process.env);
+  if (!repoRoot) return null;
+  const pnpmPath = await resolveBinaryPath("pnpm");
+  const gatewayArgs = ["gateway"];
+  return {
+    programArguments: [
+      pnpmPath,
+      "-C",
+      repoRoot,
+      "clawdbot",
+      ...gatewayArgs,
+    ],
+    workingDirectory: repoRoot,
+  };
 }
 
 export async function resolveGatewayProgramArguments(params: {
@@ -147,6 +186,11 @@ export async function resolveGatewayProgramArguments(params: {
   const gatewayArgs = ["gateway", "--port", String(params.port)];
   const execPath = process.execPath;
   const runtime = params.runtime ?? "auto";
+
+  if (runtime !== "bun") {
+    const pnpmProgramArgs = await resolvePnpmProgramArguments();
+    if (pnpmProgramArgs) return pnpmProgramArgs;
+  }
 
   if (runtime === "node") {
     const nodePath =
