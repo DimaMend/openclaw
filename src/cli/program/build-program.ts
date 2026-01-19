@@ -8,6 +8,7 @@ import { registerAgentCommands } from "./register.agent.js";
 import { registerConfigureCommand } from "./register.configure.js";
 import { registerMaintenanceCommands } from "./register.maintenance.js";
 import { registerMessageCommands } from "./register.message.js";
+import { registerMemoryCli } from "../memory-cli.js";
 import { registerOnboardCommand } from "./register.onboard.js";
 import { registerSetupCommand } from "./register.setup.js";
 import { registerStatusHealthSessionsCommands } from "./register.status-health-sessions.js";
@@ -27,6 +28,7 @@ export function buildProgram() {
   registerConfigCli(program);
   registerMaintenanceCommands(program);
   registerMessageCommands(program, ctx);
+  registerMemoryCli(program);
   registerAgentCommands(program, {
     agentChannelOptions: ctx.agentChannelOptions,
   });
