@@ -62,7 +62,9 @@ function resolvePatterns(value?: string[]): RegExp[] {
 }
 
 export function maskToken(token: string): string {
-  if (token.length < DEFAULT_REDACT_MIN_LENGTH) return "***";
+  if (token.length < DEFAULT_REDACT_MIN_LENGTH) {
+    if (token.length <= DEFAULT_REDACT_KEEP_START + DEFAULT_REDACT_KEEP_END) return "***";
+  }
   const start = token.slice(0, DEFAULT_REDACT_KEEP_START);
   const end = token.slice(-DEFAULT_REDACT_KEEP_END);
   return `${start}…${end}`;

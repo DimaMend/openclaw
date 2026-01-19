@@ -1,4 +1,5 @@
 import type { RegexDetector } from "./types.js";
+import { isLikelySecretValue } from "./validators.js";
 
 const ENV_ASSIGN_PREFIX = String.raw`\b[A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD)\b\s*[=:]\s*`;
 const CLI_FLAG_PREFIX = String.raw`--(?:api[-_]?key|token|secret|password|passwd)\s+`;
@@ -12,6 +13,7 @@ const ENV_ASSIGN_DETECTORS: RegexDetector[] = [
     flags: "gi",
     group: 1,
     redact: "group",
+    validator: isLikelySecretValue,
   },
   {
     id: "env-assignment",
@@ -21,6 +23,7 @@ const ENV_ASSIGN_DETECTORS: RegexDetector[] = [
     flags: "gi",
     group: 1,
     redact: "group",
+    validator: isLikelySecretValue,
   },
   {
     id: "env-assignment",
@@ -30,6 +33,7 @@ const ENV_ASSIGN_DETECTORS: RegexDetector[] = [
     flags: "gi",
     group: 1,
     redact: "group",
+    validator: isLikelySecretValue,
   },
 ];
 
@@ -42,6 +46,7 @@ const CLI_FLAG_DETECTORS: RegexDetector[] = [
     flags: "gi",
     group: 1,
     redact: "group",
+    validator: isLikelySecretValue,
   },
   {
     id: "cli-flag",
@@ -51,6 +56,7 @@ const CLI_FLAG_DETECTORS: RegexDetector[] = [
     flags: "gi",
     group: 1,
     redact: "group",
+    validator: isLikelySecretValue,
   },
   {
     id: "cli-flag",
@@ -60,6 +66,7 @@ const CLI_FLAG_DETECTORS: RegexDetector[] = [
     flags: "gi",
     group: 1,
     redact: "group",
+    validator: isLikelySecretValue,
   },
 ];
 
@@ -73,6 +80,7 @@ export const heuristicDetectors: RegexDetector[] = [
     flags: "gi",
     group: 1,
     redact: "group",
+    validator: isLikelySecretValue,
   },
   ...CLI_FLAG_DETECTORS,
 ];
