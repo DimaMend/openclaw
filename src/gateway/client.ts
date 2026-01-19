@@ -90,7 +90,7 @@ export class GatewayClient {
     };
     if (url.startsWith("wss://") && this.opts.tlsFingerprint) {
       wsOptions.rejectUnauthorized = false;
-      const checkServerIdentity = (_host: string, cert: CertMeta) => {
+      wsOptions.checkServerIdentity = (_host: string, cert: CertMeta) => {
         const fingerprintValue =
           typeof cert === "object" && cert && "fingerprint256" in cert
             ? ((cert as { fingerprint256?: string }).fingerprint256 ?? "")
@@ -100,19 +100,16 @@ export class GatewayClient {
         );
         const expected = normalizeFingerprint(this.opts.tlsFingerprint ?? "");
         if (!expected) {
-          return new Error("gateway tls fingerprint missing");
+          throw new Error("gateway tls fingerprint missing");
         }
         if (!fingerprint) {
-          return new Error("gateway tls fingerprint unavailable");
+          throw new Error("gateway tls fingerprint unavailable");
         }
         if (fingerprint !== expected) {
-          return new Error("gateway tls fingerprint mismatch");
+          throw new Error("gateway tls fingerprint mismatch");
         }
-        return undefined;
+        return true;
       };
-      // @types/ws models this as boolean, but tls.checkServerIdentity returns Error | undefined.
-      wsOptions.checkServerIdentity =
-        checkServerIdentity as unknown as ClientOptions["checkServerIdentity"];
     }
     this.ws = new WebSocket(url, wsOptions);
 
