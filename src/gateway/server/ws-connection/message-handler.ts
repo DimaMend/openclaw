@@ -252,11 +252,7 @@ export function attachGatewayWsMessageHandler(params: {
 
         const device = connectParams.device;
         let devicePublicKey: string | null = null;
-        // Allow local webchat connections without device identity (control-ui served from gateway)
-        const isLocalWebchat =
-          connectParams.client.mode === "webchat" &&
-          (remoteAddr === "127.0.0.1" || remoteAddr === "::1" || remoteAddr === "localhost");
-        if (!device && !isLocalWebchat) {
+        if (!device) {
           setHandshakeState("failed");
           setCloseCause("device-required", {
             client: connectParams.client.id,
@@ -362,7 +358,7 @@ export function attachGatewayWsMessageHandler(params: {
         });
         let authOk = authResult.ok;
         let authMethod = authResult.method ?? "none";
-        if (!authOk && connectParams.auth?.token && device) {
+        if (!authOk && connectParams.auth?.token) {
           const tokenCheck = await verifyDeviceToken({
             deviceId: device.id,
             token: connectParams.auth.token,
