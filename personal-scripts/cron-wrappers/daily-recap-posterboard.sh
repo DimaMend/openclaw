@@ -12,13 +12,9 @@ CLAWDBOT="/Users/steve/Library/pnpm/clawdbot"
 # Run the actual script
 OUTPUT=$("$SCRIPT" 2>&1) || true
 
-# Send via agent using message tool
+# Send directly via message send
 if [ -n "$OUTPUT" ]; then
-    "$CLAWDBOT" agent --agent main --message "Use the message tool to send this to Telegram chat 1191367022 via account steve:
-
-$OUTPUT" 2>&1
+    "$CLAWDBOT" message send --channel telegram --account steve --target 1191367022 --message "$OUTPUT" 2>&1
 else
-    "$CLAWDBOT" agent --agent main --message "Use the message tool to send this to Telegram chat 1191367022 via account steve:
-
-⚠️ daily-recap produced no output" 2>&1
+    "$CLAWDBOT" message send --channel telegram --account steve --target 1191367022 --message "⚠️ daily-recap produced no output" 2>&1
 fi

@@ -23,15 +23,11 @@ while IFS= read -r line; do
     fi
 done <<< "$OUTPUT"
 
-# Send via agent using message tool
+# Send directly via message send
 if [ -n "$TEXT_OUTPUT" ]; then
     if [ -n "$MEDIA_PATH" ] && [ -f "$MEDIA_PATH" ]; then
-        "$CLAWDBOT" agent --agent main --message "Use the message tool to send this to Telegram chat 1191367022 via account steve. Include the image $MEDIA_PATH. Message:
-
-$TEXT_OUTPUT" 2>&1
+        "$CLAWDBOT" message send --channel telegram --account steve --target 1191367022 --message "$TEXT_OUTPUT" --media "$MEDIA_PATH" 2>&1
     else
-        "$CLAWDBOT" agent --agent main --message "Use the message tool to send this to Telegram chat 1191367022 via account steve:
-
-$TEXT_OUTPUT" 2>&1
+        "$CLAWDBOT" message send --channel telegram --account steve --target 1191367022 --message "$TEXT_OUTPUT" 2>&1
     fi
 fi

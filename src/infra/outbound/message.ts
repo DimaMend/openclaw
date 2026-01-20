@@ -104,9 +104,44 @@ function resolveGatewayOptions(opts?: MessageGatewayOptions) {
 
 export async function sendMessage(params: MessageSendParams): Promise<MessageSendResult> {
   const cfg = params.cfg ?? loadConfig();
-  const channel = params.channel?.trim()
-    ? normalizeChannelId(params.channel)
-    : (await resolveMessageChannelSelection({ cfg })).channel;
+  const channelRaw = params.channel?.trim();
+  let channel = channelRaw ? normalizeChannelId(channelRaw) : null;
+
+  // If local channel resolution fails but we have an explicit channel, try gateway
+  if (!channel && channelRaw) {
+    // Fall back to gateway with the raw channel name
+    const gateway = resolveGatewayOptions(params.gateway);
+    const result = await callGateway<{ messageId: string }>({
+      url: gateway.url,
+      token: gateway.token,
+      method: "send",
+      params: {
+        to: params.to,
+        message: params.content,
+        mediaUrl: params.mediaUrl,
+        gifPlayback: params.gifPlayback,
+        accountId: params.accountId,
+        channel: channelRaw,
+        sessionKey: params.mirror?.sessionKey,
+        idempotencyKey: params.idempotencyKey ?? randomIdempotencyKey(),
+      },
+      timeoutMs: gateway.timeoutMs,
+      clientName: gateway.clientName,
+      clientDisplayName: gateway.clientDisplayName,
+      mode: gateway.mode,
+    });
+    return {
+      channel: channelRaw,
+      to: params.to,
+      via: "gateway",
+      mediaUrl: params.mediaUrl ?? null,
+      result,
+    };
+  }
+
+  if (!channel) {
+    channel = (await resolveMessageChannelSelection({ cfg })).channel;
+  }
   if (!channel) {
     throw new Error(`Unknown channel: ${params.channel}`);
   }
