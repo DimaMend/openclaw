@@ -8,14 +8,23 @@ ensure_gateway
 
 CLAWDBOT="/Users/steve/Library/pnpm/clawdbot"
 
-# Run the verse script
-OUTPUT=$(python3 /Users/steve/clawd/skills/bible/votd.py --download /tmp/votd.jpg 2>&1) || true
+# Run the verse script and get JSON
+JSON_OUTPUT=$(python3 /Users/steve/clawd/skills/bible/votd.py --download /tmp/votd.jpg 2>&1) || true
 
-# Send directly via message send
-if [ -n "$OUTPUT" ]; then
-    if [ -f /tmp/votd.jpg ]; then
-        "$CLAWDBOT" message send --channel telegram --account steve --target 1191367022 --message "$OUTPUT" --media /tmp/votd.jpg 2>&1
-    else
-        "$CLAWDBOT" message send --channel telegram --account steve --target 1191367022 --message "$OUTPUT" 2>&1
+# Parse JSON and format message
+if [ -n "$JSON_OUTPUT" ]; then
+    TEXT=$(echo "$JSON_OUTPUT" | jq -r '.text // empty')
+    REFERENCE=$(echo "$JSON_OUTPUT" | jq -r '.reference // empty')
+
+    if [ -n "$TEXT" ] && [ -n "$REFERENCE" ]; then
+        MESSAGE="📖 *${REFERENCE}*
+
+${TEXT}"
+
+        if [ -f /tmp/votd.jpg ]; then
+            "$CLAWDBOT" message send --channel telegram --account steve --target 1191367022 --message "$MESSAGE" --media /tmp/votd.jpg 2>&1
+        else
+            "$CLAWDBOT" message send --channel telegram --account steve --target 1191367022 --message "$MESSAGE" 2>&1
+        fi
     fi
 fi
