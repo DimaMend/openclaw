@@ -9,6 +9,7 @@ Docs: https://docs.clawd.bot
 - Repo: remove the Peekaboo git submodule now that the SPM release is used.
 - Update: sync plugin sources on channel switches and update npm-installed plugins during `clawdbot update`.
 - Plugins: share npm plugin update logic between `clawdbot update` and `clawdbot plugins update`.
+- Channels: add the Nostr plugin channel with profile management + onboarding install defaults. (#1323) — thanks @joelklabo.
 - Plugins: require manifest-embedded config schemas, validate configs without loading plugin code, and surface plugin config warnings. (#1272) — thanks @thewilloftheshadow.
 - Plugins: move channel catalog metadata into plugin manifests; align Nextcloud Talk policy helpers with core patterns. (#1290) — thanks @NicholaiVogel.
 - Discord: fall back to /skill when native command limits are exceeded; expose /skill globally. (#1287) — thanks @thewilloftheshadow.
@@ -18,15 +19,23 @@ Docs: https://docs.clawd.bot
 - Zalouser: add channel dock metadata, config schema, setup wiring, probe, and status issues. (#1219) — thanks @suminhthanh.
 ### Fixes
 - Discovery: shorten Bonjour DNS-SD service type to `_clawdbot-gw._tcp` and update discovery clients/docs.
+- Agents: preserve subagent announce thread/topic routing + queued replies across channels. (#1241) — thanks @gnarco.
+- Agents: avoid treating timeout errors with "aborted" messages as user aborts, so model fallback still runs.
 - Doctor: clarify plugin auto-enable hint text in the startup banner.
+- Gateway: clarify unauthorized handshake responses with token/password mismatch guidance.
+- UI: keep config form enums typed, preserve empty strings, protect sensitive defaults, and deepen config search. (#1315) — thanks @MaudeBot.
 - Web search: infer Perplexity base URL from API key source (direct vs OpenRouter).
 - TUI: keep thinking blocks ordered before content during streaming and isolate per-run assembly. (#1202) — thanks @aaronveklabs.
 - TUI: align custom editor initialization with the latest pi-tui API. (#1298) — thanks @sibbl.
 - CLI: avoid duplicating --profile/--dev flags when formatting commands.
+- Status: route native `/status` to the active agent so model selection reflects the correct profile. (#1301)
 - Exec: prefer bash when fish is default shell, falling back to sh if bash is missing. (#1297) — thanks @ysqander.
 - Exec: merge login-shell PATH for host=gateway exec while keeping daemon PATH minimal. (#1304)
 - Plugins: add Nextcloud Talk manifest for plugin config validation. (#1297) — thanks @ysqander.
 - Anthropic: default API prompt caching to 1h with configurable TTL override; ignore TTL for OAuth.
+- Discord: make resolve warnings avoid raw JSON payloads on rate limits.
+- Discord: process message handlers in parallel across sessions to avoid event queue blocking. (#1295)
+- Cron: auto-deliver isolated agent output to explicit targets without tool calls. (#1285)
 
 ## 2026.1.19-3
 

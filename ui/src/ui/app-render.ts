@@ -222,6 +222,8 @@ export function renderApp(state: AppViewState) {
               configUiHints: state.configUiHints,
               configSaving: state.configSaving,
               configFormDirty: state.configFormDirty,
+              nostrProfileFormState: state.nostrProfileFormState,
+              nostrProfileAccountId: state.nostrProfileAccountId,
               onRefresh: (probe) => loadChannels(state, probe),
               onWhatsAppStart: (force) => state.handleWhatsAppStart(force),
               onWhatsAppWait: () => state.handleWhatsAppWait(),
@@ -229,6 +231,14 @@ export function renderApp(state: AppViewState) {
               onConfigPatch: (path, value) => updateConfigFormValue(state, path, value),
               onConfigSave: () => state.handleChannelConfigSave(),
               onConfigReload: () => state.handleChannelConfigReload(),
+              onNostrProfileEdit: (accountId, profile) =>
+                state.handleNostrProfileEdit(accountId, profile),
+              onNostrProfileCancel: () => state.handleNostrProfileCancel(),
+              onNostrProfileFieldChange: (field, value) =>
+                state.handleNostrProfileFieldChange(field, value),
+              onNostrProfileSave: () => state.handleNostrProfileSave(),
+              onNostrProfileImport: () => state.handleNostrProfileImport(),
+              onNostrProfileToggleAdvanced: () => state.handleNostrProfileToggleAdvanced(),
             })
           : nothing}
 
@@ -472,9 +482,14 @@ export function renderApp(state: AppViewState) {
               uiHints: state.configUiHints,
               formMode: state.configFormMode,
               formValue: state.configForm,
+              originalValue: state.configFormOriginal,
+              searchQuery: state.configSearchQuery,
+              activeSection: state.configActiveSection,
               onRawChange: (next) => (state.configRaw = next),
               onFormModeChange: (mode) => (state.configFormMode = mode),
               onFormPatch: (path, value) => updateConfigFormValue(state, path, value),
+              onSearchChange: (query) => (state.configSearchQuery = query),
+              onSectionChange: (section) => (state.configActiveSection = section),
               onReload: () => loadConfig(state),
               onSave: () => saveConfig(state),
               onApply: () => applyConfig(state),
