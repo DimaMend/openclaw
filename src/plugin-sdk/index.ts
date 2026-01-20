@@ -104,7 +104,10 @@ export {
   resolveMentionGatingWithBypass,
 } from "../channels/mention-gating.js";
 export { resolveChannelMediaMaxBytes } from "../channels/plugins/media-limits.js";
+export type { NormalizedLocation } from "../channels/location.js";
+export { formatLocationText, toLocationContext } from "../channels/location.js";
 export {
+  resolveBlueBubblesGroupRequireMention,
   resolveDiscordGroupRequireMention,
   resolveIMessageGroupRequireMention,
   resolveSlackGroupRequireMention,
@@ -242,3 +245,6 @@ export {
   normalizeWhatsAppMessagingTarget,
 } from "../channels/plugins/normalize/whatsapp.js";
 export { collectWhatsAppStatusIssues } from "../channels/plugins/status-issues/whatsapp.js";
+
+// Channel: BlueBubbles
+export { collectBlueBubblesStatusIssues } from "../channels/plugins/status-issues/bluebubbles.js";

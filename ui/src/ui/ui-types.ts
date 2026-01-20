@@ -4,6 +4,8 @@ export type ChatQueueItem = {
   createdAt: number;
 };
 
+export const CRON_CHANNEL_LAST = "last";
+
 export type CronFormState = {
   name: string;
   description: string;
@@ -20,6 +22,7 @@ export type CronFormState = {
   payloadKind: "systemEvent" | "agentTurn";
   payloadText: string;
   deliver: boolean;
+<<<<<<< HEAD
   channel:
     | "last"
     | "whatsapp"
@@ -28,6 +31,9 @@ export type CronFormState = {
     | "slack"
     | "signal"
     | "imessage";
+=======
+  channel: string;
+>>>>>>> upstream/main
   to: string;
   timeoutSeconds: string;
   postToMainPrefix: string;
