@@ -2,6 +2,11 @@ import crypto from "node:crypto";
 
 import { resolveBlueBubblesAccount } from "./accounts.js";
 import {
+  hasFormattingMarkers,
+  markdownToBlueBubblesText,
+  type BlueBubblesTextFormatting,
+} from "./format.js";
+import {
   extractHandleFromChatGuid,
   normalizeBlueBubblesHandle,
   parseBlueBubblesTarget,
@@ -301,15 +306,31 @@ export async function sendMessageBlueBubbles(
       "BlueBubbles send failed: chatGuid not found for target. Use a chat_guid target or ensure the chat exists.",
     );
   }
+
+  // Check if text contains formatting markers and convert them
+  let messageText = trimmedText;
+  let textFormatting: BlueBubblesTextFormatting[] = [];
+  if (hasFormattingMarkers(trimmedText)) {
+    const formatted = markdownToBlueBubblesText(trimmedText);
+    messageText = formatted.text;
+    textFormatting = formatted.textFormatting;
+  }
+
   const effectId = resolveEffectId(opts.effectId);
-  const needsPrivateApi = Boolean(opts.replyToMessageGuid || effectId);
+  const hasFormatting = textFormatting.length > 0;
+  const needsPrivateApi = Boolean(opts.replyToMessageGuid || effectId || hasFormatting);
   const payload: Record<string, unknown> = {
     chatGuid,
     tempGuid: crypto.randomUUID(),
-    message: trimmedText,
+    message: messageText,
   };
   if (needsPrivateApi) {
     payload.method = "private-api";
+  }
+
+  // Add text formatting support (requires private-api)
+  if (hasFormatting) {
+    payload.textFormatting = textFormatting;
   }
 
   // Add reply threading support

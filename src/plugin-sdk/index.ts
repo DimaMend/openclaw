@@ -287,3 +287,14 @@ export { collectBlueBubblesStatusIssues } from "../channels/plugins/status-issue
 
 // Media utilities
 export { loadWebMedia, type WebMediaResult } from "../web/media.js";
+
+// Markdown utilities
+export {
+  chunkMarkdownIR,
+  markdownToIR,
+  type MarkdownIR,
+  type MarkdownLinkSpan,
+  type MarkdownParseOptions,
+  type MarkdownStyle,
+  type MarkdownStyleSpan,
+} from "../markdown/ir.js";
