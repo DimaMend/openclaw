@@ -65,6 +65,7 @@ export {
   parseProjectIdentifier,
   findSessionFile,
   getSessionDir,
+  getWorkingDirFromResumeToken,
   getGitBranch,
   decodeClaudeProjectPath,
   encodeClaudeProjectPath,
@@ -143,3 +144,11 @@ export {
   getLatestDyDoCommand,
   type OrchestratorContext,
 } from "./orchestrator.js";
+
+// Planning request builder (for DyDo orchestration)
+export {
+  buildPlanningRequest,
+  isClaudeCodeResponse,
+  extractClaudeCodeResponse,
+  type PlanningRequestParams,
+} from "./planning-request.js";

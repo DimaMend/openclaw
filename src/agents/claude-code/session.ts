@@ -127,6 +127,8 @@ export async function startSession(params: ClaudeCodeSessionParams): Promise<Ses
   }
 
   log.info(`Starting Claude Code session for ${projectName} in ${workingDir}`);
+  log.info(`Prompt provided: ${params.prompt ? `"${params.prompt.slice(0, 100)}..."` : "(none)"}`);
+  log.info(`Resume token: ${params.resumeToken || "(new session)"}`);
 
   // Build command arguments
   // IMPORTANT: -p (print mode) is required for --output-format stream-json
@@ -155,9 +157,22 @@ export async function startSession(params: ClaudeCodeSessionParams): Promise<Ses
   }
 
   // Add prompt after -- separator (required for stream-json mode)
-  if (params.prompt) {
-    args.push("--", params.prompt);
+  // CRITICAL: In -p mode, Claude NEEDS a prompt or it exits immediately!
+  const prompt = params.prompt?.trim();
+  if (prompt) {
+    args.push("--", prompt);
+  } else {
+    // No prompt provided - use a fallback to prevent immediate exit
+    const fallbackPrompt = params.resumeToken
+      ? "continue"
+      : "You are now in an interactive session. What would you like me to help with?";
+    log.warn(`No prompt provided, using fallback: "${fallbackPrompt}"`);
+    args.push("--", fallbackPrompt);
   }
+
+  // Log the full command for debugging
+  log.info(`Spawning: claude ${args.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ")}`);
+  log.info(`CWD: ${workingDir}`);
 
   // Spawn Claude Code process
   let child: ChildProcessWithoutNullStreams;
@@ -185,6 +200,20 @@ export async function startSession(params: ClaudeCodeSessionParams): Promise<Ses
       success: false,
       error: "Failed to get process ID",
     };
+  }
+
+  // CRITICAL: Close stdin immediately after spawn (takopi-style)!
+  // In -p mode with CLI arg prompt, Claude should process and exit.
+  // Closing stdin signals there's no interactive input coming.
+  // This is what takopi does - even when passing prompt as CLI arg, stdin is closed.
+  //
+  // Note: This means sendInput() won't work for this session.
+  // For question answering, we'll need to resume the session with the answer.
+  try {
+    child.stdin.end();
+    log.info(`[${sessionId}] Closed stdin (takopi-style)`);
+  } catch (err) {
+    log.warn(`[${sessionId}] Failed to close stdin: ${err}`);
   }
 
   // Create session data
@@ -273,15 +302,23 @@ function setupProcessHandlers(session: ClaudeCodeSessionData): void {
     }
   });
 
-  // Capture stderr
+  // Capture stderr - log at INFO level to catch errors
+  let stderrBuffer = "";
   child.stderr.on("data", (data: Buffer) => {
     const text = data.toString();
-    log.debug(`[${session.id}] stderr: ${text.slice(0, 200)}`);
+    stderrBuffer += text;
+    // Log each chunk to see errors in real-time
+    log.info(`[${session.id}] stderr: ${text.trim()}`);
   });
 
   // Handle process exit
   child.on("close", (code, signal) => {
     log.info(`[${session.id}] Process exited with code=${code}, signal=${signal}`);
+    log.info(`[${session.id}] Total events received: ${session.eventCount}`);
+    log.info(`[${session.id}] Resume token: ${session.resumeToken || "(none)"}`);
+    if (stderrBuffer.trim()) {
+      log.info(`[${session.id}] Full stderr: ${stderrBuffer.trim().slice(0, 500)}`);
+    }
 
     if (signal === "SIGTERM" || signal === "SIGKILL") {
       session.status = "cancelled";
@@ -624,11 +661,24 @@ export function getSessionState(session: ClaudeCodeSessionData): SessionState {
 
 /**
  * Send input to a running session.
+ *
+ * Note: With takopi-style spawning (stdin closed immediately), this won't work.
+ * For question answering in -p mode, the session needs to be resumed with the
+ * answer as a new prompt instead.
  */
 export function sendInput(sessionId: string, text: string): boolean {
   const session = activeSessions.get(sessionId);
   if (!session || !session.child || session.child.killed) {
     log.warn(`Cannot send input to session ${sessionId}: not running`);
+    return false;
+  }
+
+  // Check if stdin is still writable
+  if (!session.child.stdin.writable) {
+    log.warn(
+      `[${sessionId}] Cannot send input: stdin is closed. ` +
+        `With takopi-style spawning, use session resume instead.`,
+    );
     return false;
   }
 

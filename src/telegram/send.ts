@@ -41,6 +41,8 @@ type TelegramSendOpts = {
   messageThreadId?: number;
   /** Inline keyboard buttons (reply markup). */
   buttons?: Array<Array<{ text: string; callback_data: string }>>;
+  /** Disable link preview (web page embed). Defaults to false. */
+  disableLinkPreview?: boolean;
 };
 
 type TelegramSendResult = {
@@ -311,15 +313,20 @@ export async function sendMessageTelegram(
   }
   const textMode = opts.textMode ?? "markdown";
   const htmlText = textMode === "html" ? text : markdownToTelegramHtml(text);
+  const linkPreviewOpts = opts.disableLinkPreview
+    ? { link_preview_options: { is_disabled: true as const } }
+    : {};
   const textParams = hasThreadParams
     ? {
         parse_mode: "HTML" as const,
         ...threadParams,
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+        ...linkPreviewOpts,
       }
     : {
         parse_mode: "HTML" as const,
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+        ...linkPreviewOpts,
       };
   const res = await request(() => api.sendMessage(chatId, htmlText, textParams), "message").catch(
     async (err) => {
@@ -331,10 +338,11 @@ export async function sendMessageTelegram(
           console.warn(`telegram HTML parse failed, retrying as plain text: ${errText}`);
         }
         const plainParams =
-          hasThreadParams || replyMarkup
+          hasThreadParams || replyMarkup || opts.disableLinkPreview
             ? {
                 ...threadParams,
                 ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+                ...linkPreviewOpts,
               }
             : undefined;
         const fallbackText = opts.plainText ?? text;
@@ -447,6 +455,8 @@ type TelegramEditOpts = {
   textMode?: "markdown" | "html";
   /** Inline keyboard buttons (reply markup). */
   buttons?: Array<Array<{ text: string; callback_data: string }>>;
+  /** Disable link preview (web page embed). Defaults to false. */
+  disableLinkPreview?: boolean;
 };
 
 export async function editMessageTelegram(
@@ -476,12 +486,16 @@ export async function editMessageTelegram(
   const replyMarkup = buildInlineKeyboard(opts.buttons);
   const textMode = opts.textMode ?? "markdown";
   const htmlText = textMode === "html" ? text : markdownToTelegramHtml(text);
+  const linkPreviewOpts = opts.disableLinkPreview
+    ? { link_preview_options: { is_disabled: true as const } }
+    : {};
 
   await request(
     () =>
       api.editMessageText(chatId, messageId, htmlText, {
         parse_mode: "HTML",
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+        ...linkPreviewOpts,
       }),
     "editMessage",
   ).catch((err) => {
