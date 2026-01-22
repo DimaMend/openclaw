@@ -229,6 +229,82 @@ describe("exec approvals wildcard agent", () => {
   });
 });
 
+describe("exec approvals node host allowlist check", () => {
+  // These tests verify the allowlist satisfaction logic used by the node host path
+  // The node host checks: matchAllowlist() || isSafeBinUsage() for each command segment
+  // Using hardcoded resolution objects for cross-platform compatibility
+
+  it("satisfies allowlist when command matches exact path pattern", () => {
+    const resolution = {
+      rawExecutable: "python3",
+      resolvedPath: "/usr/bin/python3",
+      executableName: "python3",
+    };
+    const entries: ExecAllowlistEntry[] = [{ pattern: "/usr/bin/python3" }];
+    const match = matchAllowlist(entries, resolution);
+    expect(match).not.toBeNull();
+    expect(match?.pattern).toBe("/usr/bin/python3");
+  });
+
+  it("satisfies allowlist when command matches ** wildcard pattern", () => {
+    // Simulates symlink resolution: /opt/homebrew/bin/python3 -> /opt/homebrew/opt/python@3.14/bin/python3.14
+    const resolution = {
+      rawExecutable: "python3",
+      resolvedPath: "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      executableName: "python3.14",
+    };
+    // Pattern with ** matches across multiple directories
+    const entries: ExecAllowlistEntry[] = [{ pattern: "/opt/**/python*" }];
+    const match = matchAllowlist(entries, resolution);
+    expect(match?.pattern).toBe("/opt/**/python*");
+  });
+
+  it("does not satisfy allowlist when command is not in allowlist", () => {
+    const resolution = {
+      rawExecutable: "unknown-tool",
+      resolvedPath: "/usr/local/bin/unknown-tool",
+      executableName: "unknown-tool",
+    };
+    // Allowlist has different commands
+    const entries: ExecAllowlistEntry[] = [
+      { pattern: "/usr/bin/python3" },
+      { pattern: "/opt/**/node" },
+    ];
+    const match = matchAllowlist(entries, resolution);
+    expect(match).toBeNull();
+
+    // Also not a safe bin
+    const safe = isSafeBinUsage({
+      argv: ["unknown-tool", "--help"],
+      resolution,
+      safeBins: normalizeSafeBins(["jq", "curl"]),
+      cwd: "/tmp",
+    });
+    expect(safe).toBe(false);
+  });
+
+  it("satisfies via safeBins even when not in allowlist", () => {
+    const resolution = {
+      rawExecutable: "jq",
+      resolvedPath: "/usr/bin/jq",
+      executableName: "jq",
+    };
+    // Not in allowlist
+    const entries: ExecAllowlistEntry[] = [{ pattern: "/usr/bin/python3" }];
+    const match = matchAllowlist(entries, resolution);
+    expect(match).toBeNull();
+
+    // But is a safe bin with non-file args
+    const safe = isSafeBinUsage({
+      argv: ["jq", ".foo"],
+      resolution,
+      safeBins: normalizeSafeBins(["jq"]),
+      cwd: "/tmp",
+    });
+    expect(safe).toBe(true);
+  });
+});
+
 describe("exec approvals default agent migration", () => {
   it("migrates legacy default agent entries to main", () => {
     const file = {

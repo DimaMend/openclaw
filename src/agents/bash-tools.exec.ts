@@ -851,7 +851,23 @@ export function createExecTool(
         if (nodeEnv) {
           applyPathPrepend(nodeEnv, defaultPathPrepend, { requireExisting: true });
         }
-        const requiresAsk = hostAsk === "always" || hostAsk === "on-miss";
+        // Check allowlist before deciding whether to ask
+        const analysis = analyzeShellCommand({ command: params.command, cwd: workdir, env });
+        const allowlistSatisfied =
+          hostSecurity === "allowlist" &&
+          analysis.ok &&
+          analysis.segments.length > 0 &&
+          analysis.segments.every(
+            (seg) =>
+              matchAllowlist(approvals.allowlist, seg.resolution) ||
+              isSafeBinUsage({
+                argv: seg.argv,
+                resolution: seg.resolution,
+                safeBins,
+                cwd: workdir,
+              }),
+          );
+        const requiresAsk = hostAsk === "always" || (hostAsk === "on-miss" && !allowlistSatisfied);
         const commandText = params.command;
         const invokeTimeoutMs = Math.max(
           10_000,
@@ -902,8 +918,8 @@ export function createExecTool(
                   security: hostSecurity,
                   ask: hostAsk,
                   agentId,
-                  resolvedPath: null,
-                  sessionKey: defaults?.sessionKey ?? null,
+                  resolvedPath: undefined,
+                  sessionKey: defaults?.sessionKey,
                   timeoutMs: DEFAULT_APPROVAL_TIMEOUT_MS,
                 },
               )) as { decision?: string } | null;
@@ -1066,7 +1082,7 @@ export function createExecTool(
           const approvalSlug = createApprovalSlug(approvalId);
           const expiresAtMs = Date.now() + DEFAULT_APPROVAL_TIMEOUT_MS;
           const contextKey = `exec:${approvalId}`;
-          const resolvedPath = analysis.segments[0]?.resolution?.resolvedPath ?? null;
+          const resolvedPath = analysis.segments[0]?.resolution?.resolvedPath;
           const noticeSeconds = Math.max(1, Math.round(approvalRunningNoticeMs / 1000));
           const commandText = params.command;
           const effectiveTimeout =
@@ -1088,7 +1104,7 @@ export function createExecTool(
                   ask: hostAsk,
                   agentId,
                   resolvedPath,
-                  sessionKey: defaults?.sessionKey ?? null,
+                  sessionKey: defaults?.sessionKey,
                   timeoutMs: DEFAULT_APPROVAL_TIMEOUT_MS,
                 },
               )) as { decision?: string } | null;
