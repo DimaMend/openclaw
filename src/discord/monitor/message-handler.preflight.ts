@@ -343,6 +343,7 @@ export async function preflightDiscordMessage(
     threadOwnerId,
     channelConfig,
     guildInfo,
+    isAutoThreadOwnedByBot,
   });
   const hasAnyMention = Boolean(
     !isDirectMessage &&

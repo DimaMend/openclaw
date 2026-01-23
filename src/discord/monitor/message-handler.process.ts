@@ -104,8 +104,9 @@ export async function processDiscordMessage(ctx: DiscordMessagePreflightContext)
     if (ackReactionScope === "group-all") return isGroupChat;
     if (ackReactionScope === "group-mentions") {
       if (!isGuildMessage) return false;
-      if (isAutoThreadOwnedByBot) return true;
-      if (!shouldRequireMention) return false;
+      // Ack in bot-owned autoThreads (explicit) or open channels (no mention required).
+      // Note: isAutoThreadOwnedByBot implies !shouldRequireMention, but kept separate for clarity.
+      if (isAutoThreadOwnedByBot || !shouldRequireMention) return true;
       if (!canDetectMention) return false;
       return effectiveWasMentioned;
     }

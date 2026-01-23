@@ -286,10 +286,13 @@ export function resolveDiscordShouldRequireMention(params: {
   threadOwnerId?: string | null;
   channelConfig?: DiscordChannelConfigResolved | null;
   guildInfo?: DiscordGuildEntryResolved | null;
+  /** Pass pre-computed value to avoid redundant checks. */
+  isAutoThreadOwnedByBot?: boolean;
 }): boolean {
   if (!params.isGuildMessage) return false;
   // Only skip mention requirement in threads created by the bot (when autoThread is enabled).
-  if (isDiscordAutoThreadOwnedByBot(params)) return false;
+  const isBotThread = params.isAutoThreadOwnedByBot ?? isDiscordAutoThreadOwnedByBot(params);
+  if (isBotThread) return false;
   return params.channelConfig?.requireMention ?? params.guildInfo?.requireMention ?? true;
 }
 
