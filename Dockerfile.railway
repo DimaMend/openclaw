@@ -37,6 +37,18 @@ RUN echo '#!/bin/bash\n\
 set -e\n\
 mkdir -p /root/.clawdbot/agents/main/agent /root/.config/gogcli/keyring\n\
 \n\
+# Clone workspace repo with memory/identity files\n\
+if [ -n "$GITHUB_TOKEN" ]; then\n\
+  echo "Cloning workspace repo..."\n\
+  rm -rf /root/clawd\n\
+  git clone https://${GITHUB_TOKEN}@github.com/IWONTHEMONEY-01/clawd-bot.git /root/clawd\n\
+  cd /root/clawd && git config user.email "bot@clawdbot.local" && git config user.name "Clawdbot"\n\
+  echo "Workspace cloned successfully"\n\
+else\n\
+  echo "Warning: GITHUB_TOKEN not set, workspace will not persist"\n\
+  mkdir -p /root/clawd\n\
+fi\n\
+\n\
 # Generate clawdbot.json from environment\n\
 cat > /root/.clawdbot/clawdbot.json << EOFCONFIG\n\
 {\n\
@@ -52,7 +64,8 @@ cat > /root/.clawdbot/clawdbot.json << EOFCONFIG\n\
     "defaults": {\n\
       "model": {\n\
         "primary": "minimax/MiniMax-M2.1"\n\
-      }\n\
+      },\n\
+      "workspace": "/root/clawd"\n\
     }\n\
   },\n\
   "channels": {\n\
@@ -141,6 +154,24 @@ export GOG_KEYRING_BACKEND=file\n\
 export GOG_ACCOUNT="${GMAIL_ACCOUNT}"\n\
 \n\
 echo "Config generated, starting gateway..."\n\
+\n\
+# Start memory sync in background (every 5 minutes)\n\
+if [ -n "$GITHUB_TOKEN" ]; then\n\
+  (\n\
+    while true; do\n\
+      sleep 300\n\
+      cd /root/clawd 2>/dev/null || continue\n\
+      if [ -n "$(git status --porcelain)" ]; then\n\
+        git add -A\n\
+        git commit -m "Auto-sync memory $(date -u +%Y-%m-%dT%H:%M:%SZ)" || true\n\
+        git push origin main || echo "Memory sync push failed"\n\
+        echo "Memory synced to git"\n\
+      fi\n\
+    done\n\
+  ) &\n\
+  echo "Memory sync daemon started"\n\
+fi\n\
+\n\
 exec node /app/railway-gateway.mjs\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
