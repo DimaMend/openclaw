@@ -5,6 +5,7 @@ Docs: https://docs.clawd.bot
 ## 2026.1.23 (Unreleased)
 
 ### Changes
+- Agents: keep system prompt time zone-only and move current time to `session_status` for better cache hits.
 - Browser: add node-host proxy auto-routing for remote gateways (configurable per gateway/node).
 - Plugins: add optional llm-task JSON-only tool for workflows. (#1498) Thanks @vignesh07.
 - CLI: restart the gateway by default after `clawdbot update`; add `--no-restart` to skip it.
@@ -15,8 +16,10 @@ Docs: https://docs.clawd.bot
 - Docs: clarify HEARTBEAT.md empty file skips heartbeats, missing file still runs. (#1535) Thanks @JustYannicc.
 - Markdown: add per-channel table conversion (bullets for Signal/WhatsApp, code blocks elsewhere). (#1495) Thanks @odysseus0.
 - Tlon: add Urbit channel plugin (DMs, group mentions, thread replies). (#1544) Thanks @wca4a.
+- Channels: allow per-group tool allow/deny policies across built-in + plugin channels. (#1546) Thanks @adam91holt.
 
 ### Fixes
+- Agents: ignore IDENTITY.md template placeholders when parsing identity to avoid placeholder replies. (#1556)
 - Docker: update gateway command in docker-compose and Hetzner guide. (#1514)
 - Sessions: reject array-backed session stores to prevent silent wipes. (#1469)
 - Voice wake: auto-save wake words on blur/submit across iOS/Android and align limits with macOS.
@@ -41,6 +44,7 @@ Docs: https://docs.clawd.bot
 - CLI: inline auth probe errors in status rows to reduce wrapping.
 - Telegram: render markdown in media captions. (#1478)
 - Agents: honor enqueue overrides for embedded runs to avoid queue deadlocks in tests.
+- Agents: trigger model fallback when auth profiles are all in cooldown or unavailable. (#1522)
 - Daemon: use platform PATH delimiters when building minimal service paths.
 - Tests: skip embedded runner ordering assertion on Windows to avoid CI timeouts.
 - Linux: include env-configured user bin roots in systemd PATH and align PATH audits. (#1512) Thanks @robbyczgw-cla.
