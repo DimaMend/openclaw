@@ -5,7 +5,7 @@ import { googlechatPlugin } from "./src/channel.js";
 import { setGoogleChatRuntime } from "./src/runtime.js";
 
 const plugin = {
-  id: "google-chat",
+  id: "googlechat",
   name: "Google Chat",
   description: "Google Chat channel via Pub/Sub webhooks",
   configSchema: emptyPluginConfigSchema(),
