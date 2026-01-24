@@ -7,8 +7,15 @@ export type ResolvedGoogleChatAccount = {
   name?: string;
   enabled: boolean;
   projectId?: string;
+  // Pub/Sub mode
   subscriptionName?: string;
   credentialsPath?: string;
+  // Webhook mode
+  webhookMode?: boolean;
+  webhookPort?: number;
+  webhookHost?: string;
+  webhookPath?: string;
+  webhookPublicUrl?: string;
   config: GoogleChatAccountConfig;
 };
 
@@ -52,6 +59,11 @@ export function resolveGoogleChatAccount(options: {
     projectId: googlechat.projectId,
     subscriptionName: googlechat.subscriptionName,
     credentialsPath: googlechat.credentialsPath,
+    webhookMode: googlechat.webhookMode,
+    webhookPort: googlechat.webhookPort,
+    webhookHost: googlechat.webhookHost,
+    webhookPath: googlechat.webhookPath,
+    webhookPublicUrl: googlechat.webhookPublicUrl,
     dmPolicy: googlechat.dmPolicy,
     allowFrom: googlechat.allowFrom,
     spacePolicy: googlechat.spacePolicy,
@@ -69,6 +81,11 @@ export function resolveGoogleChatAccount(options: {
     projectId: config.projectId,
     subscriptionName: config.subscriptionName,
     credentialsPath: config.credentialsPath,
+    webhookMode: config.webhookMode,
+    webhookPort: config.webhookPort,
+    webhookHost: config.webhookHost,
+    webhookPath: config.webhookPath,
+    webhookPublicUrl: config.webhookPublicUrl,
     config,
   };
 }

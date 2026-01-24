@@ -7,10 +7,25 @@ export type GoogleChatAccountConfig = {
   enabled?: boolean;
   /** Google Cloud Project ID. */
   projectId?: string;
+
+  // Pub/Sub mode (for existing bots)
   /** Pub/Sub subscription name (full path: projects/.../subscriptions/...). */
   subscriptionName?: string;
   /** Path to service account credentials JSON file. */
   credentialsPath?: string;
+
+  // Webhook mode (for new bots)
+  /** Webhook connection mode. If true, use HTTP webhooks instead of Pub/Sub. */
+  webhookMode?: boolean;
+  /** Webhook server port. Default: 8790. */
+  webhookPort?: number;
+  /** Webhook server host. Default: 0.0.0.0. */
+  webhookHost?: string;
+  /** Webhook path. Default: /google-chat-webhook. */
+  webhookPath?: string;
+  /** Public webhook URL (for documentation). */
+  webhookPublicUrl?: string;
+
   /** Direct message access policy (default: pairing). */
   dmPolicy?: DmPolicy;
   /** Allowlist for DM senders (email addresses). */

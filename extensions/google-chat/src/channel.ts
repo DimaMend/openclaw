@@ -4,7 +4,9 @@ import type {
 } from "clawdbot/plugin-sdk";
 import {
   DEFAULT_ACCOUNT_ID,
+  buildChannelConfigSchema,
 } from "clawdbot/plugin-sdk";
+import { z } from "zod";
 
 import type { ResolvedGoogleChatAccount } from "./accounts.js";
 import {
@@ -18,6 +20,44 @@ import {
   sendGoogleChatMedia,
   sendGoogleChatText,
 } from "./send.js";
+
+// Config schema for Google Chat
+const GoogleChatAccountConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  projectId: z.string().optional(),
+  // Pub/Sub mode
+  subscriptionName: z.string().optional(),
+  credentialsPath: z.string().optional(),
+  // Webhook mode
+  webhookMode: z.boolean().optional(),
+  webhookPort: z.number().optional(),
+  webhookHost: z.string().optional(),
+  webhookPath: z.string().optional(),
+  webhookPublicUrl: z.string().optional(),
+  // Policies
+  allowFrom: z.array(z.string()).optional(),
+  dmPolicy: z.enum(["open", "allowlist", "paired"]).optional(),
+  spacePolicy: z.enum(["open", "allowlist"]).optional(),
+});
+
+const GoogleChatConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  projectId: z.string().optional(),
+  // Pub/Sub mode
+  subscriptionName: z.string().optional(),
+  credentialsPath: z.string().optional(),
+  // Webhook mode
+  webhookMode: z.boolean().optional(),
+  webhookPort: z.number().optional(),
+  webhookHost: z.string().optional(),
+  webhookPath: z.string().optional(),
+  webhookPublicUrl: z.string().optional(),
+  // Policies
+  allowFrom: z.array(z.string()).optional(),
+  dmPolicy: z.enum(["open", "allowlist", "paired"]).optional(),
+  spacePolicy: z.enum(["open", "allowlist"]).optional(),
+  accounts: z.record(z.string(), GoogleChatAccountConfigSchema).optional(),
+});
 
 const meta = {
   id: "googlechat",
@@ -40,6 +80,7 @@ export const googlechatPlugin: ChannelPlugin<ResolvedGoogleChatAccount> = {
     media: false, // Google Chat doesn't support direct media upload via API
   },
   reload: { configPrefixes: ["channels.googlechat"] },
+  configSchema: buildChannelConfigSchema(GoogleChatConfigSchema),
   config: {
     listAccountIds: (cfg: ClawdbotConfig) => listGoogleChatAccountIds(cfg),
     resolveAccount: (cfg: ClawdbotConfig, accountId?: string) =>
@@ -110,16 +151,26 @@ export const googlechatPlugin: ChannelPlugin<ResolvedGoogleChatAccount> = {
         },
       };
     },
-    isConfigured: (account: ResolvedGoogleChatAccount) =>
-      Boolean(account.projectId?.trim() && account.subscriptionName?.trim()),
-    describeAccount: (account: ResolvedGoogleChatAccount) => ({
-      accountId: account.accountId,
-      name: account.name,
-      enabled: account.enabled,
-      configured: Boolean(
-        account.projectId?.trim() && account.subscriptionName?.trim(),
-      ),
-    }),
+    isConfigured: (account: ResolvedGoogleChatAccount) => {
+      if (!account.projectId?.trim()) return false;
+      // Webhook mode: requires webhookMode=true
+      if (account.webhookMode) return true;
+      // Pub/Sub mode: requires subscriptionName
+      return Boolean(account.subscriptionName?.trim());
+    },
+    describeAccount: (account: ResolvedGoogleChatAccount) => {
+      // Check if configured based on mode
+      const isConfigured = account.projectId?.trim()
+        ? account.webhookMode || Boolean(account.subscriptionName?.trim())
+        : false;
+
+      return {
+        accountId: account.accountId,
+        name: account.name,
+        enabled: account.enabled,
+        configured: isConfigured,
+      };
+    },
     resolveAllowFrom: ({ cfg, accountId }) =>
       resolveGoogleChatAccount({ cfg, accountId }).config.allowFrom ?? [],
     formatAllowFrom: ({ allowFrom }) =>
@@ -172,9 +223,10 @@ export const googlechatPlugin: ChannelPlugin<ResolvedGoogleChatAccount> = {
     probeAccount: async ({ account, timeoutMs }) =>
       probeGoogleChat(account, timeoutMs),
     buildAccountSnapshot: ({ account, runtime, probe }) => {
-      const configured = Boolean(
-        account.projectId?.trim() && account.subscriptionName?.trim(),
-      );
+      // Check if configured based on mode
+      const configured = account.projectId?.trim()
+        ? account.webhookMode || Boolean(account.subscriptionName?.trim())
+        : false;
       return {
         accountId: account.accountId,
         name: account.name,

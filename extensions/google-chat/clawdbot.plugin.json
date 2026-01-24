@@ -2,6 +2,7 @@
   "id": "google-chat",
   "name": "Google Chat",
   "description": "Google Chat channel via Pub/Sub webhooks",
+  "channels": ["googlechat"],
   "configSchema": {
     "schema": {
       "type": "object",
@@ -17,6 +18,25 @@
           "type": "string"
         },
         "credentialsPath": {
+          "type": "string"
+        },
+        "webhookMode": {
+          "type": "boolean",
+          "default": false
+        },
+        "webhookPort": {
+          "type": "number",
+          "default": 8790
+        },
+        "webhookHost": {
+          "type": "string",
+          "default": "0.0.0.0"
+        },
+        "webhookPath": {
+          "type": "string",
+          "default": "/google-chat-webhook"
+        },
+        "webhookPublicUrl": {
           "type": "string"
         },
         "allowFrom": {
@@ -71,6 +91,29 @@
       "spacePolicy": {
         "label": "Space/Group Policy",
         "help": "How to handle spaces: open (any space), pairing (allowlist), closed (disabled)"
+      },
+      "webhookMode": {
+        "label": "Use Webhook Mode",
+        "help": "Enable HTTP webhook mode instead of Pub/Sub (required for new Google Chat bots)"
+      },
+      "webhookPort": {
+        "label": "Webhook Port",
+        "help": "Port for webhook server (default: 8790)",
+        "advanced": true
+      },
+      "webhookHost": {
+        "label": "Webhook Host",
+        "help": "Host binding for webhook server (default: 0.0.0.0)",
+        "advanced": true
+      },
+      "webhookPath": {
+        "label": "Webhook Path",
+        "help": "URL path for webhook endpoint (default: /google-chat-webhook)",
+        "advanced": true
+      },
+      "webhookPublicUrl": {
+        "label": "Public Webhook URL",
+        "help": "Full public URL for this webhook (e.g., https://your-domain.com/google-chat-webhook)"
       }
     }
   }

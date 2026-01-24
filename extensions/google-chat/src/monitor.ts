@@ -3,6 +3,7 @@ import type { ClawdbotConfig } from "clawdbot/plugin-sdk";
 import type { ResolvedGoogleChatAccount } from "./accounts.js";
 import type { GoogleChatEvent } from "./types.js";
 import { getGoogleChatRuntime } from "./runtime.js";
+import { monitorGoogleChatWebhook } from "./webhook.js";
 
 export type MonitorOptions = {
   account: ResolvedGoogleChatAccount;
@@ -12,6 +13,55 @@ export type MonitorOptions = {
 };
 
 export async function monitorGoogleChatProvider(
+  options: MonitorOptions,
+): Promise<void> {
+  const { account, runtime, config, abortSignal } = options;
+
+  // Check if webhook mode is enabled
+  const webhookMode = account.webhookMode || false;
+
+  if (webhookMode) {
+    // Use webhook mode
+    return monitorGoogleChatWebhookMode(options);
+  } else {
+    // Use Pub/Sub mode (original implementation)
+    return monitorGoogleChatPubSubMode(options);
+  }
+}
+
+async function monitorGoogleChatWebhookMode(
+  options: MonitorOptions,
+): Promise<void> {
+  const { account, runtime, config, abortSignal } = options;
+
+  const handleEvent = async (event: GoogleChatEvent) => {
+    // Process Google Chat events
+    // TODO: Route to agent via runtime
+    runtime.log?.(`[${account.accountId}] Received webhook event: ${event.type}`);
+  };
+
+  const { stop } = await monitorGoogleChatWebhook({
+    accountId: account.accountId,
+    config,
+    webhookPort: account.webhookPort,
+    webhookHost: account.webhookHost,
+    webhookPath: account.webhookPath,
+    webhookPublicUrl: account.webhookPublicUrl,
+    onMessage: handleEvent,
+    runtime,
+    abortSignal,
+  });
+
+  // Keep alive until aborted
+  await new Promise<void>((resolve) => {
+    abortSignal.addEventListener("abort", () => {
+      stop();
+      resolve();
+    });
+  });
+}
+
+async function monitorGoogleChatPubSubMode(
   options: MonitorOptions,
 ): Promise<void> {
   const { account, runtime, abortSignal } = options;
@@ -34,11 +84,11 @@ export async function monitorGoogleChatProvider(
       // Process Google Chat events
       // TODO: Route to agent via runtime
 
-      runtime.log?.info(`[${account.accountId}] Received event: ${event.type}`);
+      runtime.log?.(`[${account.accountId}] Received event: ${event.type}`);
 
       message.ack();
     } catch (error) {
-      runtime.log?.error(`[${account.accountId}] Error processing message:`, error);
+      runtime.log?.(`[${account.accountId}] Error processing message: ${String(error)}`);
       message.nack();
     }
   };
@@ -51,7 +101,7 @@ export async function monitorGoogleChatProvider(
     subscription.close();
   });
 
-  runtime.log?.info(`[${account.accountId}] Google Chat monitor started`);
+  runtime.log?.(`[${account.accountId}] Google Chat monitor started`);
 
   // Keep alive until aborted
   await new Promise<void>((resolve) => {
