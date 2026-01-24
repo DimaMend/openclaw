@@ -308,12 +308,13 @@ async function loginAntigravity(params: {
       [
         "Open the URL in your local browser.",
         "After signing in, copy the full redirect URL and paste it back here.",
-        "",
-        `Auth URL: ${authUrl}`,
-        `Redirect URI: ${REDIRECT_URI}`,
       ].join("\n"),
       "Google Antigravity OAuth",
     );
+    // eslint-disable-next-line no-console
+    console.log(`\nAuth URL: ${authUrl}\n`);
+    // eslint-disable-next-line no-console
+    console.log(`Redirect URI: ${REDIRECT_URI}\n`);
   }
 
   if (!needsManual) {
