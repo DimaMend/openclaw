@@ -140,7 +140,24 @@ function formatHybridBubbleMessage(state: SessionState, sessionId: string): stri
         .find((a) => a.icon === "💬");
       if (lastMessage) {
         // Use fullText if available (contains complete message), otherwise fall back to description
-        const fullMsg = lastMessage.fullText || lastMessage.description;
+        let fullMsg = lastMessage.fullText || lastMessage.description;
+
+        // Clean up: remove code blocks that contain ctx:/resume lines to avoid duplication with footer
+        // This prevents Claude Code's usage examples from polluting the summary
+        fullMsg = fullMsg.replace(/```[\s\S]*?(ctx:|claude --resume)[\s\S]*?```/g, "").trim();
+
+        // Also remove standalone ctx:/resume lines that might appear outside code blocks
+        fullMsg = fullMsg
+          .split("\n")
+          .filter(
+            (line) =>
+              !line.trim().startsWith("ctx:") &&
+              !line.includes("claude --resume") &&
+              !line.includes("`claude --resume"),
+          )
+          .join("\n")
+          .trim();
+
         // Allow up to 2500 chars for the summary in done state
         // (Telegram limit is 4096, header+footer ~200 chars)
         const maxSummaryLength = 2500;
@@ -148,7 +165,12 @@ function formatHybridBubbleMessage(state: SessionState, sessionId: string): stri
           fullMsg.length > maxSummaryLength
             ? fullMsg.slice(0, maxSummaryLength - 3) + "..."
             : fullMsg;
-        bodyLines.push(`💬 ${msg}`);
+
+        if (msg) {
+          bodyLines.push(`💬 ${msg}`);
+        } else {
+          bodyLines.push("_(session complete)_");
+        }
       } else {
         bodyLines.push("_(session complete)_");
       }

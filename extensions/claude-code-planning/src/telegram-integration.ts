@@ -160,6 +160,7 @@ export async function recordAnswer(sessionId: string): Promise<void> {
 
 /**
  * Send a blocker notification to Telegram.
+ * Supports both pattern-based BlockerInfo and AI-driven blocker reasons.
  */
 export async function sendBlockerNotification(params: {
   chatId: string;
@@ -167,16 +168,24 @@ export async function sendBlockerNotification(params: {
   accountId?: string;
   projectName: string;
   resumeToken: string;
-  blocker: BlockerInfo;
+  blocker?: BlockerInfo;
+  /** AI-driven blocker reason (alternative to blocker) */
+  reason?: string;
+  /** The question that caused the blocker */
+  question?: string;
 }): Promise<boolean> {
   try {
     const { sendMessageTelegram } = await import("../../../src/telegram/send.js");
 
+    // Support both pattern-based BlockerInfo and AI-driven reason
+    const reasonText = params.reason || params.blocker?.reason || "Unknown blocker";
+    const questionText = params.question ? `\n**問題：** ${params.question}\n` : "";
+
     const msg =
-      `⚠️ **Claude Code Session Blocked**\n\n` +
-      `**Project:** ${params.projectName}\n` +
-      `**Reason:** ${params.blocker.reason}\n\n` +
-      `Session has completed but may need attention.\n\n` +
+      `⚠️ **Claude Code 需要你的輸入**\n\n` +
+      `**專案：** ${params.projectName}\n` +
+      questionText +
+      `**原因：** ${reasonText}\n\n` +
       `\`claude --resume ${params.resumeToken}\``;
 
     await sendMessageTelegram(params.chatId, msg, {
@@ -189,6 +198,45 @@ export async function sendBlockerNotification(params: {
     return true;
   } catch (err) {
     log.error(`Failed to send blocker notification: ${err}`);
+    return false;
+  }
+}
+
+/**
+ * Send a retry blocker notification to Telegram.
+ * Used when AI has tried multiple times and failed.
+ */
+export async function sendRetryBlockerNotification(params: {
+  chatId: string;
+  threadId?: number;
+  accountId?: string;
+  projectName: string;
+  resumeToken: string;
+  question: string;
+  attemptCount: number;
+  previousAnswers: string;
+}): Promise<boolean> {
+  try {
+    const { sendMessageTelegram } = await import("../../../src/telegram/send.js");
+
+    const msg =
+      `⚠️ **Claude Code 重複卡住**\n\n` +
+      `**專案：** ${params.projectName}\n` +
+      `**問題：** ${params.question}\n\n` +
+      `**狀態：** 已嘗試 ${params.attemptCount} 次，仍無法解決\n\n` +
+      `**之前的回答：**\n${params.previousAnswers}\n\n` +
+      `\`claude --resume ${params.resumeToken}\``;
+
+    await sendMessageTelegram(params.chatId, msg, {
+      accountId: params.accountId,
+      messageThreadId: params.threadId,
+      disableLinkPreview: true,
+    });
+
+    log.info(`Retry blocker notification sent to chat ${params.chatId}`);
+    return true;
+  } catch (err) {
+    log.error(`Failed to send retry blocker notification: ${err}`);
     return false;
   }
 }
@@ -245,11 +293,18 @@ export async function getBubbleByToken(
  *
  * const tool = createClaudeCodeStartTool({
  *   onStateChange: callbacks.onStateChange,
- *   onBlocker: callbacks.onBlocker,
+ *   onQuestion: callbacks.onQuestion, // AI-driven question handler
  * });
  * ```
  */
-export function createTelegramCallbacks(config: TelegramContext) {
+export function createTelegramCallbacks(config: TelegramContext & {
+  /** Function to get orchestrator context for AI-driven question handling */
+  getOrchestratorContext?: (sessionId: string) => import("../../../../src/agents/claude-code/orchestrator.js").OrchestratorContext;
+  /** Project name for notifications */
+  projectName?: string;
+  /** Resume token getter */
+  getResumeToken?: (sessionId: string) => string;
+}) {
   return {
     /**
      * Called when session state changes - updates the bubble.
@@ -259,7 +314,82 @@ export function createTelegramCallbacks(config: TelegramContext) {
     },
 
     /**
-     * Called when a blocker is detected - sends notification.
+     * AI-driven question handler with blocker notification.
+     * Uses assessQuestion() + retry mechanism from core orchestrator.
+     */
+    onQuestion: config.getOrchestratorContext
+      ? async (sessionId: string, question: string): Promise<string | null> => {
+          const {
+            assessQuestion,
+            generateOrchestratorResponse,
+            getAttemptHistory,
+            recordAttempt,
+            isSimilarQuestion,
+          } = await import("../../../../src/agents/claude-code/orchestrator.js");
+
+          const context = config.getOrchestratorContext!(sessionId);
+          const resumeToken = config.getResumeToken?.(sessionId) || sessionId;
+          const projectName = config.projectName || context.projectName;
+
+          // Step 1: AI assessment
+          const assessment = await assessQuestion(context, question);
+
+          // Step 1a: Impossible = true blocker
+          if (assessment.confidence === "impossible") {
+            log.warn(`[${sessionId}] AI cannot handle: ${question.slice(0, 100)}...`);
+            await sendBlockerNotification({
+              chatId: config.chatId,
+              threadId: config.threadId,
+              accountId: config.accountId,
+              projectName,
+              resumeToken,
+              question,
+              reason: assessment.reasoning || "需要你的決定",
+            });
+            return null;
+          }
+
+          // Step 2: Check retry history
+          const history = getAttemptHistory(sessionId);
+          const similarAttempts = history.filter((a) => isSimilarQuestion(a.question, question));
+
+          if (similarAttempts.length >= 3) {
+            log.warn(`[${sessionId}] AI failed 3 times on similar questions`);
+            const previousAnswers = similarAttempts
+              .map((a, i) => `${i + 1}. ${a.myAnswer.slice(0, 80)}...`)
+              .join("\n");
+            await sendRetryBlockerNotification({
+              chatId: config.chatId,
+              threadId: config.threadId,
+              accountId: config.accountId,
+              projectName,
+              resumeToken,
+              question,
+              attemptCount: similarAttempts.length,
+              previousAnswers,
+            });
+            return null;
+          }
+
+          // Step 3: Generate answer
+          const answer = await generateOrchestratorResponse(context, question);
+          log.info(`[${sessionId}] AI answer (${assessment.confidence}): ${answer.slice(0, 100)}...`);
+
+          // Step 4: Record attempt
+          recordAttempt(sessionId, {
+            question,
+            myAnswer: answer,
+            confidence: assessment.confidence,
+            timestamp: Date.now(),
+          });
+
+          return answer;
+        }
+      : undefined,
+
+    /**
+     * Called when a pattern-based blocker is detected - sends notification.
+     * (Legacy - prefer AI-driven detection via onQuestion)
      */
     onBlocker: async (
       sessionId: string,

@@ -23,6 +23,21 @@ import {
 import { loadProjectContext } from "../context/explorer.js";
 import type { ProjectContext, SessionState, BlockerInfo } from "../types.js";
 
+// Re-export core AI-driven blocker detection utilities
+// These are used for AI-driven question handling instead of pattern-based detection
+export {
+  assessQuestion,
+  generateOrchestratorResponse,
+  getAttemptHistory,
+  recordAttempt,
+  clearAttemptHistory,
+  isSimilarQuestion,
+} from "../../../../src/agents/claude-code/orchestrator.js";
+export type {
+  OrchestratorContext,
+  OrchestratorAttempt,
+} from "../../../../src/agents/claude-code/orchestrator.js";
+
 /** Logger interface */
 interface Logger {
   info(msg: string): void;
@@ -189,6 +204,82 @@ export interface ClaudeCodeStartToolOptions {
 
   /** Default model */
   defaultModel?: "opus" | "sonnet" | "haiku";
+}
+
+/**
+ * Create an AI-driven question handler.
+ *
+ * This implements the same pattern as core:
+ * 1. AI assessment - Can the orchestrator handle this question?
+ * 2. Retry detection - Has this question been asked multiple times?
+ * 3. AI response - Generate a contextual answer
+ *
+ * @param getContext - Function to get orchestrator context for a session
+ * @param onBlocker - Called when a true blocker is detected (user intervention needed)
+ */
+export function createAIDrivenQuestionHandler(params: {
+  getContext: (sessionId: string) => import("../../../../src/agents/claude-code/orchestrator.js").OrchestratorContext;
+  onBlocker?: (sessionId: string, question: string, reason: string) => Promise<void>;
+}): (sessionId: string, question: string) => Promise<string | null> {
+  const { getContext, onBlocker } = params;
+
+  return async (sessionId: string, question: string): Promise<string | null> => {
+    // Dynamic import to avoid issues if core is not available
+    const {
+      assessQuestion,
+      generateOrchestratorResponse,
+      getAttemptHistory,
+      recordAttempt,
+      isSimilarQuestion,
+    } = await import("../../../../src/agents/claude-code/orchestrator.js");
+
+    const context = getContext(sessionId);
+
+    // Step 1: AI assessment
+    const assessment = await assessQuestion(context, question);
+
+    // Step 1a: Impossible = true blocker
+    if (assessment.confidence === "impossible") {
+      log.warn(`[${sessionId}] AI cannot handle: ${question.slice(0, 100)}...`);
+      if (onBlocker) {
+        await onBlocker(sessionId, question, assessment.reasoning || "Requires user input");
+      }
+      return null;
+    }
+
+    // Step 2: Check retry history
+    const history = getAttemptHistory(sessionId);
+    const similarAttempts = history.filter((a) => isSimilarQuestion(a.question, question));
+
+    if (similarAttempts.length >= 3) {
+      log.warn(`[${sessionId}] AI failed 3 times on similar questions`);
+      if (onBlocker) {
+        const previousAnswers = similarAttempts
+          .map((a, i) => `${i + 1}. ${a.myAnswer.slice(0, 80)}...`)
+          .join("\n");
+        await onBlocker(
+          sessionId,
+          question,
+          `Tried ${similarAttempts.length} times. Previous answers:\n${previousAnswers}`,
+        );
+      }
+      return null;
+    }
+
+    // Step 3: Generate answer
+    const answer = await generateOrchestratorResponse(context, question);
+    log.info(`[${sessionId}] AI answer (${assessment.confidence}): ${answer.slice(0, 100)}...`);
+
+    // Step 4: Record attempt
+    recordAttempt(sessionId, {
+      question,
+      myAnswer: answer,
+      confidence: assessment.confidence,
+      timestamp: Date.now(),
+    });
+
+    return answer;
+  };
 }
 
 /**

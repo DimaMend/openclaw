@@ -261,7 +261,9 @@ export class SessionParser {
           } else if (Array.isArray(resultContent)) {
             text = resultContent
               .map((c) =>
-                c && typeof c === "object" ? (c as Record<string, unknown>).text || "" : "",
+                c && typeof c === "object"
+                  ? String((c as Record<string, unknown>).text || "")
+                  : String(c || ""),
               )
               .join("\n")
               .slice(0, 500);

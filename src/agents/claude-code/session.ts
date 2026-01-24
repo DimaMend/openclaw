@@ -710,6 +710,16 @@ export function getSessionState(session: ClaudeCodeSessionData): SessionState {
   const minutes = Math.floor((runtimeSeconds % 3600) / 60);
   const runtimeStr = `${hours}h ${minutes}m`;
 
+  // Re-read git branch to ensure bubble shows current branch
+  // (Claude Code may have switched branches during execution)
+  let currentBranch = session.branch;
+  try {
+    currentBranch = getGitBranch(session.workingDir);
+  } catch (err) {
+    // Fall back to stored branch if git read fails
+    log.debug(`[${session.id}] Could not read current git branch, using stored: ${session.branch}`);
+  }
+
   return {
     status: session.status,
     projectName: session.projectName,
@@ -717,7 +727,7 @@ export function getSessionState(session: ClaudeCodeSessionData): SessionState {
     runtimeStr,
     runtimeSeconds,
     phaseStatus: session.phaseStatus,
-    branch: session.branch,
+    branch: currentBranch,
     recentActions: [...session.recentActions],
     hasQuestion: session.status === "waiting_for_input",
     questionText: session.currentQuestion ?? "",
