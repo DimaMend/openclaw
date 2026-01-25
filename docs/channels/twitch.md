@@ -32,11 +32,12 @@ Details: [Plugins](/plugin)
    - Select **Bot Token**
    - Verify scopes `chat:read` and `chat:write` are selected
    - Copy the **Client ID** and **Access Token**
-3) Configure the token:
+3) Find your Twitch user ID: https://www.streamweasels.com/tools/convert-twitch-username-to-user-id/
+4) Configure the token:
    - Env: `CLAWDBOT_TWITCH_ACCESS_TOKEN=...` (default account only)
    - Or config: `channels.twitch.accessToken`
    - If both are set, config takes precedence (env fallback is default-account only).
-4) Start the gateway.
+5) Start the gateway.
 
 **⚠️ Important:** Add access control (`allowFrom` or `allowedRoles`) to prevent unauthorized users from triggering the bot. `requireMention` defaults to `true`.
 
@@ -51,7 +52,7 @@ Minimal config:
       accessToken: "oauth:abc123...",    // OAuth Access Token (or use CLAWDBOT_TWITCH_ACCESS_TOKEN env var)
       clientId: "xyz789...",             // Client ID from Token Generator
       channel: "vevisk",                 // Which Twitch channel's chat to join (required)
-      allowFrom: ["123456789"]           // (recommended) Your Twitch user ID only
+      allowFrom: ["123456789"]           // (recommended) Your Twitch user ID only - get it from https://www.streamweasels.com/tools/convert-twitch-username-to-user-id/
     }
   }
 }
