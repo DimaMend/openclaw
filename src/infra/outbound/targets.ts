@@ -122,6 +122,8 @@ export function resolveOutboundTarget(params: {
   cfg?: MoltbotConfig;
   accountId?: string | null;
   mode?: ChannelOutboundTargetMode;
+  /** When true, allow explicit targets not in the allowlist (security bypass). */
+  allowUnlisted?: boolean;
 }): OutboundTargetResolution {
   if (params.channel === INTERNAL_MESSAGE_CHANNEL) {
     return {
@@ -157,6 +159,7 @@ export function resolveOutboundTarget(params: {
       allowFrom,
       accountId: params.accountId ?? undefined,
       mode: params.mode ?? "explicit",
+      allowUnlisted: params.allowUnlisted,
     });
   }
 
@@ -179,6 +182,8 @@ export function resolveHeartbeatDeliveryTarget(params: {
   const { cfg, entry } = params;
   const heartbeat = params.heartbeat ?? cfg.agents?.defaults?.heartbeat;
   const rawTarget = heartbeat?.target;
+  const requireExplicitTarget = heartbeat?.requireExplicitTarget ?? false;
+  const explicitTo = heartbeat?.to?.trim();
   let target: HeartbeatTarget = "last";
   if (rawTarget === "none" || rawTarget === "last") {
     target = rawTarget;
@@ -198,10 +203,22 @@ export function resolveHeartbeatDeliveryTarget(params: {
     };
   }
 
+  // When requireExplicitTarget is enabled, only allow delivery if an explicit target is set
+  if (requireExplicitTarget && !explicitTo) {
+    const base = resolveSessionDeliveryTarget({ entry });
+    return {
+      channel: "none",
+      reason: "require-explicit",
+      accountId: undefined,
+      lastChannel: base.lastChannel,
+      lastAccountId: base.lastAccountId,
+    };
+  }
+
   const resolvedTarget = resolveSessionDeliveryTarget({
     entry,
     requestedChannel: target === "last" ? "last" : target,
-    explicitTo: heartbeat?.to,
+    explicitTo,
     mode: "heartbeat",
   });
 

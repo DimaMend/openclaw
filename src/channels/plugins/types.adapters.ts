@@ -98,6 +98,8 @@ export type ChannelOutboundAdapter = {
     allowFrom?: string[];
     accountId?: string | null;
     mode?: ChannelOutboundTargetMode;
+    /** When true, allow explicit targets not in the allowlist (security bypass). */
+    allowUnlisted?: boolean;
   }) => { ok: true; to: string } | { ok: false; error: Error };
   sendPayload?: (ctx: ChannelOutboundPayloadContext) => Promise<OutboundDeliveryResult>;
   sendText?: (ctx: ChannelOutboundContext) => Promise<OutboundDeliveryResult>;

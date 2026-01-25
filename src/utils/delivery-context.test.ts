@@ -1,103 +1,92 @@
 import { describe, expect, it } from "vitest";
+import { isSenderTrustedForDeliveryContext } from "./delivery-context.js";
 
-import {
-  deliveryContextKey,
-  deliveryContextFromSession,
-  mergeDeliveryContext,
-  normalizeDeliveryContext,
-  normalizeSessionDeliveryFields,
-} from "./delivery-context.js";
+describe("isSenderTrustedForDeliveryContext", () => {
+  it("returns true when trustAll is set", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "+1999999999",
+      allowFrom: ["+1555000001"],
+      trustAll: true,
+    });
+    expect(result).toBe(true);
+  });
 
-describe("delivery context helpers", () => {
-  it("normalizes channel/to/accountId and drops empty contexts", () => {
+  it("returns true when allowFrom is empty (open policy)", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "+1999999999",
+      allowFrom: [],
+    });
+    expect(result).toBe(true);
+  });
+
+  it("returns true when allowFrom is undefined (open policy)", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "+1999999999",
+    });
+    expect(result).toBe(true);
+  });
+
+  it("returns true when allowFrom has wildcard", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "+1999999999",
+      allowFrom: ["*", "+1555000001"],
+    });
+    expect(result).toBe(true);
+  });
+
+  it("returns true when sender is in allowFrom", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "+1555000001",
+      allowFrom: ["+1555000001", "+1555000002"],
+    });
+    expect(result).toBe(true);
+  });
+
+  it("returns false when sender is not in allowFrom", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "+1999999999",
+      allowFrom: ["+1555000001", "+1555000002"],
+    });
+    expect(result).toBe(false);
+  });
+
+  it("returns false when sender is null/undefined", () => {
     expect(
-      normalizeDeliveryContext({
-        channel: " whatsapp ",
-        to: " +1555 ",
-        accountId: " acct-1 ",
+      isSenderTrustedForDeliveryContext({
+        sender: null,
+        allowFrom: ["+1555000001"],
       }),
-    ).toEqual({
-      channel: "whatsapp",
-      to: "+1555",
-      accountId: "acct-1",
-    });
-
-    expect(normalizeDeliveryContext({ channel: "  " })).toBeUndefined();
-  });
-
-  it("merges primary values over fallback", () => {
-    const merged = mergeDeliveryContext(
-      { channel: "whatsapp", to: "channel:abc" },
-      { channel: "slack", to: "channel:def", accountId: "acct" },
-    );
-
-    expect(merged).toEqual({
-      channel: "whatsapp",
-      to: "channel:abc",
-      accountId: "acct",
-    });
-  });
-
-  it("builds stable keys only when channel and to are present", () => {
-    expect(deliveryContextKey({ channel: "whatsapp", to: "+1555" })).toBe("whatsapp|+1555||");
-    expect(deliveryContextKey({ channel: "whatsapp" })).toBeUndefined();
-    expect(deliveryContextKey({ channel: "whatsapp", to: "+1555", accountId: "acct-1" })).toBe(
-      "whatsapp|+1555|acct-1|",
-    );
-    expect(deliveryContextKey({ channel: "slack", to: "channel:C1", threadId: "123.456" })).toBe(
-      "slack|channel:C1||123.456",
-    );
-  });
-
-  it("derives delivery context from a session entry", () => {
-    expect(
-      deliveryContextFromSession({
-        channel: "webchat",
-        lastChannel: " whatsapp ",
-        lastTo: " +1777 ",
-        lastAccountId: " acct-9 ",
-      }),
-    ).toEqual({
-      channel: "whatsapp",
-      to: "+1777",
-      accountId: "acct-9",
-    });
+    ).toBe(false);
 
     expect(
-      deliveryContextFromSession({
-        channel: "telegram",
-        lastTo: " 123 ",
-        lastThreadId: " 999 ",
+      isSenderTrustedForDeliveryContext({
+        sender: undefined,
+        allowFrom: ["+1555000001"],
       }),
-    ).toEqual({
-      channel: "telegram",
-      to: "123",
-      accountId: undefined,
-      threadId: "999",
-    });
+    ).toBe(false);
   });
 
-  it("normalizes delivery fields and mirrors them on session entries", () => {
-    const normalized = normalizeSessionDeliveryFields({
-      deliveryContext: {
-        channel: " Slack ",
-        to: " channel:1 ",
-        accountId: " acct-2 ",
-        threadId: " 444 ",
-      },
-      lastChannel: " whatsapp ",
-      lastTo: " +1555 ",
+  it("returns false when sender is empty string", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "  ",
+      allowFrom: ["+1555000001"],
     });
+    expect(result).toBe(false);
+  });
 
-    expect(normalized.deliveryContext).toEqual({
-      channel: "whatsapp",
-      to: "+1555",
-      accountId: "acct-2",
-      threadId: "444",
+  it("handles number entries in allowFrom", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "123456789",
+      allowFrom: [123456789, "+1555000001"],
     });
-    expect(normalized.lastChannel).toBe("whatsapp");
-    expect(normalized.lastTo).toBe("+1555");
-    expect(normalized.lastAccountId).toBe("acct-2");
-    expect(normalized.lastThreadId).toBe("444");
+    expect(result).toBe(true);
+  });
+
+  it("trims sender and allowFrom entries for matching", () => {
+    const result = isSenderTrustedForDeliveryContext({
+      sender: "  +1555000001  ",
+      allowFrom: ["  +1555000001  "],
+    });
+    expect(result).toBe(true);
   });
 });

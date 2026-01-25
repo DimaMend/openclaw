@@ -26,6 +26,8 @@ export type OutboundSendContext = {
   toolContext?: ChannelThreadingToolContext;
   deps?: OutboundSendDeps;
   dryRun: boolean;
+  /** When true, allow explicit targets not in the channel allowlist (security bypass). */
+  allowUnlisted?: boolean;
   mirror?: {
     sessionKey: string;
     agentId?: string;
@@ -125,6 +127,7 @@ export async function executeSendAction(params: {
     gifPlayback: params.gifPlayback,
     dryRun: params.ctx.dryRun,
     bestEffort: params.bestEffort ?? undefined,
+    allowUnlisted: params.ctx.allowUnlisted,
     deps: params.ctx.deps,
     gateway: params.ctx.gateway,
     mirror: params.ctx.mirror,

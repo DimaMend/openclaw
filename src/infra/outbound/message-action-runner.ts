@@ -674,6 +674,7 @@ async function handleSendAction(ctx: ResolvedActionContext): Promise<MessageActi
 
   const replyToId = readStringParam(params, "replyTo");
   const threadId = readStringParam(params, "threadId");
+  const allowUnlisted = readBooleanParam(params, "allowUnlisted") ?? false;
   // Slack auto-threading can inject threadTs without explicit params; mirror to that session key.
   const slackAutoThreadId =
     channel === "slack" && !replyToId && !threadId
@@ -714,6 +715,7 @@ async function handleSendAction(ctx: ResolvedActionContext): Promise<MessageActi
       toolContext: input.toolContext,
       deps: input.deps,
       dryRun,
+      allowUnlisted,
       mirror:
         outboundRoute && !dryRun
           ? {

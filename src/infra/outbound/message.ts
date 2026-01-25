@@ -40,6 +40,8 @@ type MessageSendParams = {
   accountId?: string;
   dryRun?: boolean;
   bestEffort?: boolean;
+  /** When true, allow explicit targets not in the channel allowlist (security bypass). */
+  allowUnlisted?: boolean;
   deps?: OutboundSendDeps;
   cfg?: MoltbotConfig;
   gateway?: MessageGatewayOptions;
@@ -156,6 +158,7 @@ export async function sendMessage(params: MessageSendParams): Promise<MessageSen
       cfg,
       accountId: params.accountId,
       mode: "explicit",
+      allowUnlisted: params.allowUnlisted,
     });
     if (!resolvedTarget.ok) throw resolvedTarget.error;
 
@@ -203,6 +206,7 @@ export async function sendMessage(params: MessageSendParams): Promise<MessageSen
       channel,
       sessionKey: params.mirror?.sessionKey,
       idempotencyKey: params.idempotencyKey ?? randomIdempotencyKey(),
+      allowUnlisted: params.allowUnlisted,
     },
     timeoutMs: gateway.timeoutMs,
     clientName: gateway.clientName,

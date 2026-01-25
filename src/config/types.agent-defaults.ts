@@ -193,6 +193,12 @@ export type AgentDefaultsConfig = {
      * Default: false (only the final heartbeat payload is delivered).
      */
     includeReasoning?: boolean;
+    /**
+     * When true, require an explicit target for heartbeat delivery (no implicit routing).
+     * If no explicit target is provided, heartbeat delivery is skipped with reason "require-explicit".
+     * Default: false (backwards compatible; falls back to session-derived or "last" routing).
+     */
+    requireExplicitTarget?: boolean;
   };
   /** Max concurrent agent runs across all conversations. Default: 1 (sequential). */
   maxConcurrent?: number;

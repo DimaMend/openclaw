@@ -8,6 +8,44 @@ export type DeliveryContext = {
   threadId?: string | number;
 };
 
+export type DeliveryContextTrustParams = {
+  /** Sender identifier (e.g., E.164 phone number, user id). */
+  sender?: string | null;
+  /** Allowlist entries for the channel. */
+  allowFrom?: Array<string | number>;
+  /** When true, trust any sender (no allowlist check). */
+  trustAll?: boolean;
+};
+
+/**
+ * Validates whether a sender is trusted for updating the delivery context.
+ * Only messages from allowlisted senders (or when trustAll/wildcard is set) should
+ * update the delivery context to prevent routing replies to unknown recipients.
+ *
+ * @returns true if the sender is trusted, false otherwise
+ */
+export function isSenderTrustedForDeliveryContext(params: DeliveryContextTrustParams): boolean {
+  const { sender, allowFrom, trustAll } = params;
+
+  // If trustAll is explicitly set, allow
+  if (trustAll) return true;
+
+  // If no allowFrom list, allow (open policy)
+  if (!allowFrom || allowFrom.length === 0) return true;
+
+  // Check for wildcard in allowlist
+  const hasWildcard = allowFrom.some((entry) => String(entry).trim() === "*");
+  if (hasWildcard) return true;
+
+  // No sender to check - don't trust
+  const senderNormalized = sender?.trim();
+  if (!senderNormalized) return false;
+
+  // Check if sender is in allowlist
+  const allowList = allowFrom.map((entry) => String(entry).trim()).filter(Boolean);
+  return allowList.includes(senderNormalized);
+}
+
 export type DeliveryContextSessionSource = {
   channel?: string;
   lastChannel?: string;

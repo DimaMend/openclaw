@@ -5,7 +5,11 @@ import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { createTestRegistry } from "../../test-utils/channel-plugins.js";
 import { telegramPlugin } from "../../../extensions/telegram/src/channel.js";
 import { whatsappPlugin } from "../../../extensions/whatsapp/src/channel.js";
-import { resolveOutboundTarget, resolveSessionDeliveryTarget } from "./targets.js";
+import {
+  resolveHeartbeatDeliveryTarget,
+  resolveOutboundTarget,
+  resolveSessionDeliveryTarget,
+} from "./targets.js";
 
 describe("resolveOutboundTarget", () => {
   beforeEach(() => {
@@ -104,6 +108,178 @@ describe("resolveOutboundTarget", () => {
     if (!res.ok) {
       expect(res.error.message).toContain("WebChat");
     }
+  });
+
+  describe("whatsapp explicit mode allowlist validation", () => {
+    it("rejects explicit target not in allowlist", () => {
+      const cfg: ClawdbotConfig = {
+        channels: { whatsapp: { allowFrom: ["+1555000001", "+1555000002"] } },
+      };
+      const res = resolveOutboundTarget({
+        channel: "whatsapp",
+        to: "+1555999999",
+        cfg,
+        mode: "explicit",
+      });
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error.message).toContain("not in WhatsApp allowlist");
+        expect(res.error.message).toContain("--allow-unlisted");
+      }
+    });
+
+    it("allows explicit target when in allowlist", () => {
+      const cfg: ClawdbotConfig = {
+        channels: { whatsapp: { allowFrom: ["+1555000001", "+1555000002"] } },
+      };
+      const res = resolveOutboundTarget({
+        channel: "whatsapp",
+        to: "+1555000001",
+        cfg,
+        mode: "explicit",
+      });
+      expect(res).toEqual({ ok: true, to: "+1555000001" });
+    });
+
+    it("allows explicit target with allowUnlisted override", () => {
+      const cfg: ClawdbotConfig = {
+        channels: { whatsapp: { allowFrom: ["+1555000001"] } },
+      };
+      const res = resolveOutboundTarget({
+        channel: "whatsapp",
+        to: "+1555999999",
+        cfg,
+        mode: "explicit",
+        allowUnlisted: true,
+      });
+      expect(res).toEqual({ ok: true, to: "+1555999999" });
+    });
+
+    it("allows explicit target when allowlist has wildcard", () => {
+      const cfg: ClawdbotConfig = {
+        channels: { whatsapp: { allowFrom: ["*", "+1555000001"] } },
+      };
+      const res = resolveOutboundTarget({
+        channel: "whatsapp",
+        to: "+1555999999",
+        cfg,
+        mode: "explicit",
+      });
+      expect(res).toEqual({ ok: true, to: "+1555999999" });
+    });
+
+    it("allows explicit target when allowlist is empty", () => {
+      const cfg: ClawdbotConfig = {
+        channels: { whatsapp: { allowFrom: [] } },
+      };
+      const res = resolveOutboundTarget({
+        channel: "whatsapp",
+        to: "+1555999999",
+        cfg,
+        mode: "explicit",
+      });
+      expect(res).toEqual({ ok: true, to: "+1555999999" });
+    });
+
+    it("allows group targets regardless of allowlist", () => {
+      const cfg: ClawdbotConfig = {
+        channels: { whatsapp: { allowFrom: ["+1555000001"] } },
+      };
+      const res = resolveOutboundTarget({
+        channel: "whatsapp",
+        to: "120363401234567890@g.us",
+        cfg,
+        mode: "explicit",
+      });
+      expect(res).toEqual({ ok: true, to: "120363401234567890@g.us" });
+    });
+
+    it("implicit mode still allows targets not in allowlist (fallback to first)", () => {
+      const cfg: ClawdbotConfig = {
+        channels: { whatsapp: { allowFrom: ["+1555000001", "+1555000002"] } },
+      };
+      const res = resolveOutboundTarget({
+        channel: "whatsapp",
+        to: "+1555999999",
+        cfg,
+        mode: "implicit",
+      });
+      // In implicit mode, unlisted targets fall back to the first allowFrom entry
+      expect(res).toEqual({ ok: true, to: "+1555000001" });
+    });
+  });
+});
+
+describe("resolveHeartbeatDeliveryTarget", () => {
+  beforeEach(() => {
+    setActivePluginRegistry(
+      createTestRegistry([
+        { pluginId: "whatsapp", plugin: whatsappPlugin, source: "test" },
+        { pluginId: "telegram", plugin: telegramPlugin, source: "test" },
+      ]),
+    );
+  });
+
+  it("returns none with reason require-explicit when requireExplicitTarget is true and no to is set", () => {
+    const cfg: ClawdbotConfig = {
+      agents: {
+        defaults: {
+          heartbeat: {
+            target: "whatsapp",
+            requireExplicitTarget: true,
+            // no `to` set
+          },
+        },
+      },
+      channels: { whatsapp: { allowFrom: ["+1555000001"] } },
+    };
+    const result = resolveHeartbeatDeliveryTarget({
+      cfg,
+      entry: { sessionId: "test", updatedAt: 1, lastChannel: "whatsapp", lastTo: "+1555000001" },
+    });
+    expect(result.channel).toBe("none");
+    expect(result.reason).toBe("require-explicit");
+  });
+
+  it("allows heartbeat delivery when requireExplicitTarget is true and to is set", () => {
+    const cfg: ClawdbotConfig = {
+      agents: {
+        defaults: {
+          heartbeat: {
+            target: "whatsapp",
+            requireExplicitTarget: true,
+            to: "+1555000001",
+          },
+        },
+      },
+      channels: { whatsapp: { allowFrom: ["+1555000001"] } },
+    };
+    const result = resolveHeartbeatDeliveryTarget({
+      cfg,
+      entry: { sessionId: "test", updatedAt: 1, lastChannel: "whatsapp", lastTo: "+1555000002" },
+    });
+    expect(result.channel).toBe("whatsapp");
+    expect(result.to).toBe("+1555000001");
+  });
+
+  it("allows implicit routing when requireExplicitTarget is false (default)", () => {
+    const cfg: ClawdbotConfig = {
+      agents: {
+        defaults: {
+          heartbeat: {
+            target: "last",
+            // requireExplicitTarget defaults to false
+          },
+        },
+      },
+      channels: { whatsapp: { allowFrom: ["+1555000001"] } },
+    };
+    const result = resolveHeartbeatDeliveryTarget({
+      cfg,
+      entry: { sessionId: "test", updatedAt: 1, lastChannel: "whatsapp", lastTo: "+1555000001" },
+    });
+    expect(result.channel).toBe("whatsapp");
+    expect(result.to).toBe("+1555000001");
   });
 });
 

@@ -11,7 +11,7 @@ export const whatsappOutbound: ChannelOutboundAdapter = {
   chunkerMode: "text",
   textChunkLimit: 4000,
   pollMaxOptions: 12,
-  resolveTarget: ({ to, allowFrom, mode }) => {
+  resolveTarget: ({ to, allowFrom, mode, allowUnlisted }) => {
     const trimmed = to?.trim() ?? "";
     const allowListRaw = (allowFrom ?? []).map((entry) => String(entry).trim()).filter(Boolean);
     const hasWildcard = allowListRaw.includes("*");
@@ -34,6 +34,7 @@ export const whatsappOutbound: ChannelOutboundAdapter = {
           ),
         };
       }
+      // Groups are always allowed (no allowlist check needed)
       if (isWhatsAppGroupJid(normalizedTo)) {
         return { ok: true, to: normalizedTo };
       }
@@ -45,6 +46,28 @@ export const whatsappOutbound: ChannelOutboundAdapter = {
           return { ok: true, to: normalizedTo };
         }
         return { ok: true, to: allowList[0] };
+      }
+      // For explicit mode - validate allowlist unless override is set
+      if (mode === "explicit") {
+        // Wildcard or empty allowlist: allow any target
+        if (hasWildcard || allowList.length === 0) {
+          return { ok: true, to: normalizedTo };
+        }
+        // Target is in allowlist: allow
+        if (allowList.includes(normalizedTo)) {
+          return { ok: true, to: normalizedTo };
+        }
+        // Target not in allowlist: require explicit override
+        if (allowUnlisted) {
+          return { ok: true, to: normalizedTo };
+        }
+        return {
+          ok: false,
+          error: new Error(
+            `Target ${normalizedTo} not in WhatsApp allowlist (channels.whatsapp.allowFrom). ` +
+              `Add the target to your allowlist, or use --allow-unlisted to override.`,
+          ),
+        };
       }
       return { ok: true, to: normalizedTo };
     }

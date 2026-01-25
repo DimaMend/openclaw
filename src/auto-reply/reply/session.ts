@@ -32,7 +32,12 @@ import { normalizeChatType } from "../../channels/chat-type.js";
 import { stripMentions, stripStructuralPrefixes } from "./mentions.js";
 import { formatInboundBodyWithSenderMeta } from "./inbound-sender-meta.js";
 import { normalizeInboundTextNewlines } from "./inbound-text.js";
-import { normalizeSessionDeliveryFields } from "../../utils/delivery-context.js";
+import {
+  isSenderTrustedForDeliveryContext,
+  normalizeSessionDeliveryFields,
+} from "../../utils/delivery-context.js";
+import { getChannelDock } from "../../channels/dock.js";
+import { normalizeAnyChannelId } from "../../channels/registry.js";
 
 export type SessionInitResult = {
   sessionCtx: TemplateContext;
@@ -233,12 +238,36 @@ export async function initSessionState(params: {
   }
 
   const baseEntry = !isNewSession && freshEntry ? entry : undefined;
+
+  // FIX-3.2: Validate sender against allowlist before updating delivery context.
+  // This prevents routing replies to unknown recipients from untrusted senders.
+  const inboundChannel = normalizeAnyChannelId(
+    ctx.OriginatingChannel ?? ctx.Provider ?? ctx.Surface,
+  );
+  const channelDock = inboundChannel ? getChannelDock(inboundChannel) : undefined;
+  const inboundAllowFrom = channelDock?.config?.resolveAllowFrom
+    ? channelDock.config.resolveAllowFrom({ cfg, accountId: ctx.AccountId ?? undefined })
+    : undefined;
+  const senderForTrust = ctx.SenderE164 ?? ctx.SenderId ?? ctx.From ?? ctx.To;
+  const isTrustedSender = isSenderTrustedForDeliveryContext({
+    sender: senderForTrust,
+    allowFrom: inboundAllowFrom,
+  });
+
   // Track the originating channel/to for announce routing (subagent announce-back).
-  const lastChannelRaw = (ctx.OriginatingChannel as string | undefined) || baseEntry?.lastChannel;
-  const lastToRaw = (ctx.OriginatingTo as string | undefined) || ctx.To || baseEntry?.lastTo;
-  const lastAccountIdRaw = (ctx.AccountId as string | undefined) || baseEntry?.lastAccountId;
-  const lastThreadIdRaw =
-    (ctx.MessageThreadId as string | number | undefined) || baseEntry?.lastThreadId;
+  // Only update from new inbound message if sender is trusted.
+  const lastChannelRaw = isTrustedSender
+    ? (ctx.OriginatingChannel as string | undefined) || baseEntry?.lastChannel
+    : baseEntry?.lastChannel;
+  const lastToRaw = isTrustedSender
+    ? (ctx.OriginatingTo as string | undefined) || ctx.To || baseEntry?.lastTo
+    : baseEntry?.lastTo;
+  const lastAccountIdRaw = isTrustedSender
+    ? (ctx.AccountId as string | undefined) || baseEntry?.lastAccountId
+    : baseEntry?.lastAccountId;
+  const lastThreadIdRaw = isTrustedSender
+    ? (ctx.MessageThreadId as string | number | undefined) || baseEntry?.lastThreadId
+    : baseEntry?.lastThreadId;
   const deliveryFields = normalizeSessionDeliveryFields({
     deliveryContext: {
       channel: lastChannelRaw,
