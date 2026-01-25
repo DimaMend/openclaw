@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import type { Skill } from "@mariozechner/pi-coding-agent";
 import type { NormalizedChatType } from "../../channels/chat-type.js";
 import type { ChannelId } from "../../channels/plugins/types.js";
+import type { ContextWarningLevel } from "../../commands/agent/context-warnings.js";
 import type { DeliveryContext } from "../../utils/delivery-context.js";
 
 export type SessionScope = "per-sender" | "global";
@@ -74,7 +75,7 @@ export type SessionEntry = {
   contextTokens?: number;
   compactionCount?: number;
   /** Last context warning level shown to prevent duplicate warnings. */
-  contextWarningLevel?: "none" | "soft" | "urgent";
+  contextWarningLevel?: ContextWarningLevel;
   memoryFlushAt?: number;
   memoryFlushCompactionCount?: number;
   cliSessionIds?: Record<string, string>;
