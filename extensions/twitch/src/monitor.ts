@@ -200,7 +200,6 @@ export async function monitorTwitchProvider(
       config as Parameters<typeof clientManager.getClient>[1],
       accountId,
     );
-    runtime.log?.(`Connected to Twitch as ${account.username}`);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     runtime.error?.(`Failed to connect: ${errorMsg}`);
