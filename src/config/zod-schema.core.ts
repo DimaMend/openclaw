@@ -28,18 +28,19 @@ export const ModelDefinitionSchema = z
     id: z.string().min(1),
     name: z.string().min(1),
     api: ModelApiSchema.optional(),
-    reasoning: z.boolean(),
-    input: z.array(z.union([z.literal("text"), z.literal("image")])),
+    reasoning: z.boolean().optional(),
+    input: z.array(z.union([z.literal("text"), z.literal("image")])).optional(),
     cost: z
       .object({
-        input: z.number(),
-        output: z.number(),
-        cacheRead: z.number(),
-        cacheWrite: z.number(),
+        input: z.number().optional(),
+        output: z.number().optional(),
+        cacheRead: z.number().optional(),
+        cacheWrite: z.number().optional(),
       })
-      .strict(),
-    contextWindow: z.number().positive(),
-    maxTokens: z.number().positive(),
+      .strict()
+      .optional(),
+    contextWindow: z.number().positive().optional(),
+    maxTokens: z.number().positive().optional(),
     headers: z.record(z.string(), z.string()).optional(),
     compat: ModelCompatSchema,
   })
@@ -449,6 +450,26 @@ export const ToolsMediaSchema = z
     image: ToolsMediaUnderstandingSchema.optional(),
     audio: ToolsMediaUnderstandingSchema.optional(),
     video: ToolsMediaUnderstandingSchema.optional(),
+  })
+  .strict()
+  .optional();
+
+export const LinkModelSchema = z
+  .object({
+    type: z.literal("cli").optional(),
+    command: z.string().min(1),
+    args: z.array(z.string()).optional(),
+    timeoutSeconds: z.number().int().positive().optional(),
+  })
+  .strict();
+
+export const ToolsLinksSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    scope: MediaUnderstandingScopeSchema,
+    maxLinks: z.number().int().positive().optional(),
+    timeoutSeconds: z.number().int().positive().optional(),
+    models: z.array(LinkModelSchema).optional(),
   })
   .strict()
   .optional();

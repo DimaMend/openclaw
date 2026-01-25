@@ -4,16 +4,32 @@ Docs: https://docs.clawd.bot
 
 ## 2026.1.24
 
+### Highlights
+- Ollama: provider discovery + docs. (#1606) Thanks @abhaymundhara. https://docs.clawd.bot/providers/ollama
+
 ### Changes
 - Docs: expand FAQ (migration, scheduling, concurrency, model recommendations, OpenAI subscription auth, Pi sizing, hackable install, docs SSL workaround).
 - Docs: add verbose installer troubleshooting guidance.
 - Docs: update Fly.io guide notes.
+- Docs: add Bedrock EC2 instance role setup + IAM steps. (#1625) Thanks @sergical. https://docs.clawd.bot/bedrock
 - Exec approvals: forward approval prompts to chat with `/approve` for all channels (including plugins). (#1621) Thanks @czekaj. https://docs.clawd.bot/tools/exec-approvals https://docs.clawd.bot/tools/slash-commands
+- Gateway: expose config.patch in the gateway tool with safe partial updates + restart sentinel. (#1653) Thanks @Glucksberg.
 
 ### Fixes
+- BlueBubbles: keep part-index GUIDs in reply tags when short IDs are missing.
 - Web UI: hide internal `message_id` hints in chat bubbles.
 - Heartbeat: normalize target identifiers for consistent routing.
+- TUI: reload history after gateway reconnect to restore session state. (#1663)
+- Telegram: use wrapped fetch for long-polling on Node to normalize AbortSignal handling. (#1639)
+- Exec: keep approvals for elevated ask unless full mode. (#1616) Thanks @ivancasco.
+- Agents: auto-compact on context overflow prompt errors before failing. (#1627) Thanks @rodrigouroz.
+- Agents: use the active auth profile for auto-compaction recovery.
+- Models: default missing custom provider fields so minimal configs are accepted.
 - Gateway: reduce log noise for late invokes + remote node probes; debounce skills refresh. (#1607) Thanks @petter-b.
+- macOS: default direct-transport `ws://` URLs to port 18789; document `gateway.remote.transport`. (#1603) Thanks @ngutman.
+- Voice Call: return stream TwiML for outbound conversation calls on initial Twilio webhook. (#1634)
+- Google Chat: tighten email allowlist matching, typing cleanup, media caps, and onboarding/docs/tests. (#1635) Thanks @iHildy.
+- Google Chat: normalize space targets without double `spaces/` prefix.
 
 ## 2026.1.23-1
 

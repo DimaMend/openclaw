@@ -21,9 +21,12 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
   - [I can't access docs.clawd.bot (SSL error). What now?](#i-cant-access-docsclawdbot-ssl-error-what-now)
   - [What’s the difference between stable and beta?](#whats-the-difference-between-stable-and-beta)
   - [How do I install the beta version, and what’s the difference between beta and dev?](#how-do-i-install-the-beta-version-and-whats-the-difference-between-beta-and-dev)
+  - [How do I try the latest bits?](#how-do-i-try-the-latest-bits)
+  - [Installer stuck? How do I get more feedback?](#installer-stuck-how-do-i-get-more-feedback)
   - [The docs didn’t answer my question — how do I get a better answer?](#the-docs-didnt-answer-my-question--how-do-i-get-a-better-answer)
   - [How do I install Clawdbot on Linux?](#how-do-i-install-clawdbot-on-linux)
   - [How do I install Clawdbot on a VPS?](#how-do-i-install-clawdbot-on-a-vps)
+  - [Where are the cloud/VPS install guides?](#where-are-the-cloudvps-install-guides)
   - [Can I ask Clawd to update itself?](#can-i-ask-clawd-to-update-itself)
   - [What does the onboarding wizard actually do?](#what-does-the-onboarding-wizard-actually-do)
   - [Do I need a Claude or OpenAI subscription to run this?](#do-i-need-a-claude-or-openai-subscription-to-run-this)
@@ -38,6 +41,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
   - [How do I keep hosted model traffic in a specific region?](#how-do-i-keep-hosted-model-traffic-in-a-specific-region)
   - [Do I have to buy a Mac Mini to install this?](#do-i-have-to-buy-a-mac-mini-to-install-this)
   - [Do I need a Mac mini for iMessage support?](#do-i-need-a-mac-mini-for-imessage-support)
+  - [If I buy a Mac mini to run Clawdbot, can I connect it to my MacBook Pro?](#if-i-buy-a-mac-mini-to-run-clawdbot-can-i-connect-it-to-my-macbook-pro)
   - [Can I use Bun?](#can-i-use-bun)
   - [Telegram: what goes in `allowFrom`?](#telegram-what-goes-in-allowfrom)
   - [Can multiple people use one WhatsApp number with different Clawdbots?](#can-multiple-people-use-one-whatsapp-number-with-different-clawdbots)
@@ -97,6 +101,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
   - [Why am I seeing “LLM request rejected: messages.N.content.X.tool_use.input: Field required”?](#why-am-i-seeing-llm-request-rejected-messagesncontentxtool_useinput-field-required)
   - [Why am I getting heartbeat messages every 30 minutes?](#why-am-i-getting-heartbeat-messages-every-30-minutes)
   - [Do I need to add a “bot account” to a WhatsApp group?](#do-i-need-to-add-a-bot-account-to-a-whatsapp-group)
+  - [How do I get the JID of a WhatsApp group?](#how-do-i-get-the-jid-of-a-whatsapp-group)
   - [Why doesn’t Clawdbot reply in a group?](#why-doesnt-clawdbot-reply-in-a-group)
   - [Do groups/threads share context with DMs?](#do-groupsthreads-share-context-with-dms)
   - [How many workspaces and agents can I create?](#how-many-workspaces-and-agents-can-i-create)
@@ -135,6 +140,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
 - [Logging and debugging](#logging-and-debugging)
   - [Where are logs?](#where-are-logs)
   - [How do I start/stop/restart the Gateway service?](#how-do-i-startstoprestart-the-gateway-service)
+  - [How do I completely stop then start the Gateway?](#how-do-i-completely-stop-then-start-the-gateway)
   - [ELI5: `clawdbot gateway restart` vs `clawdbot gateway`](#eli5-clawdbot-gateway-restart-vs-clawdbot-gateway)
   - [What’s the fastest way to get more details when something fails?](#whats-the-fastest-way-to-get-more-details-when-something-fails)
 - [Media & attachments](#media-attachments)
@@ -203,7 +209,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
 
 ### What is Clawdbot, in one paragraph?
 
-Clawdbot is a personal AI assistant you run on your own devices. It replies on the messaging surfaces you already use (WhatsApp, Telegram, Slack, Mattermost (plugin), Discord, Signal, iMessage, WebChat) and can also do voice + a live Canvas on supported platforms. The **Gateway** is the always-on control plane; the assistant is the product.
+Clawdbot is a personal AI assistant you run on your own devices. It replies on the messaging surfaces you already use (WhatsApp, Telegram, Slack, Mattermost (plugin), Discord, Google Chat, Signal, iMessage, WebChat) and can also do voice + a live Canvas on supported platforms. The **Gateway** is the always-on control plane; the assistant is the product.
 
 ### What’s the value proposition?
 
@@ -357,6 +363,55 @@ https://clawd.bot/install.ps1
 
 More detail: [Development channels](/install/development-channels) and [Installer flags](/install/installer).
 
+### How do I try the latest bits?
+
+Two options:
+
+1) **Dev channel (git checkout):**
+```bash
+clawdbot update --channel dev
+```
+This switches to the `main` branch and updates from source.
+
+2) **Hackable install (from the installer site):**
+```bash
+curl -fsSL https://clawd.bot/install.sh | bash -s -- --install-method git
+```
+That gives you a local repo you can edit, then update via git.
+
+If you prefer a clean clone manually, use:
+```bash
+git clone https://github.com/clawdbot/clawdbot.git
+cd clawdbot
+pnpm install
+pnpm build
+```
+
+Docs: [Update](/cli/update), [Development channels](/install/development-channels),
+[Install](/install).
+
+### Installer stuck? How do I get more feedback?
+
+Re-run the installer with **verbose output**:
+
+```bash
+curl -fsSL https://clawd.bot/install.sh | bash -s -- --verbose
+```
+
+Beta install with verbose:
+
+```bash
+curl -fsSL https://clawd.bot/install.sh | bash -s -- --beta --verbose
+```
+
+For a hackable (git) install:
+
+```bash
+curl -fsSL https://clawd.bot/install.sh | bash -s -- --install-method git --verbose
+```
+
+More options: [Installer flags](/install/installer).
+
 ### The docs didn’t answer my question — how do I get a better answer?
 
 Use the **hackable (git) install** so you have the full source and docs locally, then ask
@@ -382,6 +437,27 @@ Any Linux VPS works. Install on the server, then use SSH/Tailscale to reach the 
 
 Guides: [exe.dev](/platforms/exe-dev), [Hetzner](/platforms/hetzner), [Fly.io](/platforms/fly).  
 Remote access: [Gateway remote](/gateway/remote).
+
+### Where are the cloud/VPS install guides?
+
+We keep a **hosting hub** with the common providers. Pick one and follow the guide:
+
+- [VPS hosting](/vps) (all providers in one place)
+- [Railway](/railway) (one‑click, browser‑based setup)
+- [Fly.io](/platforms/fly)
+- [Hetzner](/platforms/hetzner)
+- [exe.dev](/platforms/exe-dev)
+
+How it works in the cloud: the **Gateway runs on the server**, and you access it
+from your laptop/phone via the Control UI (or Tailscale/SSH). Your state + workspace
+live on the server, so treat the host as the source of truth and back it up.
+
+You can pair **nodes** (Mac/iOS/Android/headless) to that cloud Gateway to access
+local screen/camera/canvas or run commands on your laptop while keeping the
+Gateway in the cloud.
+
+Hub: [Platforms](/platforms). Remote access: [Gateway remote](/gateway/remote).
+Nodes: [Nodes](/nodes), [Nodes CLI](/cli/nodes).
 
 ### Can I ask Clawd to update itself?
 
@@ -513,6 +589,19 @@ Common setups:
 Docs: [iMessage](/channels/imessage), [BlueBubbles](/channels/bluebubbles),
 [Mac remote mode](/platforms/mac/remote).
 
+### If I buy a Mac mini to run Clawdbot, can I connect it to my MacBook Pro?
+
+Yes. The **Mac mini can run the Gateway**, and your MacBook Pro can connect as a
+**node** (companion device). Nodes don’t run the Gateway — they provide extra
+capabilities like screen/camera/canvas and `system.run` on that device.
+
+Common pattern:
+- Gateway on the Mac mini (always‑on).
+- MacBook Pro runs the macOS app or a node host and pairs to the Gateway.
+- Use `clawdbot nodes status` / `clawdbot nodes list` to see it.
+
+Docs: [Nodes](/nodes), [Nodes CLI](/cli/nodes).
+
 ### Can I use Bun?
 
 Bun is **not recommended**. We see runtime bugs, especially with WhatsApp and Telegram.
@@ -570,6 +659,8 @@ Docs: [Getting started](/start/getting-started), [Updating](/install/updating).
 ### Can I switch between npm and git installs later?
 
 Yes. Install the other flavor, then run Doctor so the gateway service points at the new entrypoint.
+This **does not delete your data** — it only changes the Clawdbot code install. Your state
+(`~/.clawdbot`) and workspace (`~/clawd`) stay untouched.
 
 From npm → git:
 
@@ -591,6 +682,8 @@ clawdbot gateway restart
 ```
 
 Doctor detects a gateway service entrypoint mismatch and offers to rewrite the service config to match the current install (use `--repair` in automation).
+
+Backup tips: see [Backup strategy](/help/faq#whats-the-recommended-backup-strategy).
 
 ### Should I run the Gateway on my laptop or a VPS?
 
@@ -1278,6 +1371,25 @@ If you want only **you** to be able to trigger group replies:
 }
 ```
 
+### How do I get the JID of a WhatsApp group?
+
+Option 1 (fastest): tail logs and send a test message in the group:
+
+```bash
+clawdbot logs --follow --json
+```
+
+Look for `chatId` (or `from`) ending in `@g.us`, like:
+`1234567890-1234567890@g.us`.
+
+Option 2 (if already configured/allowlisted): list groups from config:
+
+```bash
+clawdbot directory groups list --channel whatsapp
+```
+
+Docs: [WhatsApp](/channels/whatsapp), [Directory](/cli/directory), [Logs](/cli/logs).
+
 ### Why doesn’t Clawdbot reply in a group?
 
 Two common causes:
@@ -1825,6 +1937,26 @@ clawdbot gateway restart
 ```
 
 If you run the gateway manually, `clawdbot gateway --force` can reclaim the port. See [Gateway](/gateway).
+
+### How do I completely stop then start the Gateway?
+
+If you installed the service:
+
+```bash
+clawdbot gateway stop
+clawdbot gateway start
+```
+
+This stops/starts the **supervised service** (launchd on macOS, systemd on Linux).
+Use this when the Gateway runs in the background as a daemon.
+
+If you’re running in the foreground, stop with Ctrl‑C, then:
+
+```bash
+clawdbot gateway run
+```
+
+Docs: [Gateway service runbook](/gateway).
 
 ### ELI5: `clawdbot gateway restart` vs `clawdbot gateway`
 
