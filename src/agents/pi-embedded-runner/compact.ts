@@ -485,8 +485,6 @@ export async function compactEmbeddedPiSession(
   const enqueueGlobal =
     params.enqueue ?? ((task, opts) => enqueueCommandInLane(globalLane, task, opts));
   return enqueueCommandInLane(sessionLane, () =>
-  return enqueueCommandInLane(sessionLane, () =>
     enqueueGlobal(async () => compactEmbeddedPiSessionDirect(params)),
-  );
   );
 }
