@@ -19,13 +19,31 @@ For operations that require a token (add-text, tags, open-note --selected), you 
 1. Open Bear → Help → API Token → Copy Token
 2. Save it: `echo "YOUR_TOKEN" > ~/.config/grizzly/token`
 
-## Common Commands
+## Preferred Method: URL Encoding Script
+
+**Use `bear-create.sh` instead of grizzly** — grizzly has encoding issues (+ signs between characters).
+
+```bash
+# Create a note with proper URL encoding
+~/clawd/scripts/bear-create.sh "Note Title" "tag1,tag2" < content.md
+
+# Or pipe content
+echo "My content" | ~/clawd/scripts/bear-create.sh "Quick Note" "inbox"
+```
+
+This uses Python's `urllib.parse.quote` for proper encoding and opens Bear via x-callback-url.
+
+---
+
+## Alternative: grizzly CLI (has encoding issues)
 
 Create a note
 ```bash
 echo "Note content here" | grizzly create --title "My Note" --tag work
 grizzly create --title "Quick Note" --tag inbox < /dev/null
 ```
+
+**⚠️ Warning:** grizzly may produce malformed output with + signs between characters. Use the URL encoding script above instead.
 
 Open/read a note by ID
 ```bash
