@@ -186,33 +186,6 @@ export class TwitchClientManager {
       }
     });
 
-    // Handle whispers (DMs)
-    client.onWhisper((_user, messageText, msg) => {
-      const handler = this.messageHandlers.get(key);
-      if (handler) {
-        const from = `twitch:${msg.userInfo.userName}`;
-        const preview = messageText.slice(0, 100).replace(/\n/g, "\\n");
-        this.logger.debug?.(
-          `twitch inbound: whisper from=${from} len=${messageText.length} preview="${preview}"`,
-        );
-
-        handler({
-          username: msg.userInfo.userName,
-          displayName: msg.userInfo.displayName,
-          userId: msg.userInfo.userId,
-          message: messageText,
-          channel: msg.userInfo.userName,
-          id: undefined, // Whisper doesn't have id property
-          timestamp: new Date(),
-          isMod: msg.userInfo.isMod,
-          isOwner: msg.userInfo.isBroadcaster,
-          isVip: msg.userInfo.isVip,
-          isSub: msg.userInfo.isSubscriber,
-          chatType: "direct",
-        });
-      }
-    });
-
     this.logger.info(`Set up handlers for ${key}`);
   }
 

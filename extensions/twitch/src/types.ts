@@ -102,7 +102,7 @@ export interface TwitchChatMessage {
   /** Whether the sender is a subscriber */
   isSub?: boolean;
   /** Chat type */
-  chatType?: "direct" | "group";
+  chatType?: "group";
 }
 
 /**

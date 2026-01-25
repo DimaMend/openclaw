@@ -66,7 +66,7 @@ export const twitchPlugin: ChannelPlugin<TwitchAccountConfig> = {
 
   /** Supported chat capabilities */
   capabilities: {
-    chatTypes: ["group", "direct"],
+    chatTypes: ["group"],
   } satisfies ChannelCapabilities,
 
   /** Configuration schema for Twitch channel */

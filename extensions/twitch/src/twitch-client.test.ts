@@ -3,7 +3,7 @@
  *
  * Tests cover:
  * - Client connection and reconnection
- * - Message handling (chat and whispers)
+ * - Message handling (chat)
  * - Message sending with rate limiting
  * - Disconnection scenarios
  * - Error handling and edge cases
@@ -23,16 +23,10 @@ const mockUnbind = vi.fn();
 // Event handler storage for testing
 const messageHandlers: Array<(channel: string, user: string, message: string, msg: any) => void> =
   [];
-const whisperHandlers: Array<(user: string, message: string, msg: any) => void> = [];
 
 // Mock functions that track handlers and return unbind objects
 const mockOnMessage = vi.fn((handler: any) => {
   messageHandlers.push(handler);
-  return { unbind: mockUnbind };
-});
-
-const mockOnWhisper = vi.fn((handler: any) => {
-  whisperHandlers.push(handler);
   return { unbind: mockUnbind };
 });
 
@@ -43,7 +37,6 @@ const mockOnRefreshFailure = vi.fn();
 vi.mock("@twurple/chat", () => ({
   ChatClient: class {
     onMessage = mockOnMessage;
-    onWhisper = mockOnWhisper;
     connect = mockConnect;
     join = mockJoin;
     say = mockSay;
@@ -111,7 +104,6 @@ describe("TwitchClientManager", () => {
 
     // Clear handler arrays
     messageHandlers.length = 0;
-    whisperHandlers.length = 0;
 
     // Re-set up the default token mock implementation after clearing
     const { resolveTwitchToken } = await import("./token.js");
@@ -240,7 +232,6 @@ describe("TwitchClientManager", () => {
       await manager.getClient(testAccount);
 
       expect(mockOnMessage).toHaveBeenCalled();
-      expect(mockOnWhisper).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("Set up handlers for"));
     });
 
@@ -448,33 +439,6 @@ describe("TwitchClientManager", () => {
       expect(capturedMessage?.message).toBe("Hello bot!");
       expect(capturedMessage?.channel).toBe("testchannel");
       expect(capturedMessage?.chatType).toBe("group");
-    });
-
-    it("should handle whispers (DMs)", async () => {
-      await manager.getClient(testAccount);
-
-      // Get the onWhisper callback
-      const onWhisperCallback = whisperHandlers[0];
-      if (!onWhisperCallback) throw new Error("onWhisperCallback not found");
-
-      // Simulate Twitch whisper
-      onWhisperCallback("whisperuser", "Secret message", {
-        userInfo: {
-          userName: "whisperuser",
-          displayName: "WhisperUser",
-          userId: "67890",
-          isMod: true,
-          isBroadcaster: false,
-          isVip: false,
-          isSubscriber: true,
-        },
-      });
-
-      expect(capturedMessage).not.toBeNull();
-      expect(capturedMessage?.username).toBe("whisperuser");
-      expect(capturedMessage?.message).toBe("Secret message");
-      expect(capturedMessage?.chatType).toBe("direct");
-      expect(capturedMessage?.id).toBeUndefined();
     });
 
     it("should normalize channel names without # prefix", async () => {
