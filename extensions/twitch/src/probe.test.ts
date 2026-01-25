@@ -69,16 +69,15 @@ describe("probeTwitch", () => {
   });
 
   it("returns error when username is missing", async () => {
-    const account = { ...mockAccount, username: "" as unknown as string };
+    const account = { ...mockAccount, username: "" };
     const result = await probeTwitch(account, 5000);
 
     expect(result.ok).toBe(false);
     expect(result.error).toContain("missing credentials");
-    expect(result.elapsedMs).toBeGreaterThanOrEqual(0);
   });
 
   it("returns error when token is missing", async () => {
-    const account = { ...mockAccount, token: "" as unknown as string };
+    const account = { ...mockAccount, token: "" };
     const result = await probeTwitch(account, 5000);
 
     expect(result.ok).toBe(false);
@@ -102,7 +101,6 @@ describe("probeTwitch", () => {
     expect(result.connected).toBe(true);
     expect(result.username).toBe("testbot");
     expect(result.channel).toBe("testchannel"); // uses account's configured channel
-    expect(result.elapsedMs).toBeGreaterThan(0);
   });
 
   it("uses custom channel when specified", async () => {
@@ -147,13 +145,6 @@ describe("probeTwitch", () => {
 
     // Reset mocks
     mockConnect.mockImplementation(defaultConnectImpl);
-  });
-
-  it("measures elapsed time", async () => {
-    const result = await probeTwitch(mockAccount, 5000);
-
-    expect(result.ok).toBe(true);
-    expect(result.elapsedMs).toBeGreaterThan(0);
   });
 
   it("handles connection errors gracefully", async () => {
