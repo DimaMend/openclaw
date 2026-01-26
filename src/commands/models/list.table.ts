@@ -9,7 +9,6 @@ const INPUT_PAD = 10;
 const CTX_PAD = 8;
 const LOCAL_PAD = 5;
 const AUTH_PAD = 5;
-const COST_PAD = 12;
 
 export function printModelTable(
   rows: ModelRow[],
