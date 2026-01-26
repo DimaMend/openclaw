@@ -50,7 +50,7 @@ The onboarding wizard generates a gateway token by default, so paste it here on 
 
 The Analytics tab provides visibility into your token usage and costs:
 
-![Analytics Dashboard](/gateway/images/control-ui-analytics.png)
+![Analytics Dashboard](/images/control-ui-analytics.png)
 
 ### Plan Quota
 

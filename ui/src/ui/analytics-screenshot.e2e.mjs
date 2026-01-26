@@ -67,14 +67,36 @@ async function takeScreenshot() {
     localStorage.setItem('clawdbot-control-ui-settings', JSON.stringify(settings));
   }, TOKEN);
 
-  // Navigate to analytics
-  await page.goto(`${BASE_URL}/analytics`);
-  await page.waitForTimeout(4000);
+  // Reload to apply token
+  await page.reload();
+  await page.waitForTimeout(3000);
 
-  // Click refresh
+  // Click on Analytics in the sidebar - use text content matching
+  try {
+    // Wait for sidebar to be visible
+    await page.waitForSelector('nav', { timeout: 5000 });
+    // Click on the Analytics link using text
+    await page.click('text=Analytics', { timeout: 5000 });
+    console.log('Clicked Analytics link');
+    await page.waitForTimeout(4000);
+  } catch (e) {
+    console.log('Could not click Analytics via text:', e.message);
+    // Try href-based selector
+    try {
+      await page.click('a[href="/analytics"]', { timeout: 3000 });
+      console.log('Clicked Analytics via href');
+      await page.waitForTimeout(4000);
+    } catch (e2) {
+      console.log('Fallback to direct navigation');
+      await page.goto(`${BASE_URL}/analytics`);
+      await page.waitForTimeout(4000);
+    }
+  }
+
+  // Click refresh to load data
   const refreshButton = page.locator('button', { hasText: 'Refresh' });
   try {
-    await refreshButton.click();
+    await refreshButton.click({ timeout: 5000 });
     console.log('Clicked refresh');
     await page.waitForTimeout(3000);
   } catch (e) {
