@@ -54,8 +54,8 @@ async function requireRiskAcknowledgement(params: {
   const danger = (value: string) => colorize(rich, theme.error.bold, value);
   const warning = (value: string) => colorize(rich, theme.warn.bold, value);
   const good = (value: string) => colorize(rich, theme.success.bold, value);
-  const subtle = (value: string) => colorize(rich, theme.warn, value);
-  const alert = (value: string) => colorize(rich, theme.error, value);
+  const emphasis = (value: string) => colorize(rich, theme.accentBright.bold, value);
+  const alert = (value: string) => colorize(rich, theme.error.bold, value);
 
   await params.prompter.note(
     [
@@ -63,22 +63,24 @@ async function requireRiskAcknowledgement(params: {
       "",
       alert("Prompt injection can override your bot. This risk is real and not solved."),
       "",
-      subtle(
+      emphasis(
         "Untrusted content can carry hostile instructions (links, web pages, files, logs, pasted text).",
       ),
-      subtle("If tools are enabled, a bad prompt can leak secrets, run commands, or access files."),
+      emphasis(
+        "If tools are enabled, a bad prompt can leak secrets, run commands, or access files.",
+      ),
       "",
       warning("Model policy (required for tool-enabled or untrusted input):"),
       `- ${good("Recommended:")} Anthropic Opus 4.5.`,
       `- ${warning("Not recommended:")} weaker tiers like Sonnet or Haiku.`,
       `- ${warning("Supported but not recommended:")} free models, cheap models, or local models.`,
       "",
-      warning("Required safeguards:"),
+      emphasis("Required safeguards:"),
       "- Pairing/allowlists + mention-gating.",
       "- Sandboxing + minimal tool access.",
       "- Keep secrets out of the agent's reachable filesystem.",
       "",
-      warning(
+      emphasis(
         "Run this regularly (especially after changing config or exposing network surfaces):",
       ),
       "clawdbot security audit",
