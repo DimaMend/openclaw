@@ -573,6 +573,63 @@ describe("appendMessageToTranscript", () => {
     expect(msg.message.provider).toBeUndefined();
     expect(msg.message.model).toBeUndefined();
   });
+
+  test("includes usage data when provided for assistant message", () => {
+    const sessionId = "test-append-usage";
+    const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const header = JSON.stringify({ type: "session", version: 1, id: sessionId });
+    fs.writeFileSync(transcriptPath, header + "\n", "utf-8");
+
+    const result = appendMessageToTranscript({
+      message: "Response with usage",
+      role: "assistant",
+      sessionId,
+      storePath,
+      usage: {
+        input: 100,
+        output: 50,
+        cacheRead: 10,
+        cacheWrite: 5,
+        total: 165,
+      },
+    });
+
+    expect(result.ok).toBe(true);
+
+    const content = fs.readFileSync(transcriptPath, "utf-8");
+    const lines = content.trim().split("\n");
+    const msg = JSON.parse(lines[1]);
+    expect(msg.message.usage).toEqual({
+      input: 100,
+      output: 50,
+      cacheRead: 10,
+      cacheWrite: 5,
+      totalTokens: 165,
+    });
+  });
+
+  test("defaults usage to zeros when not provided for assistant message", () => {
+    const sessionId = "test-append-no-usage";
+    const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    const header = JSON.stringify({ type: "session", version: 1, id: sessionId });
+    fs.writeFileSync(transcriptPath, header + "\n", "utf-8");
+
+    const result = appendMessageToTranscript({
+      message: "Response without usage",
+      role: "assistant",
+      sessionId,
+      storePath,
+    });
+
+    expect(result.ok).toBe(true);
+
+    const content = fs.readFileSync(transcriptPath, "utf-8");
+    const lines = content.trim().split("\n");
+    const msg = JSON.parse(lines[1]);
+    expect(msg.message.usage.input).toBe(0);
+    expect(msg.message.usage.output).toBe(0);
+    expect(msg.message.usage.totalTokens).toBe(0);
+  });
 });
 
 describe("ensureTranscriptFile", () => {

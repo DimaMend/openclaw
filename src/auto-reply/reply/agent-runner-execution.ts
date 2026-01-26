@@ -219,6 +219,7 @@ export async function runAgentTurnWithFallback(params: {
                   createIfMissing: true,
                   provider,
                   model,
+                  usage: result.meta.agentMeta?.usage,
                 });
                 if (!assistantPersistResult.ok) {
                   logVerbose(

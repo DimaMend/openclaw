@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { CURRENT_SESSION_VERSION } from "@mariozechner/pi-coding-agent";
+import type { NormalizedUsage } from "../agents/usage.js";
 import { resolveSessionTranscriptPath } from "../config/sessions.js";
 import { stripEnvelope } from "./chat-sanitize.js";
 import type { SessionPreviewItem } from "./session-utils.types.js";
@@ -112,6 +113,8 @@ function appendMessageToTranscriptImpl(
     stopReason?: string;
     provider?: string;
     model?: string;
+    /** Token usage for assistant messages (CLI backends). */
+    usage?: NormalizedUsage;
   },
   transcriptPath: string,
 ): TranscriptAppendResult {
@@ -137,7 +140,14 @@ function appendMessageToTranscriptImpl(
   };
   if (params.role === "assistant") {
     messageBody.stopReason = params.stopReason ?? "cli_backend";
-    messageBody.usage = { input: 0, output: 0, totalTokens: 0 };
+    const u = params.usage;
+    messageBody.usage = {
+      input: u?.input ?? 0,
+      output: u?.output ?? 0,
+      cacheRead: u?.cacheRead,
+      cacheWrite: u?.cacheWrite,
+      totalTokens: u?.total ?? (u?.input ?? 0) + (u?.output ?? 0),
+    };
     if (params.provider) messageBody.provider = params.provider;
     if (params.model) messageBody.model = params.model;
   }
@@ -176,6 +186,8 @@ export function appendMessageToTranscript(params: {
   provider?: string;
   /** Model that generated the response (for assistant messages). */
   model?: string;
+  /** Token usage for assistant messages (CLI backends). */
+  usage?: NormalizedUsage;
 }): TranscriptAppendResult {
   const transcriptPath = resolveTranscriptPathFromParams(params);
   if (!transcriptPath) {
@@ -199,6 +211,8 @@ export async function appendMessageToTranscriptAsync(params: {
   stopReason?: string;
   provider?: string;
   model?: string;
+  /** Token usage for assistant messages (CLI backends). */
+  usage?: NormalizedUsage;
 }): Promise<TranscriptAppendResult> {
   const transcriptPath = resolveTranscriptPathFromParams(params);
   if (!transcriptPath) {
@@ -223,6 +237,8 @@ export function appendAssistantMessageToTranscript(params: {
   provider?: string;
   /** Model that generated the response. */
   model?: string;
+  /** Token usage for assistant messages (CLI backends). */
+  usage?: NormalizedUsage;
 }): TranscriptAppendResult {
   return appendMessageToTranscript({
     ...params,
@@ -241,6 +257,8 @@ export async function appendAssistantMessageToTranscriptAsync(params: {
   createIfMissing?: boolean;
   provider?: string;
   model?: string;
+  /** Token usage for assistant messages (CLI backends). */
+  usage?: NormalizedUsage;
 }): Promise<TranscriptAppendResult> {
   return appendMessageToTranscriptAsync({
     ...params,
