@@ -734,6 +734,132 @@
       font-size: 10px;
     }
 
+    /* World URL Bar */
+    .world-url-bar {
+      background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+      border-bottom: 1px solid #aaa;
+      padding: 8px;
+    }
+
+    .url-bar-inner {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+
+    .url-label {
+      font-weight: bold;
+      color: #333;
+      white-space: nowrap;
+    }
+
+    .url-input {
+      flex: 1;
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .url-presets {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 10px;
+      padding-top: 5px;
+      border-top: 1px solid #ddd;
+      margin-top: 5px;
+    }
+
+    .preset-label {
+      color: #666;
+    }
+
+    .url-presets a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+
+    .url-presets a:hover {
+      text-decoration: underline;
+    }
+
+    /* Iframe Container */
+    .world-iframe-container {
+      width: 100%;
+      height: calc(100% - 70px);
+      position: relative;
+      background: #1a1a2e;
+    }
+
+    .world-iframe-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #fff;
+    }
+
+    .iframe-loading {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e2e8f0;
+      z-index: 10;
+    }
+
+    .iframe-loading.hidden {
+      display: none;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #00ff88;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-hint {
+      font-size: 10px;
+      color: #888;
+      margin-top: 10px;
+    }
+
+    /* Iframe Error State */
+    .iframe-error {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #ff6b6b;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 20px 30px;
+      border-radius: 8px;
+      border: 1px solid #ff6b6b;
+    }
+
+    .iframe-error h3 {
+      margin-bottom: 10px;
+    }
+
+    .iframe-error p {
+      font-size: 11px;
+      color: #ccc;
+    }
+
     .stat-row {
       display: flex;
       justify-content: space-between;
@@ -864,14 +990,14 @@
     </div>
 
     <!-- World Builder Window -->
-    <div class="xp-window" id="world-window">
+    <div class="xp-window" id="world-window" style="width: 800px; height: 600px;">
       <div class="window-titlebar" onmousedown="startDrag(event, 'world-window')">
         <div class="window-title">
           <svg width="16" height="16" viewBox="0 0 32 32">
             <circle cx="16" cy="16" r="12" fill="#22c55e"/>
             <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="#fff" stroke-width="1"/>
           </svg>
-          World Builder - Inspired by WorldLabs.ai
+          World Builder - External AI Worlds
         </div>
         <div class="window-controls">
           <button class="window-btn btn-minimize" onclick="minimizeWindow('world-window')">_</button>
@@ -883,11 +1009,47 @@
         <span>File</span>
         <span>Edit</span>
         <span>World</span>
-        <span>Generate</span>
+        <span onclick="toggleWorldMode()">Switch Mode</span>
         <span>Help</span>
       </div>
-      <div class="window-content" style="padding: 0; margin: 0; border: none;">
-        <div class="world-container">
+      <div class="window-content" style="padding: 0; margin: 0; border: none; height: calc(100% - 80px);">
+        <!-- URL Input Bar -->
+        <div class="world-url-bar" id="world-url-bar">
+          <div class="url-bar-inner">
+            <span class="url-label">World URL:</span>
+            <input type="text" class="xp-input url-input" id="world-url-input"
+                   placeholder="Enter WorldLabs.ai or any world builder URL..."
+                   value="https://www.worldlabs.ai/discover">
+            <button class="xp-btn primary" onclick="loadWorldUrl()">Go</button>
+            <button class="xp-btn" onclick="loadPresetWorld('worldlabs')">WorldLabs</button>
+            <button class="xp-btn" onclick="loadPresetWorld('threejs')">Three.js</button>
+            <button class="xp-btn" onclick="loadPresetWorld('babylonjs')">Babylon</button>
+            <button class="xp-btn" onclick="toggleWorldMode()">Local Mode</button>
+          </div>
+          <div class="url-presets">
+            <span class="preset-label">Quick Access:</span>
+            <a href="#" onclick="setWorldUrl('https://www.worldlabs.ai/discover'); return false;">WorldLabs Discover</a>
+            <a href="#" onclick="setWorldUrl('https://www.worldlabs.ai/create'); return false;">WorldLabs Create</a>
+            <a href="#" onclick="setWorldUrl('https://threejs.org/examples/#webgl_animation_keyframes'); return false;">Three.js Demo</a>
+            <a href="#" onclick="setWorldUrl('https://playground.babylonjs.com/'); return false;">Babylon Playground</a>
+          </div>
+        </div>
+
+        <!-- Iframe World Container -->
+        <div class="world-iframe-container" id="world-iframe-container">
+          <div class="iframe-loading" id="iframe-loading">
+            <div class="loading-spinner"></div>
+            <p>Loading World Builder...</p>
+            <p class="loading-hint">Enter a URL above or click a preset to start building worlds</p>
+          </div>
+          <iframe id="world-iframe"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                  allow="accelerometer; camera; encrypted-media; fullscreen; gyroscope; microphone; web-share"
+                  loading="lazy"></iframe>
+        </div>
+
+        <!-- Local Canvas Mode (hidden by default) -->
+        <div class="world-container" id="world-local-container" style="display: none;">
           <div class="world-sidebar">
             <h3>World Elements</h3>
             <div class="world-element" draggable="true" data-type="star">* Star</div>
@@ -899,6 +1061,7 @@
             <h3 style="margin-top: 15px;">AI Generation</h3>
             <button class="xp-btn" style="width: 100%; margin-bottom: 5px;" onclick="aiGenerateWorld()">Auto-Generate</button>
             <button class="xp-btn" style="width: 100%;" onclick="evolveWorld()">Evolve World</button>
+            <button class="xp-btn" style="width: 100%; margin-top: 10px;" onclick="toggleWorldMode()">Iframe Mode</button>
           </div>
           <div class="world-canvas-container">
             <div class="world-toolbar">
@@ -922,7 +1085,7 @@
           </div>
         </div>
       </div>
-      <div class="window-statusbar">Mode: Creation | Objects: <span id="world-objects">0</span></div>
+      <div class="window-statusbar">Mode: <span id="world-mode-status">Iframe</span> | <span id="world-url-status">Ready to load external world</span></div>
     </div>
 
     <!-- About Window -->
@@ -1557,6 +1720,131 @@
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       addWorldObject('star', x, y);
+    });
+
+    // ===== IFRAME WORLD BUILDER =====
+    let worldMode = 'iframe'; // 'iframe' or 'local'
+    let currentWorldUrl = '';
+
+    const worldPresets = {
+      worldlabs: 'https://www.worldlabs.ai/discover',
+      worldlabs_create: 'https://www.worldlabs.ai/create',
+      threejs: 'https://threejs.org/examples/#webgl_animation_keyframes',
+      babylonjs: 'https://playground.babylonjs.com/',
+      aframe: 'https://aframe.io/examples/showcase/helloworld/',
+      sketchfab: 'https://sketchfab.com/3d-models?features=staffpicked&sort_by=-likeCount'
+    };
+
+    function setWorldUrl(url) {
+      document.getElementById('world-url-input').value = url;
+      loadWorldUrl();
+    }
+
+    function loadWorldUrl() {
+      const input = document.getElementById('world-url-input');
+      const url = input.value.trim();
+
+      if (!url) {
+        showNotification('World Builder', 'Please enter a URL');
+        return;
+      }
+
+      // Validate URL
+      try {
+        new URL(url);
+      } catch {
+        showNotification('World Builder', 'Invalid URL format');
+        return;
+      }
+
+      currentWorldUrl = url;
+      const iframe = document.getElementById('world-iframe');
+      const loading = document.getElementById('iframe-loading');
+
+      // Show loading state
+      loading.classList.remove('hidden');
+      loading.innerHTML = `
+        <div class="loading-spinner"></div>
+        <p>Loading: ${url}</p>
+        <p class="loading-hint">Connecting to external world builder...</p>
+      `;
+
+      // Set iframe src
+      iframe.src = url;
+
+      // Update status
+      document.getElementById('world-url-status').textContent = `Loading: ${new URL(url).hostname}`;
+
+      // Handle load event
+      iframe.onload = () => {
+        loading.classList.add('hidden');
+        document.getElementById('world-url-status').textContent = `Connected: ${new URL(url).hostname}`;
+        showNotification('World Builder', `Loaded: ${new URL(url).hostname}`);
+
+        // Log to soul document
+        addSoulEntry('memory', `Explored a new world at ${new URL(url).hostname}. The universe expands...`);
+      };
+
+      // Handle error
+      iframe.onerror = () => {
+        loading.innerHTML = `
+          <div class="iframe-error">
+            <h3>Unable to Load World</h3>
+            <p>The site may block iframe embedding.</p>
+            <p>Try opening in a new tab: <a href="${url}" target="_blank" style="color: #00ff88;">${url}</a></p>
+          </div>
+        `;
+        document.getElementById('world-url-status').textContent = 'Error loading world';
+      };
+    }
+
+    function loadPresetWorld(preset) {
+      const url = worldPresets[preset];
+      if (url) {
+        setWorldUrl(url);
+      }
+    }
+
+    function toggleWorldMode() {
+      const iframeContainer = document.getElementById('world-iframe-container');
+      const urlBar = document.getElementById('world-url-bar');
+      const localContainer = document.getElementById('world-local-container');
+      const modeStatus = document.getElementById('world-mode-status');
+
+      if (worldMode === 'iframe') {
+        // Switch to local mode
+        worldMode = 'local';
+        iframeContainer.style.display = 'none';
+        urlBar.style.display = 'none';
+        localContainer.style.display = 'flex';
+        modeStatus.textContent = 'Local Canvas';
+        document.getElementById('world-url-status').textContent = 'Building locally';
+        initWorldCanvas();
+        showNotification('World Builder', 'Switched to Local Mode');
+      } else {
+        // Switch to iframe mode
+        worldMode = 'iframe';
+        iframeContainer.style.display = 'block';
+        urlBar.style.display = 'block';
+        localContainer.style.display = 'none';
+        modeStatus.textContent = 'Iframe';
+        document.getElementById('world-url-status').textContent = currentWorldUrl
+          ? `Connected: ${new URL(currentWorldUrl).hostname}`
+          : 'Ready to load external world';
+        showNotification('World Builder', 'Switched to Iframe Mode');
+      }
+    }
+
+    // Handle Enter key in URL input
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlInput = document.getElementById('world-url-input');
+      if (urlInput) {
+        urlInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            loadWorldUrl();
+          }
+        });
+      }
     });
 
     // ===== INITIALIZATION =====
