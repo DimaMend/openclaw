@@ -1,5 +1,6 @@
 import { html, nothing } from "lit";
 import { repeat } from "lit/directives/repeat.js";
+import { ref } from "lit/directives/ref.js";
 import type { SessionsListResult } from "../types";
 import type { ChatAttachment, ChatQueueItem } from "../ui-types";
 import type { ChatItem, MessageGroup } from "../types/chat-types";
@@ -100,6 +101,18 @@ function renderCompactionIndicator(status: CompactionIndicatorStatus | null | un
 
 function generateAttachmentId(): string {
   return `att-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function autoResizeTextarea(textarea: HTMLTextAreaElement) {
+  // If empty, reset to default height
+  if (!textarea.value) {
+    textarea.style.height = "";
+    return;
+  }
+  // Reset height to auto to get the correct scrollHeight
+  textarea.style.height = "auto";
+  // Set height to scrollHeight (capped by max-height in CSS)
+  textarea.style.height = `${textarea.scrollHeight}px`;
 }
 
 function handlePaste(
@@ -327,6 +340,9 @@ export function renderChat(props: ChatProps) {
           <label class="field chat-compose__field">
             <span>Message</span>
             <textarea
+              ${ref((el) => {
+                if (el) autoResizeTextarea(el as HTMLTextAreaElement);
+              })}
               .value=${props.draft}
               ?disabled=${!props.connected}
               @keydown=${(e: KeyboardEvent) => {
@@ -337,8 +353,11 @@ export function renderChat(props: ChatProps) {
                 e.preventDefault();
                 if (canCompose) props.onSend();
               }}
-              @input=${(e: Event) =>
-                props.onDraftChange((e.target as HTMLTextAreaElement).value)}
+              @input=${(e: Event) => {
+                const textarea = e.target as HTMLTextAreaElement;
+                props.onDraftChange(textarea.value);
+                autoResizeTextarea(textarea);
+              }}
               @paste=${(e: ClipboardEvent) => handlePaste(e, props)}
               placeholder=${composePlaceholder}
             ></textarea>
