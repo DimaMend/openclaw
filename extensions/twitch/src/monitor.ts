@@ -185,11 +185,16 @@ export async function monitorTwitchProvider(
   const core = getTwitchRuntime();
   let stopped = false;
 
+  const coreLogger = core.logging.getChildLogger({ module: "twitch" });
+  const logVerboseMessage = (message: string) => {
+    if (!core.logging.shouldLogVerbose()) return;
+    coreLogger.debug?.(message);
+  };
   const logger = {
-    info: (msg: string) => runtime.log?.(msg),
-    warn: (msg: string) => runtime.log?.(msg),
-    error: (msg: string) => runtime.error?.(msg),
-    debug: (msg: string) => runtime.log?.(msg),
+    info: (msg: string) => coreLogger.info(msg),
+    warn: (msg: string) => coreLogger.warn(msg),
+    error: (msg: string) => coreLogger.error(msg),
+    debug: logVerboseMessage,
   };
 
   const clientManager = getOrCreateClientManager(accountId, logger);
