@@ -294,7 +294,7 @@ export async function applyNonInteractiveAuthChoice(params: {
     });
     return applyNanoGptConfig(nextConfig);
   }
-  
+
   if (authChoice === "venice-api-key") {
     const resolved = await resolveNonInteractiveApiKey({
       provider: "venice",
