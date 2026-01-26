@@ -7,6 +7,7 @@
  * - Block tool execution with a custom reason
  */
 
+import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { HookRunner } from "../plugins/hooks.js";
 import type { PluginHookToolContext } from "../plugins/hooks.js";
 import type { AnyAgentTool } from "./pi-tools.types.js";
@@ -43,19 +44,17 @@ export function wrapToolWithBeforeCallHook(
     execute: async (toolCallId, params, signal, onUpdate) => {
       const toolName = tool.name;
 
-      // Build hook context
+      // Build hook context (matches PluginHookToolContext type)
       const hookCtx: PluginHookToolContext = {
         agentId,
         sessionKey,
         toolName,
-        toolCallId,
       };
 
       // Run the before_tool_call hook
       const hookResult = await hookRunner.runBeforeToolCall(
         {
           toolName,
-          toolCallId,
           params: params as Record<string, unknown>,
         },
         hookCtx,
@@ -64,11 +63,12 @@ export function wrapToolWithBeforeCallHook(
       // Check if the hook blocked the tool call
       if (hookResult?.block) {
         const reason = hookResult.blockReason ?? "Tool call blocked by policy";
-        // Return a structured error that the agent can understand
-        return {
-          type: "text" as const,
-          text: `Error: ${reason}`,
+        // Return a properly structured AgentToolResult error
+        const blockedResult: AgentToolResult<unknown> = {
+          content: [{ type: "text", text: `Error: ${reason}` }],
+          details: { blocked: true, reason },
         };
+        return blockedResult;
       }
 
       // Use modified params if provided, otherwise use original
