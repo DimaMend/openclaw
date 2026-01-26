@@ -12,6 +12,7 @@ Docs: https://docs.clawd.bot
 ### Fixes
 - Web UI: hide internal `message_id` hints in chat bubbles.
 - Heartbeat: normalize target identifiers for consistent routing.
+- Agent errors: detect and sanitize HTML error pages from external APIs (prevents Next.js 404 pages being sent to messaging channels).
 
 ## 2026.1.23-1
 

@@ -273,6 +273,12 @@ export function formatAssistantErrorText(
     return formatRawAssistantErrorForUi(raw);
   }
 
+  // Detect HTML error pages (e.g., Next.js 404s from misconfigured API endpoints)
+  if (raw.includes("<!DOCTYPE") || raw.includes("<html") || /<head[\s>]/.test(raw)) {
+    console.warn("[formatAssistantErrorText] HTML error page received:", raw.slice(0, 200));
+    return "The AI service returned an unexpected error page. The API endpoint may be misconfigured or temporarily unavailable.";
+  }
+
   // Never return raw unhandled errors - log for debugging but return safe message
   if (raw.length > 600) {
     console.warn("[formatAssistantErrorText] Long error truncated:", raw.slice(0, 200));
