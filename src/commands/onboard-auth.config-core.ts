@@ -216,9 +216,26 @@ export function applyChutesProviderConfig(cfg: ClawdbotConfig): ClawdbotConfig {
   const providers = { ...cfg.models?.providers };
   const existingProvider = providers.chutes;
   const existingModels = Array.isArray(existingProvider?.models) ? existingProvider.models : [];
+
+  const toolCapableModelIds = [
+    "Qwen/Qwen3-235B-A22B-Instruct-2507-TEE",
+    "deepseek-ai/DeepSeek-V3.2-TEE",
+    "chutesai/Mistral-Small-3.1-24B-Instruct-2503",
+    "NousResearch/Hermes-4-14B",
+  ];
+
   const defaultModel = buildChutesModelDefinition();
-  const hasDefaultModel = existingModels.some((model) => model.id === CHUTES_DEFAULT_MODEL_ID);
-  const mergedModels = hasDefaultModel ? existingModels : [...existingModels, defaultModel];
+  const toolModels = toolCapableModelIds.map((id) => buildChutesModelDefinition(id));
+
+  const allChutesModels = [defaultModel, ...toolModels];
+  const mergedModels = [...existingModels];
+
+  for (const model of allChutesModels) {
+    if (!mergedModels.some((m) => m.id === model.id)) {
+      mergedModels.push(model);
+    }
+  }
+
   const { apiKey: existingApiKey, ...existingProviderRest } = (existingProvider ?? {}) as Record<
     string,
     unknown
@@ -230,7 +247,7 @@ export function applyChutesProviderConfig(cfg: ClawdbotConfig): ClawdbotConfig {
     baseUrl: CHUTES_BASE_URL,
     api: "openai-completions",
     ...(normalizedApiKey ? { apiKey: normalizedApiKey } : {}),
-    models: mergedModels.length > 0 ? mergedModels : [defaultModel],
+    models: mergedModels,
   };
 
   return {

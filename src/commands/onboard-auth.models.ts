@@ -116,7 +116,53 @@ export function buildMoonshotModelDefinition(): ModelDefinitionConfig {
   };
 }
 
-export function buildChutesModelDefinition(): ModelDefinitionConfig {
+export function buildChutesModelDefinition(
+  modelId: string = CHUTES_DEFAULT_MODEL_ID,
+): ModelDefinitionConfig {
+  if (modelId === "Qwen/Qwen3-235B-A22B-Instruct-2507-TEE") {
+    return {
+      id: modelId,
+      name: "Qwen 3 235B (Tools)",
+      reasoning: false,
+      input: ["text"],
+      cost: CHUTES_DEFAULT_COST,
+      contextWindow: 262144,
+      maxTokens: 4096,
+    };
+  }
+  if (modelId === "deepseek-ai/DeepSeek-V3.2-TEE") {
+    return {
+      id: modelId,
+      name: "DeepSeek V3.2 (Tools)",
+      reasoning: false,
+      input: ["text"],
+      cost: CHUTES_DEFAULT_COST,
+      contextWindow: 202752,
+      maxTokens: 4096,
+    };
+  }
+  if (modelId === "chutesai/Mistral-Small-3.1-24B-Instruct-2503") {
+    return {
+      id: modelId,
+      name: "Mistral Small 3.1 (Tools)",
+      reasoning: false,
+      input: ["text"],
+      cost: CHUTES_DEFAULT_COST,
+      contextWindow: 131072,
+      maxTokens: 4096,
+    };
+  }
+  if (modelId === "NousResearch/Hermes-4-14B") {
+    return {
+      id: modelId,
+      name: "Hermes 4 14B (Tools)",
+      reasoning: false,
+      input: ["text"],
+      cost: CHUTES_DEFAULT_COST,
+      contextWindow: 40960,
+      maxTokens: 4096,
+    };
+  }
   return {
     id: CHUTES_DEFAULT_MODEL_ID,
     name: "GLM 4.6 TEE",
