@@ -855,30 +855,41 @@ describe("security audit", () => {
 
     const includePath = path.join(stateDir, "extra.json5");
     await fs.writeFile(includePath, "{ logging: { redactSensitive: 'off' } }\n", "utf-8");
-    await fs.chmod(includePath, 0o644);
+    if (isWindows) {
+      // Grant "Everyone" write access to trigger the perms_writable check on Windows
+      const { execSync } = await import("node:child_process");
+      execSync(`icacls "${includePath}" /grant Everyone:W`, { stdio: "ignore" });
+    } else {
+      await fs.chmod(includePath, 0o644);
+    }
 
     const configPath = path.join(stateDir, "clawdbot.json");
     await fs.writeFile(configPath, `{ "$include": "./extra.json5" }\n`, "utf-8");
     await fs.chmod(configPath, 0o600);
 
-    const cfg: ClawdbotConfig = { logging: { redactSensitive: "off" } };
-    const res = await runSecurityAudit({
-      config: cfg,
-      includeFilesystem: true,
-      includeChannelSecurity: false,
-      stateDir,
-      configPath,
-    });
+    try {
+      const cfg: ClawdbotConfig = { logging: { redactSensitive: "off" } };
+      const res = await runSecurityAudit({
+        config: cfg,
+        includeFilesystem: true,
+        includeChannelSecurity: false,
+        stateDir,
+        configPath,
+      });
 
-    const expectedCheckId = isWindows
-      ? "fs.config_include.perms_writable"
-      : "fs.config_include.perms_world_readable";
+      const expectedCheckId = isWindows
+        ? "fs.config_include.perms_writable"
+        : "fs.config_include.perms_world_readable";
 
-    expect(res.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ checkId: expectedCheckId, severity: "critical" }),
-      ]),
-    );
+      expect(res.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ checkId: expectedCheckId, severity: "critical" }),
+        ]),
+      );
+    } finally {
+      // Clean up temp directory with world-writable file
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
   });
 
   it("flags extensions without plugins.allow", async () => {
