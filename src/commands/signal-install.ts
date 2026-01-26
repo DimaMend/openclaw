@@ -53,13 +53,25 @@ function pickAsset(assets: ReleaseAsset[], platform: NodeJS.Platform) {
   if (platform === "darwin") {
     return (
       byName(/macos|osx|darwin/) ||
-      withName.find((asset) => looksLikeArchive(asset.name.toLowerCase()))
+      // Fall back to JVM version, excluding platform-specific native builds
+      withName.find(
+        (asset) =>
+          looksLikeArchive(asset.name.toLowerCase()) &&
+          !asset.name.toLowerCase().includes("linux-native") &&
+          !asset.name.toLowerCase().includes("windows"),
+      )
     );
   }
 
   if (platform === "win32") {
     return (
-      byName(/windows|win/) || withName.find((asset) => looksLikeArchive(asset.name.toLowerCase()))
+      byName(/windows|win/) ||
+      // Fall back to JVM version, excluding platform-specific native builds
+      withName.find(
+        (asset) =>
+          looksLikeArchive(asset.name.toLowerCase()) &&
+          !asset.name.toLowerCase().includes("linux-native"),
+      )
     );
   }
 
