@@ -4,6 +4,7 @@ read_when:
   - You want to choose a chat channel for Clawdbot
   - You need a quick overview of supported messaging platforms
 ---
+
 # Chat Channels
 
 Clawdbot can talk to you on any chat app you already use. Each channel connects via the Gateway.
@@ -16,6 +17,7 @@ Text is supported everywhere; media and reactions vary by channel.
 - [Discord](/channels/discord) — Discord Bot API + Gateway; supports servers, channels, and DMs.
 - [Slack](/channels/slack) — Bolt SDK; workspace apps.
 - [Google Chat](/channels/googlechat) — Google Chat API app via HTTP webhook.
+- [Feishu](/channels/feishu) — Feishu Bot API via HTTP callback (plugin, installed separately).
 - [Mattermost](/channels/mattermost) — Bot API + WebSocket; channels, groups, DMs (plugin, installed separately).
 - [Signal](/channels/signal) — signal-cli; privacy-focused.
 - [BlueBubbles](/channels/bluebubbles) — **Recommended for iMessage**; uses the BlueBubbles macOS server REST API with full feature support (edit, unsend, effects, reactions, group management — edit currently broken on macOS 26 Tahoe).
