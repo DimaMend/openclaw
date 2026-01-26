@@ -15,11 +15,14 @@
 set -euo pipefail
 
 # === Configuration ===
-MOLT_DIR="${HOME}/.clawdbot/molt"
-CLAWDBOT_DIR="${HOME}/clawd"
-WORKSPACE_DIR="${HOME}/maja-workspace"
-REMOTE="upstream"
-BRANCH="main"
+MOLT_DIR="${MOLT_DIR:-${HOME}/.clawdbot/molt}"
+CLAWDBOT_DIR="${CLAWDBOT_DIR:-${HOME}/clawdbot}"
+WORKSPACE_DIR="${WORKSPACE_DIR:-${HOME}/clawd}"
+REMOTE="${MOLT_REMOTE:-upstream}"
+BRANCH="${MOLT_BRANCH:-main}"
+
+# Ensure XDG_RUNTIME_DIR is set for systemctl --user
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
 # Health check timing
 STARTUP_TIMEOUT=60
