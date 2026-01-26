@@ -91,19 +91,7 @@ tailscale status
 
 **From now on, connect via Tailscale:** `ssh ubuntu@clawdbot` (or use the Tailscale IP).
 
-## 5) Lock Down VCN Security
-
-Now that Tailscale is running, lock down the VCN to block all traffic except Tailscale. OCI's Virtual Cloud Network acts as a firewall at the network edge — traffic is blocked before it reaches your instance.
-
-1. Go to **Networking → Virtual Cloud Networks** in the OCI Console
-2. Click your VCN → **Security Lists** → Default Security List
-3. **Remove** all ingress rules except:
-   - `0.0.0.0/0 UDP 41641` (Tailscale)
-4. Keep default egress rules (allow all outbound)
-
-This blocks SSH on port 22, HTTP, HTTPS, and everything else at the network edge. You'll only be able to connect via Tailscale from now on.
-
-## 6) Install Homebrew (ARM)
+## 5) Install Homebrew (ARM)
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -118,7 +106,7 @@ source ~/.bashrc
 brew install gcc
 ```
 
-## 7) Install Clawdbot
+## 6) Install Clawdbot
 
 ```bash
 curl -fsSL https://clawd.bot/install.sh | bash
@@ -127,7 +115,7 @@ source ~/.bashrc
 
 When prompted "How do you want to hatch your bot?", select **"Do this later"**.
 
-## 8) Configure Gateway with Tailscale Serve
+## 7) Configure Gateway with Tailscale Serve
 
 ```bash
 clawdbot config set gateway.bind loopback
@@ -143,7 +131,7 @@ This configures:
 - Tailscale Serve provides HTTPS and handles external routing
 - Authentication via Tailscale identity headers (no tokens needed)
 
-## 9) Verify
+## 8) Verify
 
 ```bash
 # Check version
@@ -158,6 +146,18 @@ tailscale serve status
 # Test local response
 curl http://localhost:18789
 ```
+
+## 9) Lock Down VCN Security
+
+Now that everything is working, lock down the VCN to block all traffic except Tailscale. OCI's Virtual Cloud Network acts as a firewall at the network edge — traffic is blocked before it reaches your instance.
+
+1. Go to **Networking → Virtual Cloud Networks** in the OCI Console
+2. Click your VCN → **Security Lists** → Default Security List
+3. **Remove** all ingress rules except:
+   - `0.0.0.0/0 UDP 41641` (Tailscale)
+4. Keep default egress rules (allow all outbound)
+
+This blocks SSH on port 22, HTTP, HTTPS, and everything else at the network edge. From now on, you can only connect via Tailscale.
 
 ---
 
@@ -180,7 +180,7 @@ No SSH tunnel needed. Tailscale provides:
 
 ## Security: Why VCN + Tailscale Is Enough
 
-With the VCN configured as above (only UDP 41641 open), you have **defense in depth** that makes traditional VPS hardening redundant.
+With the VCN locked down (only UDP 41641 open), you have **defense in depth** that makes traditional VPS hardening redundant.
 
 **How it works:** The VCN blocks traffic at the network edge — before it reaches your instance. Combined with Tailscale SSH (which bypasses sshd entirely), there's no attack surface for typical threats.
 
