@@ -11,7 +11,7 @@
  * - Auth profile resolution for model access
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Mock dependencies
 vi.mock("../../src/agents/defaults.js", () => ({
