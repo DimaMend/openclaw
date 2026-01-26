@@ -657,6 +657,7 @@ async function sendEncryptedDm(
 
     const startTime = Date.now();
     try {
+      // pool.publish returns Promise<string>[], await the first promise
       await pool.publish([relay], reply)[0];
       const latency = Date.now() - startTime;
 

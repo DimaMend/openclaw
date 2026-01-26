@@ -218,21 +218,72 @@ export const nostrPlugin: ChannelPlugin<ResolvedNostrAccount> = {
         accountId: account.accountId,
         privateKey: account.privateKey,
         relays: account.relays,
-        onMessage: async (senderPubkey, text, reply) => {
+        onMessage: async (senderPubkey, text, replyFn) => {
           ctx.log?.debug(`[${account.accountId}] DM from ${senderPubkey}: ${text.slice(0, 50)}...`);
 
-          // Forward to clawdbot's message pipeline
-          await runtime.channel.reply.handleInboundMessage({
+          // Load config and resolve routing
+          const cfg = await runtime.config.loadConfig();
+          const route = runtime.channel.routing.resolveAgentRoute({
+            cfg,
             channel: "nostr",
-            accountId: account.accountId,
-            senderId: senderPubkey,
             chatType: "direct",
-            chatId: senderPubkey, // For DMs, chatId is the sender's pubkey
-            text,
-            reply: async (responseText: string) => {
-              await reply(responseText);
-            },
+            chatId: senderPubkey,
+            senderId: senderPubkey,
           });
+
+          // Build the inbound context
+          const ctxPayload = runtime.channel.reply.finalizeInboundContext({
+            Body: text,
+            RawBody: text,
+            CommandBody: text,
+            From: `nostr:${senderPubkey}`,
+            To: `nostr:dm:${senderPubkey}`,
+            SessionKey: route.sessionKey,
+            AccountId: account.accountId,
+            ChatType: "direct",
+            ConversationLabel: `nostr:${senderPubkey.slice(0, 8)}`,
+            SenderName: senderPubkey.slice(0, 8),
+            SenderId: senderPubkey,
+            Provider: "nostr" as const,
+            Surface: "nostr" as const,
+            CommandSource: "text" as const,
+            OriginatingChannel: "nostr" as const,
+            OriginatingTo: `nostr:dm:${senderPubkey}`,
+          });
+
+          // Create reply dispatcher
+          const { dispatcher, replyOptions, markDispatchIdle } =
+            runtime.channel.reply.createReplyDispatcherWithTyping({
+              humanDelay: runtime.channel.reply.resolveHumanDelayConfig(cfg, route.agentId),
+              deliver: async (payload) => {
+                if (payload.text) {
+                  await replyFn(payload.text);
+                }
+              },
+              onError: (err, info) => {
+                ctx.log?.error(`nostr ${info.kind} reply failed: ${String(err)}`);
+              },
+            });
+
+          // Dispatch to agent
+          try {
+            const { queuedFinal, counts } = await runtime.channel.reply.dispatchReplyFromConfig({
+              ctx: ctxPayload,
+              cfg,
+              dispatcher,
+              replyOptions,
+            });
+            markDispatchIdle();
+
+            if (queuedFinal) {
+              const finalCount = counts.final;
+              ctx.log?.debug(
+                `[${account.accountId}] delivered ${finalCount} reply${finalCount === 1 ? "" : "ies"} to ${senderPubkey.slice(0, 8)}`,
+              );
+            }
+          } catch (err) {
+            ctx.log?.error(`[${account.accountId}] dispatch failed: ${String(err)}`);
+          }
         },
         onError: (error, context) => {
           ctx.log?.error(`[${account.accountId}] Nostr error (${context}): ${error.message}`);
