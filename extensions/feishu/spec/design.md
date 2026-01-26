@@ -4,11 +4,11 @@
 
 Implement `@clawdbot/feishu` as a channel extension that:
 
-- Registers a channel plugin (`api.registerChannel`) and an HTTP webhook handler (`api.registerHttpHandler`).
-- Starts a per-account “monitor” on gateway start (via `plugin.gateway.startAccount`) that registers webhook targets and manages runtime status.
+- Registers a channel plugin (`api.registerChannel`) and an HTTP handler (`api.registerHttpHandler`).
+- Starts a per-account “monitor” on gateway start (via `plugin.gateway.startAccount`) that runs until aborted and manages runtime status.
 - Uses the existing Clawdbot reply pipeline (`runtime.channel.reply.dispatchReplyWithBufferedBlockDispatcher`) to route inbound messages to an agent and send outbound replies back to Feishu.
 
-This follows the proven “webhook channel” structure in `extensions/googlechat`.
+This follows the proven “webhook channel” structure in `extensions/googlechat`, with an additional long-connection transport option.
 
 ## Architecture
 
@@ -27,6 +27,10 @@ This follows the proven “webhook channel” structure in `extensions/googlecha
   - Parses raw body, validates signature/token, decrypts if needed.
   - Handles `url_verification`.
   - Handles `im.message.receive_v1` text messages.
+- **Long connection monitor**: `extensions/feishu/src/ws.ts`
+  - Fetches long-connection endpoint config from Feishu.
+  - Connects to Feishu’s event WebSocket and acknowledges events quickly.
+- **Inbound processing + routing**: `extensions/feishu/src/inbound.ts`
   - Applies DM + group policies and mention gating.
   - Builds inbound context and calls reply dispatcher.
   - Sends replies via Feishu REST API.

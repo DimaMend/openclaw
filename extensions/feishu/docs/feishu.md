@@ -2,12 +2,12 @@
 summary: "Feishu bot support status, capabilities, and configuration"
 read_when:
   - You want to connect Clawdbot to Feishu
-  - You are debugging Feishu webhook callbacks
+  - You are debugging Feishu webhook callbacks or long connection events
 ---
 
 # Feishu (Bot API)
 
-Status: experimental. HTTP callback only. Text messages only (V1).
+Status: experimental. Text messages only (V1). Supports HTTP callback and long connection.
 
 ## Plugin required
 
@@ -25,16 +25,40 @@ Feishu ships as a plugin and is not bundled with the core install.
    - `appId`
    - `appSecret`
 3. Configure event subscription:
-   - Callback URL: `https://gateway.example.com/feishu`
    - Events: subscribe to `im.message.receive_v1`
-   - Set either a **verification token** or an **encrypt key**
-4. Configure Clawdbot:
+   - Choose one delivery mode:
+     - **Long connection** (no public URL required)
+     - **HTTP callback** (public HTTPS webhook required)
+4. Configure Clawdbot (choose one):
+
+### Long connection (mode: ws)
 
 ```json5
 {
   channels: {
     feishu: {
       enabled: true,
+      mode: "ws",
+      appId: "cli_xxx",
+      appSecret: "xxx",
+      dm: { policy: "pairing" },
+      groupPolicy: "allowlist",
+      groups: {
+        oc_xxx: { allow: true, requireMention: true },
+      },
+    },
+  },
+}
+```
+
+### HTTP callback (mode: http)
+
+```json5
+{
+  channels: {
+    feishu: {
+      enabled: true,
+      mode: "http",
       appId: "cli_xxx",
       appSecret: "xxx",
       verificationToken: "xxx", // or encryptKey: "xxx"
@@ -49,10 +73,10 @@ Feishu ships as a plugin and is not bundled with the core install.
 }
 ```
 
-5. Start the gateway. Feishu will POST to the webhook path.
+5. Start the gateway. In HTTP callback mode, Feishu will POST to the webhook path.
 6. DM access is pairing by default; approve the pairing code on first contact.
 
-## Webhook security
+## Webhook security (mode: http)
 
 The plugin validates webhook requests using one of:
 
@@ -83,6 +107,7 @@ Provider options:
 - `channels.feishu.enabled`: enable/disable the channel.
 - `channels.feishu.appId`: Feishu appId.
 - `channels.feishu.appSecret`: Feishu appSecret.
+- `channels.feishu.mode`: `http | ws` (default `http`).
 - `channels.feishu.verificationToken`: webhook verification token.
 - `channels.feishu.encryptKey`: webhook encrypt key (signature validation + optional decryption).
 - `channels.feishu.webhookPath`: webhook path on the gateway HTTP server (default `/feishu`).
@@ -96,6 +121,7 @@ Multi-account options:
 
 - `channels.feishu.accounts.<id>.appId`
 - `channels.feishu.accounts.<id>.appSecret`
+- `channels.feishu.accounts.<id>.mode`
 - `channels.feishu.accounts.<id>.verificationToken`
 - `channels.feishu.accounts.<id>.encryptKey`
 - `channels.feishu.accounts.<id>.webhookPath`

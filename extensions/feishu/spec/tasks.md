@@ -8,6 +8,7 @@
 ## 2. Config + normalization
 
 - [x] Define Feishu config Zod schema (extension-local) and expose it as `configSchema` via `buildChannelConfigSchema`.
+- [x] Add `mode: http | ws` to select HTTP callback vs long connection.
 - [x] Implement target normalization (`user:<open_id>`, `chat:<chat_id>`) and allowlist formatting.
 - [x] Implement account model (start with default account; keep `accounts` extensible).
 
@@ -46,9 +47,15 @@
 
 ## 8. Onboarding
 
-- [x] Add onboarding adapter with prompts for app id/secret and webhook settings.
+- [x] Add onboarding adapter with prompts for app id/secret and delivery mode.
 
-## 9. Tests
+## 9. Long connection (WebSocket)
+
+- [x] Implement long connection transport (`mode="ws"`) for event subscriptions.
+- [x] Acknowledge events quickly and process messages asynchronously.
+
+## 10. Tests
 
 - [x] Add unit tests for: signature, decrypt, target normalization.
 - [x] Add unit tests for: url_verification, event parsing.
+- [x] Add unit tests for: long connection frame codec + monitor lifecycle.

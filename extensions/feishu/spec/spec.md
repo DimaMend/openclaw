@@ -12,7 +12,7 @@ The system SHALL provide a Feishu chat channel as a Clawdbot extension plugin th
 - **WHEN** the user reaches the channel selection step
 - **THEN** Feishu is listed as an installable channel plugin with a docs link
 
-### Requirement: Webhook endpoint and URL verification
+### Requirement: Webhook endpoint and URL verification (mode: http)
 
 The system SHALL accept Feishu event subscription callbacks over HTTP and complete the platform “request URL verification” handshake.
 
@@ -22,7 +22,7 @@ The system SHALL accept Feishu event subscription callbacks over HTTP and comple
 - **WHEN** Clawdbot receives the POST at the configured webhook path
 - **THEN** the response status is `200` and the response body is `{"challenge":"<value>"}` (JSON)
 
-### Requirement: Request validation
+### Requirement: Request validation (mode: http)
 
 The system SHALL validate inbound callback requests before processing events.
 
@@ -32,7 +32,7 @@ The system SHALL validate inbound callback requests before processing events.
 - **WHEN** the request is received
 - **THEN** the request is rejected with `401` and no message processing occurs
 
-### Requirement: Encrypted payload support
+### Requirement: Encrypted payload support (mode: http)
 
 When configured with an encrypt key, the system SHALL decrypt payloads that use the `encrypt` envelope.
 
@@ -83,3 +83,13 @@ The system SHALL expose Feishu channel health via `clawdbot channels status`, in
 - **GIVEN** the plugin is enabled but credentials are invalid
 - **WHEN** the user runs `clawdbot channels status --probe`
 - **THEN** the Feishu channel shows `probe=error` with an actionable message (e.g. token fetch failed)
+
+### Requirement: Long connection mode (mode: ws)
+
+The system SHALL support receiving Feishu events over long connection when `channels.feishu.mode="ws"` is configured.
+
+#### Scenario: Long connection receives events without public URL
+
+- **GIVEN** `channels.feishu.mode="ws"` and `channels.feishu.appId/appSecret` are configured
+- **WHEN** the gateway starts
+- **THEN** the plugin establishes a long connection to Feishu and can receive `im.message.receive_v1` events without an exposed webhook URL
