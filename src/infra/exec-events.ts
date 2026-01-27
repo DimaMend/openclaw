@@ -14,6 +14,7 @@ type ExecEventBase = {
   ts: number;
   seq: number;
   sessionId: string;
+  runId?: string;
   pid?: number;
   command: string;
   commandName?: string;
@@ -105,14 +106,7 @@ const DEFAULT_OUTPUT_BUFFER_MULTIPLIER = 8;
 const MIN_OUTPUT_MAX_CHUNK_BYTES = 256;
 const MAX_OUTPUT_BUFFER_BYTES = 256 * 1024;
 
-const WRAPPER_COMMANDS = new Set([
-  "npx",
-  "pnpm",
-  "pnpmx",
-  "bunx",
-  "npm",
-  "yarn",
-]);
+const WRAPPER_COMMANDS = new Set(["npx", "pnpm", "pnpmx", "bunx", "npm", "yarn"]);
 
 const WRAPPER_SUBCOMMANDS = new Set(["exec", "run", "run-script", "dlx", "x"]);
 
@@ -184,7 +178,10 @@ export function resolveExecEventsConfig(cfg?: MoltbotConfig): ExecEventsConfigRe
   const execCfg = hooks?.exec;
   const commandWhitelist = normalizeCommandWhitelist(execCfg?.commandWhitelist);
   const commandWhitelistSet = new Set(commandWhitelist);
-  const outputThrottleMs = resolvePositiveInt(execCfg?.outputThrottleMs, DEFAULT_OUTPUT_THROTTLE_MS);
+  const outputThrottleMs = resolvePositiveInt(
+    execCfg?.outputThrottleMs,
+    DEFAULT_OUTPUT_THROTTLE_MS,
+  );
   const outputMaxChunkBytes = resolvePositiveInt(
     execCfg?.outputMaxChunkBytes,
     DEFAULT_OUTPUT_MAX_CHUNK_BYTES,
@@ -331,7 +328,10 @@ function resolveWrapperCommandName(tokens: string[], wrapperIndex: number): stri
   return subcommand;
 }
 
-export function matchExecCommandAgainstWhitelist(command: string, cfg: ExecEventsConfigResolved): WhitelistMatchResult {
+export function matchExecCommandAgainstWhitelist(
+  command: string,
+  cfg: ExecEventsConfigResolved,
+): WhitelistMatchResult {
   if (!cfg.emitEvents) return { matched: false };
   if (cfg.commandWhitelistSet.size === 0) return { matched: false };
   if (!includesWhitelistToken(command, cfg.commandWhitelistTokens)) {

@@ -576,6 +576,7 @@ async function runExecProcess(opts: {
         for (const chunk of chunks) {
           emitExecEvent("exec.output", {
             sessionId,
+            runId: execEventsState.context?.runId,
             pid: session.pid,
             command: session.command,
             commandName: execEventsState.commandName,
@@ -594,6 +595,7 @@ async function runExecProcess(opts: {
     execEventsState.startedEmitted = true;
     emitExecEvent("exec.started", {
       sessionId,
+      runId: execEventsState.context?.runId,
       pid: session.pid,
       command: session.command,
       commandName: execEventsState.commandName,
@@ -617,6 +619,7 @@ async function runExecProcess(opts: {
     const completedAt = Date.now();
     emitExecEvent("exec.completed", {
       sessionId,
+      runId: execEventsState.context?.runId,
       pid: session.pid,
       command: session.command,
       commandName: execEventsState.commandName,
