@@ -158,11 +158,7 @@ Exa provides a `/contents` API endpoint optimized for extracting text content fr
         exa: {
           enabled: true,
           // API key (optional if EXA_API_KEY is set)
-          apiKey: "your-exa-api-key",
-          // Include page text in results (default: true)
-          contents: true,
-          // Max characters of page text per result (default: 1500)
-          maxChars: 1500
+          apiKey: "your-exa-api-key"
         }
       }
     }
@@ -265,8 +261,6 @@ Fetch a URL and extract readable content.
         exa: {
           enabled: true,
           apiKey: "EXA_API_KEY_HERE", // optional if EXA_API_KEY is set
-          contents: true,
-          maxChars: 1500,
           timeoutSeconds: 30
         },
         firecrawl: {
