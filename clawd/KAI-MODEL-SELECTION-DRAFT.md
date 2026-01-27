@@ -5,6 +5,18 @@ todos: []
 isProject: false
 ---
 
+> **ARCHIVED (2026-01-27)**
+> 
+> **Decision:** Not deploying Kai as a separate agent.
+> 
+> **Reason:** No local model surpasses GLM 4.7 cloud within 96GB memory constraints. Same-model supervisor provides marginal benefit at high complexity cost.
+> 
+> **Alternative implemented:** Proactive Review Mode added to Liam's SOUL.md - automatic quality gate that runs invisibly before delivering code, config, and external communications.
+> 
+> **Revisit when:** Local models improve (Llama 4, Qwen 4) or hardware upgrade enables 200B+ models.
+> 
+> **See:** EVOLUTION-QUEUE.md entry [2026-01-27-032]
+
 # Kai Supervisor Model Selection - Research Draft
 
 ## Critical Discovery: Mistral Large 3 Not Available Locally

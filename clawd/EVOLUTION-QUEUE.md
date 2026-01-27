@@ -18,6 +18,30 @@ Add items under "## Pending" using this format:
 
 ## Pending
 
+### [2026-01-27-032] Kai Supervisor Project - Not Deploying, Implemented Review Mode Instead [RESOLVED]
+- **Proposed by:** Simon (via Cursor)
+- **Date:** 2026-01-27
+- **Category:** architecture | behavior
+- **Target file:** `SOUL.md`, `ROLES.md`
+- **Description:**
+  - **Original plan:** Deploy "Kai" as a separate supervisor agent to review Liam's important work
+  - **Research findings:** 
+    - Mistral Large 3 is cloud-only (not locally runnable)
+    - No local model surpasses GLM 4.7 cloud within 96GB memory
+    - Same-model supervisor provides marginal benefit at high complexity cost
+  - **Decision:** Not deploying Kai. Implementing "Proactive Review Mode" in Liam instead.
+
+- **Status:** RESOLVED (2026-01-27)
+- **Resolution:**
+  - Added "Proactive Review" section to SOUL.md (automatic quality gate)
+  - Auto-triggers on: code, config, external comms, proposals, overnight builds, uncertainty
+  - Invisible to Simon (runs internally, fixes silently)
+  - Added proactive behaviors: Anticipate, Warn, Suggest, Remember
+  - Updated ROLES.md Engineer mode with quality gate reference
+  - **Rationale:** APEX v6.2.0 File Minimalism - "Never create. Edit first."
+  - **Revisit when:** Local models improve (Llama 4, Qwen 4, etc.) or hardware upgrade (256GB+ RAM)
+- **Research preserved:** `~/clawd/KAI-MODEL-SELECTION-DRAFT.md` (archived)
+
 ### [2026-01-27-031] Weekly-Employee-Review - Run Daily During Debugging Period
 - **Proposed by:** Simon (via Telegram)
 - **Date:** 2026-01-27
