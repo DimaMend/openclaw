@@ -3,7 +3,7 @@ import { PollLayoutType } from "discord-api-types/payloads/v10";
 import type { RESTAPIPoll } from "discord-api-types/rest/v10";
 import { Routes } from "discord-api-types/v10";
 
-import { loadConfig } from "../config/config.js";
+import { loadConfig, type ClawdbotConfig } from "../config/config.js";
 import type { RetryConfig } from "../infra/retry.js";
 import { createDiscordRetryRunner, type RetryRunner } from "../infra/retry-policy.js";
 import { normalizePollDurationHours, normalizePollInput, type PollInput } from "../polls.js";
@@ -15,6 +15,8 @@ import { fetchChannelPermissionsDiscord, isThreadChannelType } from "./send.perm
 import { DiscordSendError } from "./send.types.js";
 import { parseDiscordTarget } from "./targets.js";
 import { normalizeDiscordToken } from "./token.js";
+import { listDiscordDirectoryPeersLive } from "./directory-live.js";
+import { looksLikeDiscordTargetId } from "../channels/plugins/normalize/discord.js";
 
 const DISCORD_TEXT_LIMIT = 2000;
 const DISCORD_MAX_STICKERS = 3;
@@ -91,14 +93,68 @@ function normalizeReactionEmoji(raw: string) {
   return encodeURIComponent(identifier);
 }
 
-function parseRecipient(raw: string): DiscordRecipient {
+async function parseRecipient(
+  raw: string,
+  params: { cfg: ClawdbotConfig; accountId?: string },
+): Promise<DiscordRecipient> {
   const target = parseDiscordTarget(raw, {
     ambiguousMessage: `Ambiguous Discord recipient "${raw.trim()}". Use "user:${raw.trim()}" for DMs or "channel:${raw.trim()}" for channel messages.`,
   });
   if (!target) {
     throw new Error("Recipient is required for Discord sends");
   }
-  return { kind: target.kind, id: target.id };
+  if (target.kind === "user") {
+    return { kind: target.kind, id: target.id };
+  }
+  if (looksLikeDiscordTargetId(raw) || /^\d+$/.test(target.id)) {
+    return { kind: target.kind, id: target.id };
+  }
+
+  const query = raw.trim();
+  if (!query) {
+    throw new Error("Recipient is required for Discord sends");
+  }
+
+  const candidates = await listDiscordDirectoryPeersLive({
+    cfg: params.cfg,
+    accountId: params.accountId,
+    query,
+    limit: 5,
+  });
+  if (candidates.length === 0) {
+    throw new Error(
+      `Discord recipient "${raw.trim()}" did not match a user. Use "user:<id>" or "<@id>" for DMs.`,
+    );
+  }
+
+  const normalizedQuery = query.toLowerCase();
+  const exactMatches = candidates.filter((entry) => {
+    const name = entry.name?.trim().toLowerCase();
+    const handle = entry.handle?.trim().toLowerCase().replace(/^@/, "");
+    const id = entry.id?.trim().toLowerCase().replace(/^user:/, "");
+    return name === normalizedQuery || handle === normalizedQuery || id === normalizedQuery;
+  });
+
+  const selected =
+    exactMatches.length === 1
+      ? exactMatches[0]
+      : candidates.length === 1
+        ? candidates[0]
+        : null;
+
+  if (!selected) {
+    throw new Error(
+      `Multiple Discord users matched "${raw.trim()}". Use "user:<id>" or "<@id>" to disambiguate.`,
+    );
+  }
+
+  const resolvedId = selected.id.replace(/^user:/i, "").trim();
+  if (!resolvedId) {
+    throw new Error(
+      `Discord recipient "${raw.trim()}" did not match a valid user id. Use "user:<id>" or "<@id>".`,
+    );
+  }
+  return { kind: "user", id: resolvedId };
 }
 
 function normalizeStickerIds(raw: string[]) {
