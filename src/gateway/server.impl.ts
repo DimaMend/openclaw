@@ -17,6 +17,7 @@ import { isDiagnosticsEnabled } from "../infra/diagnostic-events.js";
 import { logAcceptedEnvOption } from "../infra/env.js";
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { clearAgentRunContext, onAgentEvent } from "../infra/agent-events.js";
+import { onExecEvent } from "../infra/exec-events.js";
 import { onHeartbeatEvent } from "../infra/heartbeat-events.js";
 import { startHeartbeatRunner } from "../infra/heartbeat-runner.js";
 import { getMachineDisplayName } from "../infra/machine-name.js";
@@ -402,6 +403,10 @@ export async function startGatewayServer(
     }),
   );
 
+  const execUnsub = onExecEvent((evt) => {
+    broadcast(evt.event, evt, { dropIfSlow: true });
+  });
+
   const heartbeatUnsub = onHeartbeatEvent((evt) => {
     broadcast("heartbeat", evt, { dropIfSlow: true });
   });
@@ -559,6 +564,7 @@ export async function startGatewayServer(
     healthInterval,
     dedupeCleanup,
     agentUnsub,
+    execUnsub,
     heartbeatUnsub,
     chatRunState,
     clients,

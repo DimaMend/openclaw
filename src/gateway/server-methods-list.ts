@@ -108,4 +108,7 @@ export const GATEWAY_EVENTS = [
   "voicewake.changed",
   "exec.approval.requested",
   "exec.approval.resolved",
+  "exec.started",
+  "exec.output",
+  "exec.completed",
 ];
