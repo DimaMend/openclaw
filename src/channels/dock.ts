@@ -369,6 +369,13 @@ const DOCKS: Record<ChatChannelId, ChannelDock> = {
       },
     },
   },
+  ndr: {
+    id: "ndr",
+    capabilities: {
+      chatTypes: ["direct"],
+    },
+    outbound: { textChunkLimit: 4000 },
+  },
 };
 
 function buildDockFromPlugin(plugin: ChannelPlugin): ChannelDock {

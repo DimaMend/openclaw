@@ -1,0 +1,301 @@
+import { spawn, type ChildProcess } from "child_process";
+
+export interface NdrBusOptions {
+  accountId: string;
+  privateKey: string;
+  relays: string[];
+  ndrPath: string;
+  dataDir: string | null;
+  onMessage: (chatId: string, messageId: string, senderPubkey: string, text: string, reply: (text: string) => Promise<void>) => Promise<void>;
+  onNewSession?: (chatId: string, theirPubkey: string) => Promise<void>;
+  onError?: (error: Error, context: string) => void;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+}
+
+export interface NdrBusHandle {
+  sendMessage: (chatId: string, text: string) => Promise<void>;
+  react: (chatId: string, messageId: string, emoji: string) => Promise<void>;
+  createInvite: () => Promise<{ inviteUrl: string; inviteId: string }>;
+  joinInvite: (inviteUrl: string) => Promise<{ chatId: string; theirPubkey: string }>;
+  listChats: () => Promise<Array<{ id: string; their_pubkey: string }>>;
+  close: () => void;
+  isRunning: () => boolean;
+}
+
+/**
+ * Start the NDR bus - manages ndr CLI process for listening and sending
+ *
+ * The `ndr listen` command handles both incoming messages AND invite responses,
+ * so we only need a single listener process.
+ */
+export async function startNdrBus(options: NdrBusOptions): Promise<NdrBusHandle> {
+  const {
+    privateKey,
+    relays,
+    ndrPath,
+    dataDir,
+    onMessage,
+    onNewSession,
+    onError,
+    onConnect,
+    onDisconnect,
+  } = options;
+
+  let listenProcess: ChildProcess | null = null;
+  let running = false;
+
+  // Build common args
+  const baseArgs: string[] = ["--json"];
+  if (dataDir) {
+    baseArgs.push("--data-dir", dataDir);
+  }
+
+  // Initialize: login with provided key, or let ndr auto-generate on first use
+  if (privateKey) {
+    await runNdrCommand(ndrPath, [...baseArgs, "login", privateKey]);
+  }
+  // If no privateKey, ndr will auto-generate identity when needed (invite/listen/send)
+
+  // Update relay config if needed (preserve existing config like private_key)
+  if (dataDir && relays.length > 0) {
+    const configPath = `${dataDir}/config.json`;
+    const fs = await import("fs/promises");
+    try {
+      let existingConfig: Record<string, unknown> = {};
+      try {
+        const content = await fs.readFile(configPath, "utf-8");
+        existingConfig = JSON.parse(content);
+      } catch {
+        // Config doesn't exist yet, start fresh
+      }
+      // Merge relays into existing config, preserving other fields like private_key
+      const mergedConfig = { ...existingConfig, relays };
+      await fs.writeFile(configPath, JSON.stringify(mergedConfig, null, 2));
+    } catch {
+      // Config dir may not exist yet, ndr will create it
+    }
+  }
+
+  // Start listening for messages and invite responses (both handled by `ndr listen`)
+  const startListening = () => {
+    listenProcess = spawn(ndrPath, [...baseArgs, "listen"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    listenProcess.stdout?.on("data", (data: Buffer) => {
+      const lines = data.toString().split("\n").filter(Boolean);
+      for (const line of lines) {
+        try {
+          const json = JSON.parse(line);
+
+          // Handle incoming messages
+          if (json.event === "message") {
+            const chatId = json.chat_id;
+            const messageId = json.message_id ?? "";
+            const senderPubkey = json.from_pubkey;
+            const content = json.content;
+
+            // Create reply function
+            const reply = async (text: string) => {
+              await runNdrCommand(ndrPath, [...baseArgs, "send", chatId, text]);
+            };
+
+            onMessage(chatId, messageId, senderPubkey, content, reply).catch((err) => {
+              onError?.(err, "message_handler");
+            });
+          }
+
+          // Handle new sessions from invite responses
+          if (json.event === "session_created") {
+            const chatId = json.chat_id;
+            const theirPubkey = json.their_pubkey;
+
+            onNewSession?.(chatId, theirPubkey).catch((err) => {
+              onError?.(err, "new_session_handler");
+            });
+          }
+        } catch {
+          // Ignore non-JSON lines
+        }
+      }
+    });
+
+    listenProcess.stderr?.on("data", (data: Buffer) => {
+      const text = data.toString().trim();
+      if (text && !text.includes("Listening")) {
+        onError?.(new Error(text), "listen_stderr");
+      }
+    });
+
+    listenProcess.on("exit", (code) => {
+      if (running && code !== 0) {
+        onError?.(new Error(`ndr listen exited with code ${code}`), "listen_exit");
+        setTimeout(() => running && startListening(), 5000);
+      }
+    });
+
+    listenProcess.on("error", (err) => {
+      onError?.(err, "listen_spawn");
+    });
+  };
+
+  running = true;
+  onConnect?.();
+  startListening();
+
+  return {
+    sendMessage: async (chatId: string, text: string) => {
+      const result = await runNdrCommand(ndrPath, [...baseArgs, "send", chatId, text]);
+      if (result.status !== "ok") {
+        throw new Error(result.error || "Failed to send message");
+      }
+    },
+
+    react: async (chatId: string, messageId: string, emoji: string) => {
+      const result = await runNdrCommand(ndrPath, [...baseArgs, "react", chatId, messageId, emoji]);
+      if (result.status !== "ok") {
+        throw new Error(result.error || "Failed to send reaction");
+      }
+    },
+
+    createInvite: async () => {
+      const result = await runNdrCommand(ndrPath, [...baseArgs, "invite", "create"]);
+      if (result.status !== "ok") {
+        throw new Error(result.error || "Failed to create invite");
+      }
+      const data = result.data as { url: string; id: string };
+      return { inviteUrl: data.url, inviteId: data.id };
+    },
+
+    joinInvite: async (inviteUrl: string) => {
+      const result = await runNdrCommand(ndrPath, [...baseArgs, "chat", "join", inviteUrl]);
+      if (result.status !== "ok") {
+        throw new Error(result.error || "Failed to join invite");
+      }
+      const data = result.data as { id: string; their_pubkey: string };
+      return { chatId: data.id, theirPubkey: data.their_pubkey };
+    },
+
+    listChats: async () => {
+      const result = await runNdrCommand(ndrPath, [...baseArgs, "chat", "list"]);
+      if (result.status === "ok" && result.data) {
+        const data = result.data as { chats: Array<{ id: string; their_pubkey: string }> };
+        return data.chats || [];
+      }
+      return [];
+    },
+
+    close: () => {
+      running = false;
+      onDisconnect?.();
+      if (listenProcess) {
+        listenProcess.kill();
+        listenProcess = null;
+      }
+    },
+
+    isRunning: () => running,
+  };
+}
+
+/**
+ * Run an ndr CLI command and return parsed JSON output
+ */
+async function runNdrCommand(ndrPath: string, args: string[]): Promise<{ status: string; error?: string; data?: unknown }> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(ndrPath, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    proc.stdout?.on("data", (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    proc.stderr?.on("data", (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    proc.on("exit", (code) => {
+      if (code === 0) {
+        try {
+          const json = JSON.parse(stdout.trim());
+          resolve(json);
+        } catch {
+          resolve({ status: "ok", data: stdout.trim() });
+        }
+      } else {
+        resolve({ status: "error", error: stderr.trim() || `Exit code ${code}` });
+      }
+    });
+
+    proc.on("error", (err) => {
+      reject(err);
+    });
+  });
+}
+
+/**
+ * Get chat list from ndr
+ */
+export async function listChats(ndrPath: string, dataDir: string | null): Promise<Array<{ id: string; their_pubkey: string }>> {
+  const args = ["--json"];
+  if (dataDir) {
+    args.push("--data-dir", dataDir);
+  }
+  args.push("chat", "list");
+
+  const result = await runNdrCommand(ndrPath, args);
+  if (result.status === "ok" && Array.isArray(result.data)) {
+    return result.data as Array<{ id: string; their_pubkey: string }>;
+  }
+  return [];
+}
+
+/**
+ * Join a chat via invite URL
+ */
+export async function joinChat(
+  ndrPath: string,
+  dataDir: string | null,
+  inviteUrl: string
+): Promise<{ chatId: string; theirPubkey: string }> {
+  const args = ["--json"];
+  if (dataDir) {
+    args.push("--data-dir", dataDir);
+  }
+  args.push("chat", "join", inviteUrl);
+
+  const result = await runNdrCommand(ndrPath, args);
+  if (result.status !== "ok") {
+    throw new Error(result.error || "Failed to join chat");
+  }
+
+  const data = result.data as { id: string; their_pubkey: string };
+  return { chatId: data.id, theirPubkey: data.their_pubkey };
+}
+
+/**
+ * Create an invite
+ */
+export async function createInvite(
+  ndrPath: string,
+  dataDir: string | null
+): Promise<{ inviteUrl: string; inviteId: string }> {
+  const args = ["--json"];
+  if (dataDir) {
+    args.push("--data-dir", dataDir);
+  }
+  args.push("invite", "create");
+
+  const result = await runNdrCommand(ndrPath, args);
+  if (result.status !== "ok") {
+    throw new Error(result.error || "Failed to create invite");
+  }
+
+  const data = result.data as { url: string; id: string };
+  return { inviteUrl: data.url, inviteId: data.id };
+}

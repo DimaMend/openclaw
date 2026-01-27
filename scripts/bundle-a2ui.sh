@@ -37,6 +37,18 @@ compute_hash() {
     | awk '{print $1}'
 }
 
+# In Docker builds (vendor/ and apps/ excluded), skip bundling if output exists
+for path in "${INPUT_PATHS[@]}"; do
+  if [[ ! -e "$path" ]]; then
+    if [[ -f "$OUTPUT_FILE" ]]; then
+      echo "A2UI bundle exists; source files unavailable (docker build?); skipping."
+      exit 0
+    fi
+    echo "Error: Required path $path not found and no pre-built bundle exists." >&2
+    exit 1
+  fi
+done
+
 current_hash="$(compute_hash)"
 if [[ -f "$HASH_FILE" ]]; then
   previous_hash="$(cat "$HASH_FILE")"
