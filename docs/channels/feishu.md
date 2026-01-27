@@ -9,6 +9,12 @@ read_when:
 
 Status: experimental. Supports direct messages and groups via Bot API using WebSocket long connection.
 
+## Demo
+
+<frame>
+  <img src="/images/feishu/demo-chat.png" alt="Feishu Bot Demo" />
+</frame>
+
 ## Key Features
 
 - **WebSocket long connection**: No public IP or webhook setup required
@@ -60,15 +66,17 @@ Request approval if required by your organization.
 
 ### 4. Configure Credentials
 
-**Option A: Environment variables**
+**Option A: Clawdbot config**
 
 ```bash
-export FEISHU_APP_ID=cli_xxxxxxxxxx
-export FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+clawdbot config set channels.feishu.enabled true
+clawdbot config set channels.feishu.appId "cli_xxxxxxxxxx"
+clawdbot config set channels.feishu.appSecret "xxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
-**Option B: Configuration file**
 
+**Option B: Configuration file**
+~/.clawdbot/clawdbot.json
 ```json5
 {
   channels: {
@@ -80,6 +88,14 @@ export FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
   }
 }
 ```
+
+**Option C: Environment variables**
+
+```bash
+export FEISHU_APP_ID=cli_xxxxxxxxxx
+export FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
 
 ### 5. Publish and Start
 
@@ -130,12 +146,25 @@ All outbound messages use Feishu interactive card format with markdown:
 | `open` | Anyone can message (requires `allowFrom: ["*"]`) |
 | `disabled` | DMs blocked |
 
+#### Pairing Flow
+
+When a new user messages your bot with `dmPolicy: "pairing"` (default), they receive a pairing code:
+
+<frame>
+  <img src="/images/feishu/pairing-code.png" alt="Feishu Pairing Code" />
+</frame>
+
 **Approve pairing requests:**
 
 ```bash
+# List pending pairing requests
 clawdbot pairing list feishu
-clawdbot pairing approve feishu <CODE>
+
+# Approve a specific code
+clawdbot pairing approve feishu KZ6YE87U
 ```
+
+Once approved, the user can interact with the bot normally.
 
 ### Groups
 
