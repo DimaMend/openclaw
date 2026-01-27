@@ -180,6 +180,11 @@ const FIELD_LABELS: Record<string, string> = {
   "tools.exec.node": "Exec Node Binding",
   "tools.exec.pathPrepend": "Exec PATH Prepend",
   "tools.exec.safeBins": "Exec Safe Bins",
+  "tools.tidb.enabled": "Enable TiDB Tool",
+  "tools.tidb.url": "TiDB URL",
+  "tools.tidb.command": "TiDB mysql CLI Command",
+  "tools.tidb.timeoutSeconds": "TiDB Timeout (sec)",
+  "tools.tidb.maxOutputChars": "TiDB Max Output Chars",
   "tools.message.allowCrossContextSend": "Allow Cross-Context Messaging",
   "tools.message.crossContext.allowWithinProvider": "Allow Cross-Context (Same Provider)",
   "tools.message.crossContext.allowAcrossProviders": "Allow Cross-Context (Across Providers)",
@@ -420,6 +425,14 @@ const FIELD_HELP: Record<string, string> = {
   "tools.exec.pathPrepend": "Directories to prepend to PATH for exec runs (gateway/sandbox).",
   "tools.exec.safeBins":
     "Allow stdin-only safe binaries to run without explicit allowlist entries.",
+  "tools.tidb.enabled":
+    "Enable the tidb tool (mysql CLI-backed). Intended for saving/querying large structured datasets when it makes sense to persist results to a database.",
+  "tools.tidb.url":
+    'TiDB/MySQL connection URL (supports "tidb://" and "mysql://"). Prefer using env substitution (e.g. "${TIDB_URL}") to avoid storing credentials in plaintext.',
+  "tools.tidb.command": 'mysql client binary name/path (default: "mysql").',
+  "tools.tidb.timeoutSeconds": "Default timeout in seconds for tidb tool mysql CLI runs.",
+  "tools.tidb.maxOutputChars":
+    "Max characters returned from mysql stdout/stderr in tidb tool results (default: 60000).",
   "tools.message.allowCrossContextSend":
     "Legacy override: allow cross-context sends across all providers.",
   "tools.message.crossContext.allowWithinProvider":

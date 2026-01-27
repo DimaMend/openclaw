@@ -126,6 +126,24 @@ export type LinkToolsConfig = {
   models?: LinkModelConfig[];
 };
 
+export type TiDbToolConfig = {
+  /** Enable TiDB tool (default: false). */
+  enabled?: boolean;
+  /**
+   * Connection URL for TiDB/MySQL protocol.
+   *
+   * Supports `tidb://` and `mysql://` schemes.
+   * Prefer using env substitution (e.g. "${TIDB_URL}") to avoid storing credentials in plaintext.
+   */
+  url?: string;
+  /** mysql client binary name/path (default: "mysql"). */
+  command?: string;
+  /** Default timeout in seconds for mysql CLI invocations. */
+  timeoutSeconds?: number;
+  /** Max stdout/stderr characters returned in tool results (default: 60k). */
+  maxOutputChars?: number;
+};
+
 export type MediaToolsConfig = {
   /** Shared model list applied across image/audio/video. */
   models?: MediaUnderstandingModelConfig[];
@@ -429,6 +447,8 @@ export type ToolsConfig = {
   };
   /** Exec tool defaults. */
   exec?: ExecToolConfig;
+  /** TiDB (MySQL protocol) query tool via mysql CLI. */
+  tidb?: TiDbToolConfig;
   /** Sub-agent tool policy defaults (deny wins). */
   subagents?: {
     /** Default model selection for spawned sub-agents (string or {primary,fallbacks}). */

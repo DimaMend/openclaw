@@ -137,6 +137,7 @@ Available groups:
 - `group:sessions`: `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `session_status`
 - `group:memory`: `memory_search`, `memory_get`
 - `group:web`: `web_search`, `web_fetch`
+- `group:db`: `tidb`
 - `group:ui`: `browser`, `canvas`
 - `group:automation`: `cron`, `gateway`
 - `group:messaging`: `message`
@@ -198,6 +199,11 @@ Manage background exec sessions.
 
 Core actions:
 - `list`, `poll`, `log`, `write`, `kill`, `clear`, `remove`
+
+### `tidb`
+Run SQL against TiDB (MySQL protocol) using the local `mysql` CLI.
+
+Docs: [TiDB tool](/tools/tidb).
 
 Notes:
 - `poll` returns new output and exit status when complete.

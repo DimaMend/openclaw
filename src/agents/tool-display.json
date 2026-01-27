@@ -296,6 +296,11 @@
       "title": "Web Fetch",
       "detailKeys": ["url", "extractMode", "maxChars"]
     },
+    "tidb": {
+      "emoji": "🐬",
+      "title": "TiDB",
+      "detailKeys": ["database", "format", "timeoutSeconds"]
+    },
     "whatsapp_login": {
       "emoji": "🟢",
       "title": "WhatsApp Login",

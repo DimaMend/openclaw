@@ -521,6 +521,16 @@ export const ToolsSchema = z
       })
       .strict()
       .optional(),
+    tidb: z
+      .object({
+        enabled: z.boolean().optional(),
+        url: z.string().optional(),
+        command: z.string().optional(),
+        timeoutSeconds: z.number().int().positive().optional(),
+        maxOutputChars: z.number().int().positive().optional(),
+      })
+      .strict()
+      .optional(),
     subagents: z
       .object({
         tools: ToolPolicySchema,
