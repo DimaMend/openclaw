@@ -115,6 +115,11 @@ export type AgentDefaultsConfig = {
    */
   envelopeTimezone?: string;
   /**
+   * Custom date format string (e.g., "ddd MMM D HH:mm"). Overrides default timestamp format.
+   * Supported tokens: YYYY, MMM, MM, DD, D, ddd, dddd, HH, hh, mm, ss, a, A, z
+   */
+  envelopeDateFormat?: string;
+  /**
    * Include absolute timestamps in message envelopes ("on" | "off", default: "on").
    */
   envelopeTimestamp?: "on" | "off";

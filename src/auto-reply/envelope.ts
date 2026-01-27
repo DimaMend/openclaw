@@ -28,9 +28,13 @@ export type EnvelopeFormatOptions = {
    */
   includeElapsed?: boolean;
   /**
-   * Optional user timezone used when timezone="user".
+   * Optional user timezone used when timezone = "user".
    */
   userTimezone?: string;
+  /**
+   * Custom date format string (e.g., "ddd MMM D HH:mm"). Overrides default timestamp format.
+   */
+  dateFormat?: string;
 };
 
 type NormalizedEnvelopeOptions = {
@@ -38,6 +42,7 @@ type NormalizedEnvelopeOptions = {
   includeTimestamp: boolean;
   includeElapsed: boolean;
   userTimezone?: string;
+  dateFormat?: string;
 };
 
 type ResolvedEnvelopeTimezone =
@@ -52,6 +57,7 @@ export function resolveEnvelopeFormatOptions(cfg?: ClawdbotConfig): EnvelopeForm
     includeTimestamp: defaults?.envelopeTimestamp !== "off",
     includeElapsed: defaults?.envelopeElapsed !== "off",
     userTimezone: defaults?.userTimezone,
+    dateFormat: defaults?.envelopeDateFormat,
   };
 }
 
@@ -63,6 +69,7 @@ function normalizeEnvelopeOptions(options?: EnvelopeFormatOptions): NormalizedEn
     includeTimestamp,
     includeElapsed,
     userTimezone: options?.userTimezone,
+    dateFormat: options?.dateFormat,
   };
 }
 
@@ -132,9 +139,78 @@ function formatTimestamp(
   const date = ts instanceof Date ? ts : new Date(ts);
   if (Number.isNaN(date.getTime())) return undefined;
   const zone = resolveEnvelopeTimezone(resolved);
+  if (resolved.dateFormat) {
+    let tz: string | undefined;
+    if (zone.mode === "iana") tz = zone.timeZone;
+    else if (zone.mode === "utc") tz = "UTC";
+    return formatDate(date, resolved.dateFormat, tz);
+  }
   if (zone.mode === "utc") return formatUtcTimestamp(date);
   if (zone.mode === "local") return formatZonedTimestamp(date);
   return formatZonedTimestamp(date, zone.timeZone);
+}
+
+function formatDate(date: Date, format: string, checkTimeZone?: string): string {
+  // We need to extract parts in the correct timezone
+  const timeZone = checkTimeZone || undefined; // undefined = local
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+    timeZoneName: "short",
+  }).formatToParts(date);
+
+  const getPart = (type: string) => parts.find((p) => p.type === type)?.value || "";
+
+  // Also get 12h hour and day period/ampm
+  const parts12 = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    hour12: true,
+  }).formatToParts(date);
+  const hour12 = parts12.find((p) => p.type === "hour")?.value || "";
+  const dayPeriod = parts12.find((p) => p.type === "dayPeriod")?.value || "";
+
+  const Y = getPart("year");
+  const M = getPart("month"); // Long month
+  const D = getPart("day");
+  const d = getPart("weekday"); // Long weekday
+  const H = getPart("hour").padStart(2, "0"); // 0-23
+  const m = getPart("minute").padStart(2, "0");
+  const s = getPart("second").padStart(2, "0");
+  const z = parts.find((p) => p.type === "timeZoneName")?.value || "";
+
+  // Helper for short month/weekday
+  const MMM = M.slice(0, 3);
+  const MM = new Intl.DateTimeFormat("en-US", { timeZone, month: "2-digit" }).format(date);
+  const DD = D.padStart(2, "0");
+  const ddd = d.slice(0, 3);
+  const h = hour12.padStart(2, "0");
+
+  const map: Record<string, string> = {
+    YYYY: Y,
+    MMM: MMM,
+    MM: MM,
+    DD: DD,
+    D: D,
+    dddd: d,
+    ddd: ddd,
+    HH: H,
+    hh: h,
+    mm: m,
+    ss: s,
+    a: dayPeriod.toLowerCase(),
+    A: dayPeriod.toUpperCase(),
+    z: z,
+  };
+
+  return format.replace(/YYYY|MMM|MM|DD|D|dddd|ddd|HH|hh|mm|ss|a|A|z/g, (match) => map[match]);
 }
 
 function formatElapsedTime(currentMs: number, previousMs: number): string | undefined {
@@ -161,11 +237,11 @@ export function formatAgentEnvelope(params: AgentEnvelopeParams): string {
   const elapsed =
     resolved.includeElapsed && params.timestamp && params.previousTimestamp
       ? formatElapsedTime(
-          params.timestamp instanceof Date ? params.timestamp.getTime() : params.timestamp,
-          params.previousTimestamp instanceof Date
-            ? params.previousTimestamp.getTime()
-            : params.previousTimestamp,
-        )
+        params.timestamp instanceof Date ? params.timestamp.getTime() : params.timestamp,
+        params.previousTimestamp instanceof Date
+          ? params.previousTimestamp.getTime()
+          : params.previousTimestamp,
+      )
       : undefined;
   if (params.from?.trim()) {
     const from = params.from.trim();
