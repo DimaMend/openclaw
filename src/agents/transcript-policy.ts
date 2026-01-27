@@ -62,6 +62,16 @@ function isMistralModel(params: { provider?: string | null; modelId?: string | n
   return MISTRAL_MODEL_HINTS.some((hint) => modelId.includes(hint));
 }
 
+/**
+ * Detects Claude models by checking if the modelId contains 'claude'.
+ * This catches Claude models accessed via non-Anthropic providers like
+ * github-copilot, openrouter, etc.
+ */
+function isClaudeModel(modelId?: string | null): boolean {
+  if (!modelId) return false;
+  return modelId.toLowerCase().includes("claude");
+}
+
 export function resolveTranscriptPolicy(params: {
   modelApi?: string | null;
   provider?: string | null;
@@ -81,6 +91,8 @@ export function resolveTranscriptPolicy(params: {
     provider,
     modelId,
   });
+  // Detect Claude models by modelId (catches github-copilot, openrouter, etc.)
+  const isClaude = isClaudeModel(modelId);
 
   const needsNonImageSanitize = isGoogle || isAnthropic || isMistral || isOpenRouterGemini;
 
@@ -90,7 +102,7 @@ export function resolveTranscriptPolicy(params: {
     : sanitizeToolCallIds
       ? "strict"
       : undefined;
-  const repairToolUseResultPairing = isGoogle || isAnthropic;
+  const repairToolUseResultPairing = isGoogle || isAnthropic || isClaude;
   const sanitizeThoughtSignatures = isOpenRouterGemini
     ? { allowBase64Only: true, includeCamelCase: true }
     : undefined;
@@ -106,7 +118,7 @@ export function resolveTranscriptPolicy(params: {
     normalizeAntigravityThinkingBlocks,
     applyGoogleTurnOrdering: !isOpenAi && isGoogle,
     validateGeminiTurns: !isOpenAi && isGoogle,
-    validateAnthropicTurns: !isOpenAi && isAnthropic,
-    allowSyntheticToolResults: !isOpenAi && (isGoogle || isAnthropic),
+    validateAnthropicTurns: !isOpenAi && (isAnthropic || isClaude),
+    allowSyntheticToolResults: !isOpenAi && (isGoogle || isAnthropic || isClaude),
   };
 }
