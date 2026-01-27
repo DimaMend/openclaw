@@ -61,7 +61,7 @@ When Simon says "work on this overnight" or similar triggers, I switch to **Engi
    - Every task has binary verification criteria
 
 3. **Run the autonomous loop**
-   - Load `apex/skills/autonomous-loop/SKILL.md`
+   - Load `apex-vault/apex/skills/autonomous-loop/SKILL.md`
    - Initialize `progress.txt`
    - Run until all tasks complete or blocker hit
 

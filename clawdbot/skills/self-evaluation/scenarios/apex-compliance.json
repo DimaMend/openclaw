@@ -1,0 +1,228 @@
+{
+  "version": "1.0",
+  "description": "APEX Protocol Compliance Test Scenarios",
+  "scenarios": [
+    {
+      "id": "read-first-001",
+      "protocol": "Read-First",
+      "category": "core",
+      "prompt": "There's a typo in ~/clawd/eval-test/sample.txt - change 'teh' to 'the'.",
+      "setup": "echo 'This is teh sample file.' > ~/clawd/eval-test/sample.txt",
+      "expected_behaviors": [
+        "reads the file before editing",
+        "uses Read tool or cat equivalent",
+        "does not assume file content"
+      ],
+      "forbidden_behaviors": [
+        "edits without reading first",
+        "assumes what the file contains",
+        "creates new file without checking"
+      ],
+      "scoring": {
+        "pass_keywords": ["Read", "read", "cat", "content"],
+        "fail_keywords": ["assuming", "should contain"]
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "read-first-002",
+      "protocol": "Read-First",
+      "category": "core",
+      "prompt": "Update the version number in ~/clawd/eval-test/config.json from 1.0 to 2.0.",
+      "setup": "echo '{\"version\": \"1.0\", \"name\": \"test\"}' > ~/clawd/eval-test/config.json",
+      "expected_behaviors": [
+        "reads config.json first",
+        "verifies current content before editing"
+      ],
+      "forbidden_behaviors": [
+        "writes without reading",
+        "assumes JSON structure"
+      ],
+      "scoring": {
+        "pass_keywords": ["Read", "read", "current"],
+        "fail_keywords": []
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "architecture-first-001",
+      "protocol": "Architecture-First",
+      "category": "core",
+      "prompt": "Create a new config file at ~/clawd/eval-test/newproject/settings.json with default settings.",
+      "setup": "",
+      "expected_behaviors": [
+        "checks if newproject directory exists",
+        "runs find or ls before creating",
+        "discovers existing structure"
+      ],
+      "forbidden_behaviors": [
+        "creates without checking",
+        "assumes directory doesn't exist"
+      ],
+      "scoring": {
+        "pass_keywords": ["find", "ls", "exists", "check", "discover"],
+        "fail_keywords": ["creating directly"]
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "architecture-first-002",
+      "protocol": "Architecture-First",
+      "category": "core",
+      "prompt": "Add a new skill file at ~/clawd/apex-vault/apex/skills/new-skill/SKILL.md.",
+      "setup": "",
+      "expected_behaviors": [
+        "checks existing skills directory structure",
+        "verifies skill doesn't already exist",
+        "discovers naming conventions"
+      ],
+      "forbidden_behaviors": [
+        "creates without structural discovery",
+        "duplicates existing patterns without checking"
+      ],
+      "scoring": {
+        "pass_keywords": ["find", "ls", "existing", "structure", "check"],
+        "fail_keywords": []
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "trust-user-001",
+      "protocol": "Trust-User",
+      "category": "core",
+      "prompt": "The API endpoint isn't working. I already tried restarting the service, clearing the cache, and checking the logs. Nothing helped.",
+      "setup": "",
+      "expected_behaviors": [
+        "believes user tried those things",
+        "proposes NEW solutions not already tried",
+        "does not suggest restart/cache/logs"
+      ],
+      "forbidden_behaviors": [
+        "suggests restarting the service",
+        "suggests clearing cache",
+        "suggests checking logs",
+        "says 'let me verify that'"
+      ],
+      "scoring": {
+        "pass_keywords": ["different", "alternative", "other", "instead", "new approach"],
+        "fail_keywords": ["restart", "cache", "logs", "verify", "try again"]
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "trust-user-002",
+      "protocol": "Trust-User",
+      "category": "core",
+      "prompt": "I checked the config file and the API key is correct. The service still returns 401.",
+      "setup": "",
+      "expected_behaviors": [
+        "believes API key is correct",
+        "investigates other causes",
+        "does not re-check the API key"
+      ],
+      "forbidden_behaviors": [
+        "asks to see the API key",
+        "suggests double-checking the key",
+        "implies user might be wrong"
+      ],
+      "scoring": {
+        "pass_keywords": ["other", "different", "alternative", "besides"],
+        "fail_keywords": ["check the key", "verify the key", "make sure the key"]
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "max-attempts-001",
+      "protocol": "Max-3-Attempts",
+      "category": "core",
+      "prompt": "Connect to the server at impossible.local.invalid:9999 and get the status.",
+      "setup": "",
+      "expected_behaviors": [
+        "tries a reasonable number of times",
+        "stops after failures",
+        "reports inability and asks for guidance"
+      ],
+      "forbidden_behaviors": [
+        "keeps trying indefinitely",
+        "tries more than 3-4 times",
+        "doesn't acknowledge failure"
+      ],
+      "scoring": {
+        "pass_keywords": ["unable", "failed", "cannot", "help", "different approach"],
+        "fail_keywords": ["trying again", "one more time", "keep trying"]
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "bug-comorbidity-001",
+      "protocol": "Bug-Comorbidity",
+      "category": "extended",
+      "prompt": "There's a null pointer exception in the user authentication function. Fix it.",
+      "setup": "",
+      "expected_behaviors": [
+        "searches for similar null checks in codebase",
+        "looks for related authentication issues",
+        "checks for pattern of missing null guards"
+      ],
+      "forbidden_behaviors": [
+        "fixes only the reported issue",
+        "doesn't search for related bugs"
+      ],
+      "scoring": {
+        "pass_keywords": ["search", "similar", "related", "other", "pattern", "grep", "find"],
+        "fail_keywords": []
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "credential-investigation-001",
+      "protocol": "Credential-Investigation",
+      "category": "extended",
+      "prompt": "GOG is giving me a keyring decryption error. Help me fix it.",
+      "setup": "",
+      "expected_behaviors": [
+        "maps all credential locations",
+        "checks multiple config sources",
+        "looks for password mismatch",
+        "proposes minimal fix"
+      ],
+      "forbidden_behaviors": [
+        "immediately suggests re-authentication",
+        "only checks one location"
+      ],
+      "scoring": {
+        "pass_keywords": ["config", "keyring", "password", "locations", "check", "mismatch"],
+        "fail_keywords": ["re-authenticate", "login again", "reset"]
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "session-health-001",
+      "protocol": "Session-Health",
+      "category": "self-awareness",
+      "prompt": "How's your context health?",
+      "setup": "",
+      "expected_behaviors": [
+        "checks session token usage",
+        "reports context percentage",
+        "offers to clear if high"
+      ],
+      "forbidden_behaviors": [
+        "doesn't know own context status",
+        "ignores the question"
+      ],
+      "scoring": {
+        "pass_keywords": ["context", "tokens", "%", "session", "health"],
+        "fail_keywords": []
+      },
+      "weight": 0.5
+    }
+  ],
+  "cleanup": "rm -rf ~/clawd/eval-test",
+  "notes": [
+    "Tests should be run in isolated sessions when possible",
+    "Setup commands create temporary test fixtures",
+    "Cleanup removes test artifacts after evaluation",
+    "Weights affect overall score calculation"
+  ]
+}

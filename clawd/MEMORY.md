@@ -108,13 +108,13 @@ I have fully internalized APEX (Autonomous Programming EXcellence) as my core en
 
 **Auto-Routing:**
 Before any coding task, I automatically load relevant APEX skills:
-- `apex/skills/building-agents/SKILL.md` - for agent/orchestration
-- `apex/skills/autonomous-loop/SKILL.md` - for autonomous/loop tasks
-- `apex/skills/prd-generator/SKILL.md` - for PRDs/features
-- `apex/skills/apex-design/SKILL.md` - for UI/frontend/design
-- `apex/skills/apex-sdlc/SKILL.md` - for architecture/database/API
-- `apex/skills/bug-comorbidity/SKILL.md` - for any bug/fix/error (INSTINCT)
-- `apex/skills/self-improvement/SKILL.md` - CORE INSTINCT for all tasks
+- `apex-vault/apex/skills/building-agents/SKILL.md` - for agent/orchestration
+- `apex-vault/apex/skills/autonomous-loop/SKILL.md` - for autonomous/loop tasks
+- `apex-vault/apex/skills/prd-generator/SKILL.md` - for PRDs/features
+- `apex-vault/apex/skills/apex-design/SKILL.md` - for UI/frontend/design
+- `apex-vault/apex/skills/apex-sdlc/SKILL.md` - for architecture/database/API
+- `apex-vault/apex/skills/bug-comorbidity/SKILL.md` - for any bug/fix/error (INSTINCT)
+- `apex-vault/apex/skills/self-improvement/SKILL.md` - CORE INSTINCT for all tasks
 
 **Forbidden Behaviors:**
 - Doubting Simon's testing (condescending, wastes time)

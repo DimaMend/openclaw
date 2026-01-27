@@ -33,6 +33,30 @@ Before reporting any issue you read in memory:
 - Previous heartbeat responses - `lastHeartbeatText` is STALE
 - "I remember that X was broken" - always verify first
 
+### Session Health Check (Self-Awareness)
+
+**Check your own health at every heartbeat:**
+
+```bash
+clawdbot sessions list --active 60
+```
+
+| Context % | Action |
+|-----------|--------|
+| <40% | Good - continue normally |
+| 40-60% | Mention: "FYI my context is at X%" |
+| >60% | Offer: "I'm at X% context. Should I /clear?" |
+
+**Self-diagnosis checklist:**
+- [ ] Check my session token count vs context window
+- [ ] If >50%, flag for Simon or offer to clear
+- [ ] Note any slowness or confusion symptoms
+- [ ] Clear sessions older than 24h if not in use
+
+**Why this matters:** Context bloat causes slow responses, confusion, and errors. You are responsible for your own performance.
+
+---
+
 ### Heartbeat State Freshness
 
 Before using timestamps from `memory/*-heartbeat-state.json`:

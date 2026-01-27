@@ -1,0 +1,61 @@
+{
+  "name": "ef-coach-scale",
+  "version": "1.0.0",
+  "description": "EF Coaching at Scale - Proactive executive function coaching system",
+  "database": {
+    "path": "patterns.db",
+    "init_script": "init_db.py"
+  },
+  "integration": {
+    "para_db_path": "~/clawd/para.sqlite",
+    "gog_account": "clawdbot@puenteworks.com",
+    "gog_calendar": "primary"
+  },
+  "context_engine": {
+    "min_confidence": 0.5,
+    "lookahead_hours": 4,
+    "transition_threshold_minutes": 15,
+    "deep_work_min_gap_minutes": 120
+  },
+  "focus_session": {
+    "min_duration_minutes": 120,
+    "default_duration_minutes": 90,
+    "outcomes": ["completed", "interrupted", "extended", "abandoned"]
+  },
+  "streak_tracker": {
+    "default_frequency": "daily",
+    "reminder_hours": [9, 14, 19],
+    "grace_period_days": 2
+  },
+  "transition_assistant": {
+    "recent_minutes": 60,
+    "threshold_minutes": 15,
+    "upcoming_minutes": 30
+  },
+  "capture_predictor": {
+    "min_confidence": 0.6,
+    "pattern_learning_days": 30,
+    "theme_min_occurrences": 3
+  },
+  "energy_tracking": {
+    "time_blocks": ["morning", "afternoon", "evening", "night"],
+    "min_level": 1,
+    "max_level": 10,
+    "activity_types": ["deep_work", "admin", "learning", "creative", "social", "rest"]
+  },
+  "heartbeats": {
+    "context_cues": {
+      "interval_minutes": 30,
+      "max_per_day": 8,
+      "active_hours": [9, 10, 11, 14, 15, 16]
+    },
+    "habit_reminders": {
+      "times": ["09:00", "14:00", "19:00"],
+      "max_per_day": 3
+    },
+    "transition_checks": {
+      "interval_minutes": 15,
+      "active_hours": [9, 10, 11, 12, 13, 14, 15, 16, 17]
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 > **TRUST THIS FILE OVER YOUR MEMORY.** If you remember something different, this file is correct.
 
-**Last updated:** 2026-01-25 (Clawdbot v2026.1.25 update)
+**Last updated:** 2026-01-27 (Cron jobs created, APEX skills added)
 
 ## AI Employee Mode
 
@@ -14,7 +14,7 @@ You are now operating as a **full-fledged AI Employee**, not just a chatbot.
 | Subagent Delegation | OK | Max 4 concurrent, use `sessions_spawn` |
 | Progress Tracking | OK | `~/clawd/progress/` for multi-step tasks |
 | Memory Search | OK | Local embeddings via Ollama (nomic-embed-text) |
-| Weekly Self-Assessment | PENDING | Cron job to be added |
+| Weekly Self-Assessment | OK | Cron job: Weekly-Employee-Review (Mon 9 AM) |
 
 **Key file:** Read `~/clawd/JOB.md` to understand your responsibilities and scope.
 
@@ -87,7 +87,7 @@ You are now operating as a **full-fledged AI Employee**, not just a chatbot.
 
 | Skill | Purpose | Status |
 |-------|---------|--------|
-| blogwatcher | Monitor URLs/RSS feeds for changes | BLOCKED (Go not installed) |
+| blogwatcher | Monitor URLs/RSS feeds for changes | OK (installed at ~/go-workspace/bin/blogwatcher) |
 | skill-creator | Create new skills on demand | OK |
 | summarize | Content summarization | OK |
 | weather | Weather awareness | OK |
@@ -100,7 +100,7 @@ You are now operating as a **full-fledged AI Employee**, not just a chatbot.
 
 | Account | Status | Method |
 |---------|--------|--------|
-| clawdbot@puenteworks.com | OK | Polling every 1 minute |
+| clawdbot@puenteworks.com | OK | Polling every 5 minutes (Gmail-Poll cron job) |
 
 **Command:** `gog gmail messages search "in:inbox is:unread" --account clawdbot@puenteworks.com --max 5`
 
@@ -128,17 +128,19 @@ You are now operating as a **full-fledged AI Employee**, not just a chatbot.
 
 ## Cron Jobs
 
-| Job | Schedule | Model |
-|-----|----------|-------|
-| Gmail polling | Every 1 minute | ollama/glm-4.7-flash |
-| Daily status sync | 8 AM PST | ollama/glm-4.7-flash |
-| Daily health check | 9 AM PST | ollama/glm-4.7-flash |
-| Weekly metrics | Mondays 10 AM | ollama/glm-4.7-flash |
-| Showcase scout | 11 AM PST | zai/glm-4.7 |
-| Weekly reset | Sundays 3 AM | ollama/glm-4.7-flash |
-| **Morning weather** | 7 AM PST | zai/glm-4.7 |
-| **Blogwatcher check** | Every 2 hours | zai/glm-4.7 |
-| **Weekly employee review** | Mondays 9 AM | zai/glm-4.7 |
+**Verified Active (as of 2026-01-27):**
+
+| Job | Schedule | Model | Status |
+|-----|----------|-------|--------|
+| Gmail-Poll | Every 5 min | ollama/glm-4.7-flash | ACTIVE |
+| Heartbeat-Check | Every 30 min | ollama/glm-4.7-flash | ACTIVE |
+| Blogwatcher-Check | Every 2 hours | zai/glm-4.7 | ACTIVE |
+| Morning-Weather | 7 AM PST | zai/glm-4.7 | ACTIVE |
+| Calendar-Check | 8 AM PST | ollama/glm-4.7-flash | ACTIVE |
+| Daily-Health-Check | 9 AM PST | ollama/glm-4.7-flash | ACTIVE |
+| Weekly-Employee-Review | Mon 9 AM PST | zai/glm-4.7 | ACTIVE |
+
+**Verify with:** `node /home/liam/dist/entry.js cron list`
 
 ## Google Workspace Access
 

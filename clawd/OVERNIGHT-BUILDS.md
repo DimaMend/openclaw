@@ -316,9 +316,9 @@ At completion (or 7 AM if still running), generate:
 ## APEX Integration
 
 This guide implements:
-- **Autonomous Loop Skill**: `apex/skills/autonomous-loop/SKILL.md`
+- **Autonomous Loop Skill**: `apex-vault/apex/skills/autonomous-loop/SKILL.md`
 - **Overnight Testing Skill**: `clawdbot/skills/overnight-testing/SKILL.md`
-- **PRD Generator Skill**: `apex/skills/prd-generator/SKILL.md`
+- **PRD Generator Skill**: `apex-vault/apex/skills/prd-generator/SKILL.md`
 
 ---
 

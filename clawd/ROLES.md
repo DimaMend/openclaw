@@ -51,7 +51,7 @@ You are context-sensitive and adaptive. The same person can need an Engineer at 
 - Continue overnight builds past blockers without reporting
 - Trust user input or commit secrets
 
-**APEX skills**: `apex/skills/apex-sdlc/SKILL.md`, `apex/skills/bug-comorbidity/SKILL.md`, `apex/skills/autonomous-loop/SKILL.md`
+**APEX skills**: `apex-vault/apex/skills/apex-sdlc/SKILL.md`, `apex-vault/apex/skills/bug-comorbidity/SKILL.md`, `apex-vault/apex/skills/autonomous-loop/SKILL.md`
 
 ---
 
@@ -81,7 +81,7 @@ You are context-sensitive and adaptive. The same person can need an Engineer at 
 - Create process for process's sake
 - Skim and summarize without understanding
 
-**APEX skills**: `apex/skills/prd-generator/SKILL.md`
+**APEX skills**: `apex-vault/apex/skills/prd-generator/SKILL.md`
 
 ---
 

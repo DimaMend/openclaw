@@ -1,0 +1,100 @@
+{
+  "posts": [
+    {
+      "id": 1,
+      "image_type": "Tall Layered Vase",
+      "image_source": "shelf_photo_1",
+      "style": "aesthetic",
+      "post_type": "new-work",
+      "caption": "New form emerged from the kiln today. Tall Layered Vase (~12\" tall)\nPrice: $275\n\nThe glaze did something unexpected — Layered blue glaze over speckled clay, with organic dripping effects. Each piece teaches me something new.",
+      "hashtags": "#ceramics #handmade #pottery #contemporaryceramics #maker #clay #kiln #art",
+      "photo_suggestions": [
+        "[1] Best overall shot (front/3/4 angle)",
+        "[2] Detail shot (texture, glaze interaction)",
+        "[3] Lifestyle shot (in natural light, context)"
+      ],
+      "engagement": "Does this piece speak to you?",
+      "created_date": "2026-01-26 15:51 PST"
+    },
+    {
+      "id": 2,
+      "image_type": "Abstract Sculpture with Holes",
+      "image_source": "shelf_photo_1",
+      "style": "casual",
+      "post_type": "sale",
+      "caption": "Fresh out of the kiln! 🔥\n\nAbstract Sculpture with Holes\nEarthenware with rust and gray glazes\n~8\" wide\nPrice: $185\n\nPretty happy with how this one turned out.",
+      "hashtags": "#ceramics #pottery #handmade #clay #kiln #maker #madebyhand #ceramic",
+      "photo_suggestions": [
+        "[1] Best overall shot (front/3/4 angle)",
+        "[2] Detail shot (texture, glaze interaction)",
+        "[3] Lifestyle shot (in natural light, context)"
+      ],
+      "engagement": "Thoughts?",
+      "created_date": "2026-01-26 15:51 PST"
+    },
+    {
+      "id": 3,
+      "image_type": "Wheel Process Shot",
+      "image_source": "wheel_process_1",
+      "style": "storytelling",
+      "post_type": "process",
+      "caption": "Some days the studio is quiet work, hands in clay, mind elsewhere.\n\nOther days, every mark matters deeply. Today was the latter.\n\nThe wheel turns, the water slicks the surface, and suddenly there's something where there was nothing before. That transition — from formless to forming — never gets old.",
+      "hashtags": "#ceramics #storytelling #handmade #artisan #pottery #makerlife #clay #ceramicart #process #studio",
+      "photo_suggestions": [
+        "[1] Best overall shot (front/3/4 angle)",
+        "[2] Detail shot (texture, glaze interaction)",
+        "[3] Lifestyle shot (in natural light, context)"
+      ],
+      "engagement": "What's a piece that's stuck with you?",
+      "created_date": "2026-01-26 18:58 PST"
+    },
+    {
+      "id": 4,
+      "image_type": "Wheel Process Shot",
+      "image_source": "wheel_process_1",
+      "style": "casual",
+      "post_type": "process",
+      "caption": "Studio day vibes 🎵\n\nWorking at the wheel. Clay everywhere. Good day.\n\nLove the energy when everything just clicks.",
+      "hashtags": "#ceramics #pottery #handmade #clay #kiln #maker #madebyhand #ceramic #studio #studiolife",
+      "photo_suggestions": [
+        "[1] Best overall shot (front/3/4 angle)",
+        "[2] Detail shot (texture, glaze interaction)",
+        "[3] Lifestyle shot (in natural light, context)"
+      ],
+      "engagement": "Thoughts?",
+      "created_date": "2026-01-26 18:58 PST"
+    },
+    {
+      "id": 5,
+      "image_type": "Studio Scene - Multiple Pieces",
+      "image_source": "studio_scene_1",
+      "style": "storytelling",
+      "post_type": "process",
+      "caption": "Some days you make one thing and get lost in it.\n\nOther days you're throwing shapes all afternoon, seven pieces lined up at different stages, and the studio feels alive in a different way.\n\nThis is the latter. Green table, chipped paint, clay everywhere. The kind of chaos that means work is happening.",
+      "hashtags": "#ceramics #storytelling #handmade #artisan #pottery #makerlife #clay #ceramicart #studio #studiolife #process",
+      "photo_suggestions": [
+        "[1] Best overall shot (front/3/4 angle of table)",
+        "[2] Detail shot (texture on ribbed surfaces)",
+        "[3] Wide shot (studio context, yellow table in back)"
+      ],
+      "engagement": "What's your studio look like right now?",
+      "created_date": "2026-01-26 19:05 PST"
+    },
+    {
+      "id": 6,
+      "image_type": "Studio Scene - Multiple Pieces",
+      "image_source": "studio_scene_1",
+      "style": "casual",
+      "post_type": "process",
+      "caption": "Studio in full swing today 🔥\n\nSeven pieces on the wheel, clay everywhere, green table's seen better days. Love the energy of a productive session.",
+      "hashtags": "#ceramics #pottery #handmade #clay #kiln #maker #madebyhand #ceramic #studio #studiolife #production",
+      "photo_suggestions": [
+        "[1] Best overall shot (front/3/4 angle of table)",
+        "[2] Detail shot (texture on ribbed surfaces)",
+        "[3] Wide shot (studio context, yellow table in back)"
+      ],
+      "engagement": "Most productive day this week?",
+      "created_date": "2026-01-26 19:05 PST"
+    }
+  ]
+}
