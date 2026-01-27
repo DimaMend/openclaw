@@ -811,6 +811,10 @@
 =======
     },
     {
+      "source": "/install/northflank/",
+      "destination": "/northflank"
+    },
+    {
       "source": "/gcp",
       "destination": "/platforms/gcp"
     },
@@ -858,6 +862,7 @@
           "install/docker",
           "railway",
           "render",
+          "northflank",
           "install/bun"
         ]
       },
