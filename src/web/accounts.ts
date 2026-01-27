@@ -85,8 +85,18 @@ function resolveAccountConfig(
   return entry;
 }
 
+/**
+ * Normalize accountId to prevent path traversal attacks.
+ * Strips any characters that could be used to escape the directory structure.
+ */
+function normalizeAccountId(accountId: string): string {
+  const trimmed = accountId.trim();
+  if (!trimmed) return "default";
+  return trimmed.replace(/[^a-z0-9._-]+/gi, "_");
+}
+
 function resolveDefaultAuthDir(accountId: string): string {
-  return path.join(resolveOAuthDir(), "whatsapp", accountId);
+  return path.join(resolveOAuthDir(), "whatsapp", normalizeAccountId(accountId));
 }
 
 function resolveLegacyAuthDir(): string {
