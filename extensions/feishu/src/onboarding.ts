@@ -199,6 +199,7 @@ export const feishuOnboardingAdapter: ChannelOnboardingAdapter = {
             feishu: {
               ...next.channels?.feishu,
               enabled: true,
+              dmPolicy: "pairing",
             },
           },
         } as ClawdbotConfig;
@@ -293,14 +294,7 @@ export const feishuOnboardingAdapter: ChannelOnboardingAdapter = {
     }
 
     // WebSocket mode - no webhook configuration needed
-
-    if (forceAllowFrom) {
-      next = await promptFeishuAllowFrom({
-        cfg: next,
-        prompter,
-        accountId: feishuAccountId,
-      });
-    }
+    // Pairing mode by default - no allowFrom needed
 
     return { cfg: next, accountId: feishuAccountId };
   },
