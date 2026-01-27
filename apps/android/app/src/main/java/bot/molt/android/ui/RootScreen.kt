@@ -50,11 +50,13 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.clawdbot.android.DeepLinkSheet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
@@ -73,6 +75,19 @@ import bot.molt.android.MainViewModel
 fun RootScreen(viewModel: MainViewModel) {
   var sheet by remember { mutableStateOf<Sheet?>(null) }
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+  val pendingDeepLinkSheet by viewModel.pendingDeepLinkSheet.collectAsState()
+
+  // Handle deep link navigation requests
+  LaunchedEffect(pendingDeepLinkSheet) {
+    when (pendingDeepLinkSheet) {
+      DeepLinkSheet.Chat -> sheet = Sheet.Chat
+      DeepLinkSheet.Settings -> sheet = Sheet.Settings
+      null -> {}
+    }
+    if (pendingDeepLinkSheet != null) {
+      viewModel.consumeDeepLinkSheet()
+    }
+  }
   val safeOverlayInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
   val context = LocalContext.current
   val serverName by viewModel.serverName.collectAsState()

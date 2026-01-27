@@ -88,6 +88,12 @@ targets:
           UIApplicationSupportsMultipleScenes: false
         UIBackgroundModes:
           - audio
+          - voip
+          - remote-notification
+        CFBundleURLTypes:
+          - CFBundleURLName: bot.molt.ios
+            CFBundleURLSchemes:
+              - moltbot
         NSLocalNetworkUsageDescription: Moltbot discovers and connects to your Moltbot gateway on the local network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true

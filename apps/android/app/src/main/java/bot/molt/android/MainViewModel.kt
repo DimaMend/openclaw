@@ -8,9 +8,13 @@ import bot.molt.android.node.CameraCaptureManager
 import bot.molt.android.node.CanvasController
 import bot.molt.android.node.ScreenRecordManager
 import bot.molt.android.node.SmsManager
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
+  private val _pendingDeepLinkSheet = MutableStateFlow<DeepLinkSheet?>(null)
+  val pendingDeepLinkSheet: StateFlow<DeepLinkSheet?> = _pendingDeepLinkSheet.asStateFlow()
   private val runtime: NodeRuntime = (app as NodeApp).runtime
 
   val canvas: CanvasController = runtime.canvas
@@ -171,4 +175,36 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
   fun sendChat(message: String, thinking: String, attachments: List<OutgoingAttachment>) {
     runtime.sendChat(message = message, thinking = thinking, attachments = attachments)
   }
+
+  /**
+   * Handle a deep link message by switching to the specified session and sending the message.
+   */
+  fun handleDeepLinkMessage(message: String, sessionKey: String) {
+    if (sessionKey != chatSessionKey.value) {
+      switchChatSession(sessionKey)
+    }
+    val thinking = chatThinkingLevel.value
+    sendChat(message = message, thinking = thinking, attachments = emptyList())
+    // Signal the UI to open the chat sheet
+    _pendingDeepLinkSheet.value = DeepLinkSheet.Chat
+  }
+
+  /**
+   * Request the settings sheet to be shown from a deep link.
+   */
+  fun showSettings() {
+    _pendingDeepLinkSheet.value = DeepLinkSheet.Settings
+  }
+
+  /**
+   * Clear the pending deep link sheet after the UI has consumed it.
+   */
+  fun consumeDeepLinkSheet() {
+    _pendingDeepLinkSheet.value = null
+  }
+}
+
+enum class DeepLinkSheet {
+  Chat,
+  Settings,
 }

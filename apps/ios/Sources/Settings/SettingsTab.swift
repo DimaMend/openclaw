@@ -186,6 +186,12 @@ struct SettingsTab: View {
                             "Wake Words",
                             value: VoiceWakePreferences.displayString(for: self.voiceWake.triggerWords))
                     }
+
+                    NavigationLink {
+                        TTSVoiceSettingsView()
+                    } label: {
+                        Text("TTS Voice Settings")
+                    }
                 }
 
                 Section("Camera") {
@@ -278,8 +284,13 @@ struct SettingsTab: View {
     @ViewBuilder
     private func gatewayList(showing: GatewayListMode) -> some View {
         if self.gatewayController.gateways.isEmpty {
-            Text("No gateways found yet.")
-                .foregroundStyle(.secondary)
+            ContentUnavailableView {
+                Label("No Gateways Found", systemImage: "network.slash")
+            } description: {
+                Text("Make sure your Clawdbot gateway is running on the same network.")
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
         } else {
             let connectedID = self.appModel.connectedGatewayID
             let rows = self.gatewayController.gateways.filter { gateway in

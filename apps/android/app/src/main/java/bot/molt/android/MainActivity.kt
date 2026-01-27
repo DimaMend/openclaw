@@ -1,8 +1,10 @@
 package bot.molt.android
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.os.Bundle
+import android.util.Log
 import android.os.Build
 import android.view.WindowManager
 import android.webkit.WebView
@@ -26,6 +28,10 @@ class MainActivity : ComponentActivity() {
   private val viewModel: MainViewModel by viewModels()
   private lateinit var permissionRequester: PermissionRequester
   private lateinit var screenCaptureRequester: ScreenCaptureRequester
+
+  companion object {
+    private const val TAG = "MainActivity"
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -60,6 +66,40 @@ class MainActivity : ComponentActivity() {
         Surface(modifier = Modifier) {
           RootScreen(viewModel = viewModel)
         }
+      }
+    }
+
+    // Handle deep link from initial launch
+    handleDeepLink(intent)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    handleDeepLink(intent)
+  }
+
+  private fun handleDeepLink(intent: Intent?) {
+    val uri = intent?.data ?: return
+    if (uri.scheme != "clawdbot") return
+
+    val host = uri.host // e.g., "agent", "chat", "settings"
+    val path = uri.path?.trimStart('/') // e.g., "hello" from clawdbot://agent/hello
+    val sessionKey = uri.getQueryParameter("sessionKey") ?: "main"
+
+    Log.d(TAG, "Deep link received: scheme=${uri.scheme}, host=$host, path=$path, sessionKey=$sessionKey")
+
+    when (host) {
+      "agent", "chat" -> {
+        // Send message via chat if path contains text
+        if (!path.isNullOrBlank()) {
+          viewModel.handleDeepLinkMessage(path, sessionKey)
+        }
+      }
+      "settings" -> {
+        viewModel.showSettings()
+      }
+      else -> {
+        Log.w(TAG, "Unknown deep link host: $host")
       }
     }
   }

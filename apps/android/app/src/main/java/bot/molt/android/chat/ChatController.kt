@@ -1,5 +1,6 @@
 package bot.molt.android.chat
 
+import android.util.Log
 import bot.molt.android.gateway.GatewaySession
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -24,6 +25,9 @@ class ChatController(
   private val json: Json,
   private val supportsChatSubscribe: Boolean,
 ) {
+  companion object {
+    private const val TAG = "ChatController"
+  }
   private val _sessionKey = MutableStateFlow("main")
   val sessionKey: StateFlow<String> = _sessionKey.asStateFlow()
 
@@ -218,8 +222,8 @@ class ChatController(
               put("runId", JsonPrimitive(runId))
             }
           session.request("chat.abort", params.toString())
-        } catch (_: Throwable) {
-          // best-effort
+        } catch (e: Throwable) {
+          Log.d(TAG, "Failed to abort chat (best-effort)", e)
         }
       }
     }
@@ -263,8 +267,8 @@ class ChatController(
       if (supportsChatSubscribe) {
         try {
           session.sendNodeEvent("chat.subscribe", """{"sessionKey":"$key"}""")
-        } catch (_: Throwable) {
-          // best-effort
+        } catch (e: Throwable) {
+          Log.d(TAG, "Failed to subscribe to chat events (best-effort)", e)
         }
       }
 
@@ -291,8 +295,8 @@ class ChatController(
         }
       val res = session.request("sessions.list", params.toString())
       _sessions.value = parseSessions(res)
-    } catch (_: Throwable) {
-      // best-effort
+    } catch (e: Throwable) {
+      Log.d(TAG, "Failed to refresh chat sessions (best-effort)", e)
     }
   }
 
@@ -304,7 +308,8 @@ class ChatController(
     try {
       session.request("health", null)
       _healthOk.value = true
-    } catch (_: Throwable) {
+    } catch (e: Throwable) {
+      Log.d(TAG, "Health check failed", e)
       _healthOk.value = false
     }
   }
@@ -341,8 +346,8 @@ class ChatController(
             _messages.value = history.messages
             _sessionId.value = history.sessionId
             history.thinkingLevel?.trim()?.takeIf { it.isNotEmpty() }?.let { _thinkingLevel.value = it }
-          } catch (_: Throwable) {
-            // best-effort
+          } catch (e: Throwable) {
+            Log.d(TAG, "Failed to refresh chat history after complete event (best-effort)", e)
           }
         }
       }
@@ -491,7 +496,8 @@ class ChatController(
   private fun parseRunId(resJson: String): String? {
     return try {
       json.parseToJsonElement(resJson).asObjectOrNull()?.get("runId").asStringOrNull()
-    } catch (_: Throwable) {
+    } catch (e: Throwable) {
+      Log.d(TAG, "Failed to parse runId from response", e)
       null
     }
   }

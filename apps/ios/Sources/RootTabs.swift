@@ -138,6 +138,15 @@ struct RootTabs: View {
             }
         }
 
+        // Show pending offline messages indicator
+        let pendingCount = self.appModel.offlineQueue.count
+        if pendingCount > 0 {
+            return StatusPill.Activity(
+                title: "\(pendingCount) pending",
+                systemImage: "clock.arrow.circlepath",
+                tint: .orange)
+        }
+
         return nil
     }
 }

@@ -62,6 +62,9 @@ class GatewaySession(
   private val onInvoke: (suspend (InvokeRequest) -> InvokeResult)? = null,
   private val onTlsFingerprint: ((stableId: String, fingerprint: String) -> Unit)? = null,
 ) {
+  companion object {
+    private const val TAG = "GatewaySession"
+  }
   data class InvokeRequest(
     val id: String,
     val nodeId: String,
@@ -458,7 +461,8 @@ class GatewaySession(
       if (isLoopbackHost(endpoint.host)) return null
       return try {
         withTimeout(2_000) { connectNonceDeferred.await() }
-      } catch (_: Throwable) {
+      } catch (e: Throwable) {
+        Log.d(TAG, "Timeout awaiting connect nonce", e)
         null
       }
     }
@@ -473,7 +477,8 @@ class GatewaySession(
       val payload =
         try {
           json.parseToJsonElement(payloadJson).asObjectOrNull()
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+          Log.w(TAG, "Failed to parse invoke event JSON", e)
           null
         } ?: return
       val id = payload["id"].asStringOrNull() ?: return

@@ -140,7 +140,8 @@ class TalkModeManager(
     val obj =
       try {
         json.parseToJsonElement(payloadJson).asObjectOrNull()
-      } catch (_: Throwable) {
+      } catch (e: Throwable) {
+        Log.d(tag, "Failed to parse gateway event JSON", e)
         null
       } ?: return
     val runId = obj["runId"].asStringOrNull() ?: return
@@ -245,8 +246,8 @@ class TalkModeManager(
             val shouldInterrupt = _isSpeaking.value && interruptOnSpeech
             if (!shouldListen && !shouldInterrupt) return@post
             startListeningInternal(markListening = shouldListen)
-          } catch (_: Throwable) {
-            // handled by onError
+          } catch (e: Throwable) {
+            Log.d(tag, "Failed to restart listening after end-of-speech", e)
           }
         }
       }
@@ -395,7 +396,8 @@ class TalkModeManager(
       withContext(Dispatchers.IO) {
         try {
           kotlinx.coroutines.withTimeout(120_000) { deferred.await() }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+          Log.d(tag, "Timeout waiting for agent response", e)
           false
         }
       }
@@ -702,7 +704,8 @@ class TalkModeManager(
           TextToSpeech(context) { status ->
             deferred.complete(status == TextToSpeech.SUCCESS)
           }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+          Log.w(tag, "Failed to initialize system TTS", e)
           deferred.complete(false)
           null
         }
@@ -743,7 +746,8 @@ class TalkModeManager(
       val ok =
         try {
           deferred.await()
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+          Log.d(tag, "TTS initialization deferred await failed", e)
           false
         }
       if (ok) {
@@ -793,8 +797,8 @@ class TalkModeManager(
       track.pause()
       track.flush()
       track.stop()
-    } catch (_: Throwable) {
-      // ignore cleanup errors
+    } catch (e: Throwable) {
+      Log.d(tag, "PCM track cleanup error (ignored)", e)
     } finally {
       track.release()
     }
@@ -842,7 +846,8 @@ class TalkModeManager(
       defaultOutputFormat = outputFormat ?: defaultOutputFormatFallback
       apiKey = key ?: envKey?.takeIf { it.isNotEmpty() }
       if (interrupt != null) interruptOnSpeech = interrupt
-    } catch (_: Throwable) {
+    } catch (e: Throwable) {
+      Log.w(tag, "Failed to parse talk config from gateway, using defaults", e)
       defaultVoiceId = envVoice?.takeIf { it.isNotEmpty() } ?: sagVoice?.takeIf { it.isNotEmpty() }
       defaultModelId = defaultModelIdFallback
       if (!modelOverrideActive) currentModelId = defaultModelId
@@ -1099,8 +1104,8 @@ class TalkModeManager(
         }
         recognizer?.cancel()
         startListeningInternal(markListening = false)
-      } catch (_: Throwable) {
-        // ignore
+      } catch (e: Throwable) {
+        Log.d(tag, "Failed to start interrupt listener", e)
       }
     }
   }
