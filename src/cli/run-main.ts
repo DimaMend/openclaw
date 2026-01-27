@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { loadDotEnv } from "../infra/dotenv.js";
 import { normalizeEnv } from "../infra/env.js";
+import { initGlobalProxy } from "../infra/global-proxy.js";
 import { isMainModule } from "../infra/is-main.js";
 import { ensureClawdbotCliOnPath } from "../infra/path-env.js";
 import { assertSupportedRuntime } from "../infra/runtime-guard.js";
@@ -27,6 +28,7 @@ export async function runCli(argv: string[] = process.argv) {
   const normalizedArgv = stripWindowsNodeExec(argv);
   loadDotEnv({ quiet: true });
   normalizeEnv();
+  initGlobalProxy();
   ensureClawdbotCliOnPath();
 
   // Enforce the minimum supported runtime before doing any work.

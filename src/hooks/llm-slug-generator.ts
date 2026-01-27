@@ -11,7 +11,10 @@ import {
   resolveDefaultAgentId,
   resolveAgentWorkspaceDir,
   resolveAgentDir,
+  resolveAgentModelPrimary,
 } from "../agents/agent-scope.js";
+import { parseModelRef } from "../agents/model-selection.js";
+import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 
 /**
  * Generate a short 1-2 word filename slug from session content using LLM
@@ -38,6 +41,12 @@ ${params.sessionContent.slice(0, 2000)}
 
 Reply with ONLY the slug, nothing else. Examples: "vendor-pitch", "api-design", "bug-fix"`;
 
+    // Use the user's configured model instead of hardcoded defaults
+    const primaryModel = resolveAgentModelPrimary(params.cfg, agentId);
+    const modelRef = primaryModel ? parseModelRef(primaryModel, DEFAULT_PROVIDER) : null;
+    const provider = modelRef?.provider ?? DEFAULT_PROVIDER;
+    const model = modelRef?.model ?? DEFAULT_MODEL;
+
     const result = await runEmbeddedPiAgent({
       sessionId: `slug-generator-${Date.now()}`,
       sessionKey: "temp:slug-generator",
@@ -45,6 +54,8 @@ Reply with ONLY the slug, nothing else. Examples: "vendor-pitch", "api-design", 
       workspaceDir,
       agentDir,
       config: params.cfg,
+      provider,
+      model,
       prompt,
       timeoutMs: 15_000, // 15 second timeout
       runId: `slug-gen-${Date.now()}`,
