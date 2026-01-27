@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Clawdbot.Windows.Core</RootNamespace>
+    <Description>Core Gateway client and services for Clawdbot Windows companion</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="System.Windows.Extensions" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Clawdbot.Windows.Protocol\Clawdbot.Windows.Protocol.csproj" />
+  </ItemGroup>
+
+</Project>

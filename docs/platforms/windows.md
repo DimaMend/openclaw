@@ -147,7 +147,62 @@ clawdbot onboard
 
 Full guide: [Getting Started](/start/getting-started)
 
-## Windows companion app
+## Windows Companion App
 
-We do not have a Windows companion app yet. Contributions are welcome if you want
-contributions to make it happen.
+The Windows companion app provides a native system tray experience for managing
+the Clawdbot Gateway. It connects to a Gateway running in WSL2 (or anywhere else)
+and provides:
+
+- **System tray icon** with connection status
+- **Exec approval dialogs** with timeout and queue (matches macOS behavior)
+- **Settings persistence** to `%LOCALAPPDATA%\Clawdbot\settings.json`
+- **Auto-start on login** (optional, via Windows Registry)
+- **Notification sounds** for approvals and connection events
+- **Embedded Control UI** via WebView2
+
+### Requirements
+
+- Windows 10/11
+- .NET 9.0 Runtime
+- WebView2 Runtime (ships with Windows 11, install separately on Windows 10)
+
+### Building from Source
+
+```powershell
+cd apps/windows
+dotnet build --configuration Release
+```
+
+Run the app:
+
+```powershell
+.\src\Clawdbot.Windows\bin\Release\net9.0-windows\Clawdbot.exe
+```
+
+### Configuration
+
+The app stores settings in `%LOCALAPPDATA%\Clawdbot\settings.json`:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `gatewayUrl` | `ws://127.0.0.1:18789/` | WebSocket URL of the Gateway |
+| `startOnLogin` | `false` | Launch at Windows startup |
+| `minimizeToTray` | `true` | Minimize to tray instead of closing |
+| `playSounds` | `true` | Play notification sounds |
+| `showConnectionNotifications` | `true` | Show balloon notifications |
+| `reconnectIntervalSeconds` | `5` | Auto-reconnect interval (0 = disabled) |
+
+Access settings via the system tray icon → **Settings**.
+
+### Logs
+
+Logs are written to `%LOCALAPPDATA%\Clawdbot\logs\clawdbot-YYYY-MM-DD.log`.
+
+### Development Status
+
+The Windows companion app is under active development:
+
+- ✅ **Phase 0** - Project structure, Gateway protocol, WebSocket client, tests
+- ✅ **Phase 1** - System tray, exec approval dialogs with queue and timeout
+- ✅ **Phase 2** - Settings persistence, auto-start, notification sounds
+- 🔲 **Phase 3** - Installer (MSIX/MSI), auto-update, polish

@@ -1,0 +1,14 @@
+# Build outputs
+bin/
+obj/
+publish/
+publish-*/
+dist/
+
+# IDE
+.vs/
+*.user
+*.suo
+
+# WebView2 cache (generated at runtime)
+*.WebView2/

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\clawdbot.ico</ApplicationIcon>
+    <RootNamespace>Clawdbot.Windows</RootNamespace>
+    <AssemblyName>Clawdbot</AssemblyName>
+    <Description>Clawdbot Windows Companion - System tray app for Clawdbot Gateway</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\clawdbot.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Clawdbot.Windows.Core\Clawdbot.Windows.Core.csproj" />
+  </ItemGroup>
+
+</Project>

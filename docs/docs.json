@@ -1081,6 +1081,7 @@
           "platforms/ios",
           "platforms/android",
           "platforms/windows",
+          "platforms/windows-companion-build-guide",
           "platforms/linux",
           "platforms/fly",
           "platforms/hetzner",
