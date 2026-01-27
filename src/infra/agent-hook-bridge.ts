@@ -87,9 +87,7 @@ function parseSessionMeta(sessionKey: string | undefined | null): SessionMeta {
 /**
  * Type guard for tool event data
  */
-function isToolEventData(
-  data: Record<string, unknown> | undefined,
-): data is {
+function isToolEventData(data: Record<string, unknown> | undefined): data is {
   phase: string;
   name: string;
   toolCallId: string;

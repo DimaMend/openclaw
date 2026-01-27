@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   startAgentHookBridge,
   stopAgentHookBridge,
   type SessionMeta,
-  type ToolHookEvent,
 } from "./agent-hook-bridge.js";
 import { emitAgentEvent } from "./agent-events.js";
 import {
