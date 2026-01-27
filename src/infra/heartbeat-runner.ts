@@ -89,14 +89,14 @@ function resolveActiveHoursTimezone(cfg: ClawdbotConfig, raw?: string): string {
   }
 }
 
-function parseActiveHoursTime(raw?: string, opts: { allow24: boolean }): number | null {
+function parseActiveHoursTime(raw?: string, opts?: { allow24: boolean }): number | null {
   if (!raw || !ACTIVE_HOURS_TIME_PATTERN.test(raw)) return null;
   const [hourStr, minuteStr] = raw.split(":");
   const hour = Number(hourStr);
   const minute = Number(minuteStr);
   if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
   if (hour === 24) {
-    if (!opts.allow24 || minute !== 0) return null;
+    if (!(opts?.allow24 ?? false) || minute !== 0) return null;
     return 24 * 60;
   }
   return hour * 60 + minute;
