@@ -4,7 +4,6 @@ import {
   SYNTHETIC_DEFAULT_MODEL_REF,
   SYNTHETIC_MODEL_CATALOG,
 } from "../agents/synthetic-models.js";
-import { discoverTogetherModels } from "../agents/together-models.js";
 
 // Together AI constants and models - inline to avoid separate models file
 const TOGETHER_BASE_URL = "https://api.together.xyz/v1";
@@ -533,7 +532,7 @@ export function applyVeniceConfig(cfg: ClawdbotConfig): ClawdbotConfig {
   };
 }
 
-export async function applyTogetherProviderConfig(cfg: ClawdbotConfig): Promise<ClawdbotConfig> {
+export function applyTogetherProviderConfig(cfg: ClawdbotConfig): ClawdbotConfig {
   const models = { ...cfg.agents?.defaults?.models };
   models[TOGETHER_DEFAULT_MODEL_REF] = {
     ...models[TOGETHER_DEFAULT_MODEL_REF],
@@ -544,7 +543,7 @@ export async function applyTogetherProviderConfig(cfg: ClawdbotConfig): Promise<
   const existingProvider = providers.together;
   const existingModels = Array.isArray(existingProvider?.models) ? existingProvider.models : [];
 
-  // Try dynamic discovery if API key is available, otherwise fall back to static catalog
+  // Use static catalog only (no async operations to maintain sync interface)
   const { apiKey: existingApiKey, ...existingProviderRest } = (existingProvider ?? {}) as Record<
     string,
     unknown
@@ -552,22 +551,7 @@ export async function applyTogetherProviderConfig(cfg: ClawdbotConfig): Promise<
   const resolvedApiKey = typeof existingApiKey === "string" ? existingApiKey : undefined;
   const normalizedApiKey = resolvedApiKey?.trim();
 
-  let togetherModels;
-  if (normalizedApiKey) {
-    // Try dynamic discovery with API key
-    try {
-      togetherModels = await discoverTogetherModels(normalizedApiKey);
-      console.log(`[together-models] Dynamic discovery found ${togetherModels.length} models`);
-    } catch (error) {
-      console.warn(
-        `[together-models] Dynamic discovery failed, using static catalog: ${String(error)}`,
-      );
-      togetherModels = TOGETHER_MODEL_CATALOG.map(buildTogetherModelDefinition);
-    }
-  } else {
-    // No API key, use static catalog
-    togetherModels = TOGETHER_MODEL_CATALOG.map(buildTogetherModelDefinition);
-  }
+  const togetherModels = TOGETHER_MODEL_CATALOG.map(buildTogetherModelDefinition);
 
   const mergedModels = [
     ...existingModels,
@@ -600,8 +584,8 @@ export async function applyTogetherProviderConfig(cfg: ClawdbotConfig): Promise<
   };
 }
 
-export async function applyTogetherConfig(cfg: ClawdbotConfig): Promise<ClawdbotConfig> {
-  const next = await applyTogetherProviderConfig(cfg);
+export function applyTogetherConfig(cfg: ClawdbotConfig): ClawdbotConfig {
+  const next = applyTogetherProviderConfig(cfg);
   const existingModel = next.agents?.defaults?.model;
   return {
     ...next,
