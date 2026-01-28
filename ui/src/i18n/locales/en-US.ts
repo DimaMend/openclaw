@@ -234,19 +234,35 @@ export const enUS = {
     // Slack
     slack: {
       title: "Slack",
-      desc: "Slack app via Bolt framework.",
+      desc: "Socket mode status and channel configuration.",
+      lastStart: "Last start",
+      lastProbe: "Last probe",
+      probe: "Probe",
+      probeOk: "ok",
+      probeFailed: "failed",
     },
 
     // Signal
     signal: {
       title: "Signal",
-      desc: "Signal via signal-cli or linked device.",
+      desc: "signal-cli status and channel configuration.",
+      baseUrl: "Base URL",
+      lastStart: "Last start",
+      lastProbe: "Last probe",
+      probe: "Probe",
+      probeOk: "ok",
+      probeFailed: "failed",
     },
 
     // iMessage
     imessage: {
       title: "iMessage",
-      desc: "iMessage via BlueBubbles server.",
+      desc: "macOS bridge status and channel configuration.",
+      lastStart: "Last start",
+      lastProbe: "Last probe",
+      probe: "Probe",
+      probeOk: "ok",
+      probeFailed: "failed",
     },
 
     // Google Chat

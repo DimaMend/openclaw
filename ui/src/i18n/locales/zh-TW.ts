@@ -241,19 +241,35 @@ export const zhTW = {
     // Slack
     slack: {
       title: "Slack",
-      desc: "透過 Bolt 框架連接 Slack 應用程式。",
+      desc: "Socket 模式狀態與頻道設定。",
+      lastStart: "上次啟動",
+      lastProbe: "上次探測",
+      probe: "探測",
+      probeOk: "正常",
+      probeFailed: "失敗",
     },
 
     // Signal
     signal: {
       title: "Signal",
-      desc: "透過 signal-cli 或已連結裝置連接 Signal。",
+      desc: "signal-cli 狀態與頻道設定。",
+      baseUrl: "Base URL",
+      lastStart: "上次啟動",
+      lastProbe: "上次探測",
+      probe: "探測",
+      probeOk: "正常",
+      probeFailed: "失敗",
     },
 
     // iMessage
     imessage: {
       title: "iMessage",
-      desc: "透過 BlueBubbles 伺服器連接 iMessage。",
+      desc: "macOS 橋接器狀態與頻道設定。",
+      lastStart: "上次啟動",
+      lastProbe: "上次探測",
+      probe: "探測",
+      probeOk: "正常",
+      probeFailed: "失敗",
     },
 
     // Google Chat
