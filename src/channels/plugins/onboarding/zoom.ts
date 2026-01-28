@@ -129,6 +129,43 @@ export const zoomOnboardingAdapter: ChannelOnboardingAdapter = {
       }),
     ).trim();
 
+    // Prompt for OAuth Redirect URI
+    await prompter.note(
+      [
+        "OAuth Redirect URL is the public URL where Zoom will redirect after installation.",
+        "",
+        "Examples:",
+        "- Local dev: https://abc123.ngrok.io/api/zoomapp/auth (use ngrok http 3001)",
+        "- Production: https://yourdomain.com/api/zoomapp/auth",
+        "",
+        "This MUST exactly match the OAuth Redirect URL configured in your Zoom app.",
+      ].join("\n"),
+      "OAuth Redirect URL",
+    );
+
+    const redirectUri = String(
+      await prompter.text({
+        message: "OAuth Redirect URL",
+        placeholder: "https://yourdomain.com/api/zoomapp/auth",
+        validate: (value) => {
+          const trimmed = String(value ?? "").trim();
+          if (!trimmed) return "OAuth Redirect URL is required";
+          try {
+            const url = new URL(trimmed);
+            if (!url.protocol.startsWith("http")) {
+              return "URL must start with http:// or https://";
+            }
+            if (!trimmed.endsWith("/api/zoomapp/auth")) {
+              return "URL should end with /api/zoomapp/auth";
+            }
+            return undefined;
+          } catch {
+            return "Invalid URL format";
+          }
+        },
+      }),
+    ).trim();
+
     // Determine environment from Bot JID
     const isDev = botJid.includes("@xmppdev");
     const apiHost = isDev ? "https://zoomdev.us" : "https://api.zoom.us";
@@ -145,6 +182,7 @@ export const zoomOnboardingAdapter: ChannelOnboardingAdapter = {
           clientSecret,
           botJid,
           secretToken,
+          redirectUri,
           apiHost,
           oauthHost,
         },
@@ -152,19 +190,16 @@ export const zoomOnboardingAdapter: ChannelOnboardingAdapter = {
     };
 
     // Show URL configuration instructions
+    const gatewayHost = redirectUri.replace(/\/api\/zoomapp\/auth$/, "");
     await prompter.note(
       [
         "IMPORTANT: Configure these URLs in your Zoom app:",
         "",
         "Webhook URL (for receiving messages):",
-        "  https://gateway-host/webhooks/zoom",
+        `  ${gatewayHost}/webhooks/zoom`,
         "",
         "OAuth Redirect URL (for app installation):",
-        "  https://gateway-host/api/zoomapp/auth",
-        "",
-        "Replace gateway-host with:",
-        "- For local dev: Use ngrok (ngrok http 3001)",
-        "- For production: Your server's public domain",
+        `  ${redirectUri}`,
         "",
         "Subscribe to event type: bot_notification",
       ].join("\n"),

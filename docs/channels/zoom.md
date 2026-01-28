@@ -25,6 +25,7 @@ Status: production-ready plugin for Zoom Team Chat direct messages via Team Chat
          clientSecret: "YOUR_CLIENT_SECRET",
          botJid: "YOUR_BOT_JID@xmppdev.zoom.us",
          secretToken: "YOUR_SECRET_TOKEN",
+         redirectUri: "https://yourdomain.com/api/zoomapp/auth",
          dm: { policy: "open" }
        }
      }
@@ -81,6 +82,12 @@ Replace `gateway-host` with:
 Subscribe to these event types:
 - `bot_notification` - Required for receiving messages
 
+**Important**: The `redirectUri` in your Moltbot config must EXACTLY match the OAuth Redirect URL configured in your Zoom app. OAuth will fail if these don't match.
+
+Examples:
+- Local dev: `https://abc123.ngrok.io/api/zoomapp/auth`
+- Production: `https://yourdomain.com/api/zoomapp/auth`
+
 ### 3. Install App to Your Account
 
 1) In app settings, click "Install"
@@ -100,6 +107,7 @@ Add to `~/.clawdbot/moltbot.json`:
       clientSecret: "YOUR_CLIENT_SECRET",
       botJid: "YOUR_BOT_JID@xmppdev.zoom.us",
       secretToken: "YOUR_SECRET_TOKEN",
+      redirectUri: "https://yourdomain.com/api/zoomapp/auth",  // Must match Zoom app OAuth Redirect URL
       apiHost: "https://zoomdev.us",          // Use https://api.zoom.us for production
       oauthHost: "https://zoomdev.us",        // Use https://zoom.us for production
       dm: {

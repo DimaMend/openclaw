@@ -7,6 +7,7 @@ export const ZoomConfigSchema = z.object({
   clientSecret: z.string().optional(),
   botJid: z.string().optional(),
   secretToken: z.string().optional(),
+  redirectUri: z.string().optional(),
   apiHost: z.string().optional(),
   oauthHost: z.string().optional(),
   dm: z
@@ -26,6 +27,7 @@ export type ResolvedZoomAccount = {
   clientSecret?: string;
   botJid?: string;
   secretToken?: string;
+  redirectUri?: string;
   apiHost: string;
   oauthHost: string;
   config: ZoomConfig;
@@ -46,6 +48,7 @@ export function resolveZoomAccount(params: {
     clientSecret: config.clientSecret,
     botJid: config.botJid,
     secretToken: config.secretToken,
+    redirectUri: config.redirectUri,
     apiHost: config.apiHost || "https://api.zoom.us",
     oauthHost: config.oauthHost || "https://zoom.us",
     config,

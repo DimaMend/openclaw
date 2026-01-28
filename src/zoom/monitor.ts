@@ -178,7 +178,10 @@ export async function monitorZoomProvider(opts: MonitorZoomOpts = {}): Promise<v
       const tokenUrl = `${account.oauthHost}/oauth/token`;
       const tokenParams = new URLSearchParams();
       tokenParams.set("grant_type", "authorization_code");
-      tokenParams.set("redirect_uri", `${req.protocol}://${req.get("host")}/api/zoomapp/auth`);
+      // Use configured redirectUri or fall back to dynamically built one
+      const redirectUri =
+        account.redirectUri || `${req.protocol}://${req.get("host")}/api/zoomapp/auth`;
+      tokenParams.set("redirect_uri", redirectUri);
       tokenParams.set("code", code);
 
       const authHeader = Buffer.from(`${account.clientId}:${account.clientSecret}`).toString(
