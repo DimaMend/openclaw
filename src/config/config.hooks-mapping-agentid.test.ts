@@ -48,8 +48,9 @@ describe("hooks.mappings agentId validation", () => {
     });
     expect(res.ok).toBe(false);
     if (!res.ok) {
-      expect(res.error).toContain("nonexistent-agent");
-      expect(res.error).toContain("not in agents.list");
+      const messages = res.issues.map((i) => i.message).join(" ");
+      expect(messages).toContain("nonexistent-agent");
+      expect(messages).toContain("not in agents.list");
     }
   });
 
