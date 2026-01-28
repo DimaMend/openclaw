@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   extractVeniceBalance,
   updateVeniceBalance,
@@ -12,6 +12,8 @@ import {
   formatVeniceError,
   isVeniceProvider,
   isVeniceApiUrl,
+  onVeniceBalanceUpdate,
+  resolveVeniceBalanceThresholds,
   DEFAULT_VENICE_BALANCE_THRESHOLDS,
   type VeniceBalance,
 } from "./venice-balance.js";
@@ -385,6 +387,167 @@ describe("venice-balance", () => {
 
     it("handles invalid URLs gracefully", () => {
       expect(isVeniceApiUrl("not-a-url")).toBe(false);
+    });
+  });
+
+  describe("onVeniceBalanceUpdate", () => {
+    it("calls callback when balance is updated", () => {
+      const callback = vi.fn();
+      const unsubscribe = onVeniceBalanceUpdate(callback);
+
+      const balance: VeniceBalance = { diem: 50, lastChecked: Date.now() };
+      updateVeniceBalance(balance);
+
+      expect(callback).toHaveBeenCalledWith(balance);
+      unsubscribe();
+    });
+
+    it("unsubscribe stops further callbacks", () => {
+      const callback = vi.fn();
+      const unsubscribe = onVeniceBalanceUpdate(callback);
+
+      updateVeniceBalance({ diem: 50, lastChecked: Date.now() });
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      unsubscribe();
+
+      updateVeniceBalance({ diem: 40, lastChecked: Date.now() });
+      expect(callback).toHaveBeenCalledTimes(1); // Still 1, not called again
+    });
+
+    it("handles callback errors gracefully", () => {
+      const errorCallback = vi.fn(() => {
+        throw new Error("Callback error");
+      });
+      const goodCallback = vi.fn();
+
+      const unsub1 = onVeniceBalanceUpdate(errorCallback);
+      const unsub2 = onVeniceBalanceUpdate(goodCallback);
+
+      // Should not throw, and good callback should still be called
+      expect(() => updateVeniceBalance({ diem: 50, lastChecked: Date.now() })).not.toThrow();
+      expect(goodCallback).toHaveBeenCalled();
+
+      unsub1();
+      unsub2();
+    });
+  });
+
+  describe("resolveVeniceBalanceThresholds", () => {
+    it("returns defaults when no config provided", () => {
+      expect(resolveVeniceBalanceThresholds()).toEqual(DEFAULT_VENICE_BALANCE_THRESHOLDS);
+      expect(resolveVeniceBalanceThresholds({})).toEqual(DEFAULT_VENICE_BALANCE_THRESHOLDS);
+      expect(resolveVeniceBalanceThresholds({ models: {} })).toEqual(DEFAULT_VENICE_BALANCE_THRESHOLDS);
+    });
+
+    it("merges partial config with defaults", () => {
+      const config = {
+        models: {
+          veniceBalanceWarning: {
+            lowDiemThreshold: 10,
+            enabled: false,
+          },
+        },
+      };
+      const result = resolveVeniceBalanceThresholds(config);
+
+      expect(result.lowDiemThreshold).toBe(10);
+      expect(result.enabled).toBe(false);
+      // Other values should be defaults
+      expect(result.criticalDiemThreshold).toBe(DEFAULT_VENICE_BALANCE_THRESHOLDS.criticalDiemThreshold);
+      expect(result.showInStatus).toBe(DEFAULT_VENICE_BALANCE_THRESHOLDS.showInStatus);
+    });
+  });
+
+  describe("evaluateBalanceDetailed - token limits", () => {
+    it("returns critical when token limit is nearly exhausted", () => {
+      const balance: VeniceBalance = {
+        diem: 50,
+        lastChecked: Date.now(),
+        rateLimit: {
+          limitTokens: 1000000,
+          remainingTokens: 20000, // 2% remaining
+        },
+      };
+      const evaluation = evaluateBalanceDetailed(balance);
+      expect(evaluation.status).toBe("critical");
+      expect(evaluation.reason).toBe("rate_limit");
+    });
+
+    it("returns low when token limit is getting low", () => {
+      const balance: VeniceBalance = {
+        diem: 50,
+        lastChecked: Date.now(),
+        rateLimit: {
+          limitTokens: 1000000,
+          remainingTokens: 80000, // 8% remaining
+        },
+      };
+      const evaluation = evaluateBalanceDetailed(balance);
+      expect(evaluation.status).toBe("low");
+      expect(evaluation.reason).toBe("rate_limit");
+    });
+
+    it("returns depleted when token limit is exhausted", () => {
+      const balance: VeniceBalance = {
+        diem: 50,
+        lastChecked: Date.now(),
+        rateLimit: {
+          limitTokens: 1000000,
+          remainingTokens: 0,
+        },
+      };
+      const evaluation = evaluateBalanceDetailed(balance);
+      expect(evaluation.status).toBe("depleted");
+      expect(evaluation.reason).toBe("rate_limit");
+    });
+  });
+
+  describe("edge cases", () => {
+    it("handles negative DIEM balance as depleted", () => {
+      const balance: VeniceBalance = { diem: -5, lastChecked: Date.now() };
+      expect(evaluateBalanceStatus(balance)).toBe("depleted");
+    });
+
+    it("handles negative remaining requests as depleted", () => {
+      const balance: VeniceBalance = {
+        diem: 50,
+        lastChecked: Date.now(),
+        rateLimit: {
+          limitRequests: 500,
+          remainingRequests: -10, // Over-limit
+        },
+      };
+      const evaluation = evaluateBalanceDetailed(balance);
+      expect(evaluation.status).toBe("depleted");
+      expect(evaluation.reason).toBe("rate_limit");
+    });
+
+    it("extracts balance from case-insensitive plain object headers", () => {
+      const headers: Record<string, string> = {
+        "X-Venice-Balance-Diem": "25.5", // Mixed case
+      };
+      const balance = extractVeniceBalance(headers);
+      expect(balance).not.toBeNull();
+      expect(balance?.diem).toBeCloseTo(25.5);
+    });
+
+    it("handles balance at exact threshold boundaries", () => {
+      // At exactly 5 DIEM (low threshold) - should be low, not ok
+      const atLow: VeniceBalance = { diem: 5, lastChecked: Date.now() };
+      expect(evaluateBalanceStatus(atLow)).toBe("ok"); // 5 is NOT below 5
+
+      // Just below 5 DIEM
+      const belowLow: VeniceBalance = { diem: 4.99, lastChecked: Date.now() };
+      expect(evaluateBalanceStatus(belowLow)).toBe("low");
+
+      // At exactly 2 DIEM (critical threshold)
+      const atCritical: VeniceBalance = { diem: 2, lastChecked: Date.now() };
+      expect(evaluateBalanceStatus(atCritical)).toBe("low"); // 2 is NOT below 2
+
+      // Just below 2 DIEM
+      const belowCritical: VeniceBalance = { diem: 1.99, lastChecked: Date.now() };
+      expect(evaluateBalanceStatus(belowCritical)).toBe("critical");
     });
   });
 });
