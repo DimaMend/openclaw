@@ -6,58 +6,29 @@ read_when:
 
 # AgentMail
 
-AgentMail is an email API service designed for AI agents. Clawdbot connects to AgentMail via
-webhooks to receive incoming emails and uses the AgentMail API to send replies. This enables
-email as a conversation channel for your AI assistant.
+AgentMail is an email API service designed for AI agents. Moltbot connects to AgentMail via
+WebSockets to receive incoming emails in real-time and uses the AgentMail API to send replies.
+This enables email as a conversation channel for your AI assistant.
 
-Status: supported via plugin. Direct messages (email threads), media (attachments as links),
+Status: supported as a core channel. Direct messages (email threads), media (attachments as links),
 and threading are supported.
 
-## Plugin required
+## Quick setup
 
-AgentMail ships as a plugin and is not bundled with the core install.
-
-Install via CLI (npm registry):
-
-```bash
-clawdbot plugins install @clawdbot/agentmail
-```
-
-Local checkout (when running from a git repo):
+1. Create an AgentMail account at [agentmail.to](https://agentmail.to) (free to sign up)
+2. Get your API token from the AgentMail dashboard
+3. Run onboarding or configure manually:
 
 ```bash
-clawdbot plugins install ./extensions/agentmail
+moltbot onboard
+# Select AgentMail and follow the prompts
 ```
 
-Details: [Plugins](/plugin)
+Or set credentials directly:
+- Env: `AGENTMAIL_TOKEN`, `AGENTMAIL_EMAIL_ADDRESS`
+- Or config: `channels.agentmail.token`, `channels.agentmail.emailAddress`
 
-## Setup
-
-1. Install the AgentMail plugin:
-
-   - From npm: `clawdbot plugins install @clawdbot/agentmail`
-   - From a local checkout: `clawdbot plugins install ./extensions/agentmail`
-
-2. Create an AgentMail account at [agentmail.to](https://agentmail.to)
-
-3. Get your API key from the AgentMail dashboard
-
-4. Create an inbox (or use an existing one) and note the inbox ID
-
-5. Webhook setup:
-
-   - **Automatic**: During onboarding, provide your gateway's public URL and the webhook will be auto-registered
-   - **Manual**: Register in the AgentMail dashboard with URL `https://your-gateway/webhooks/agentmail` and event type `message.received`
-
-6. Configure credentials:
-
-   - Env: `AGENTMAIL_TOKEN`, `AGENTMAIL_EMAIL_ADDRESS`
-   - Or config: `channels.agentmail.token`, `channels.agentmail.emailAddress`
-   - If both are set, config takes precedence.
-
-7. Restart the gateway (or finish onboarding)
-
-8. Send an email to your AgentMail inbox to test the integration
+4. Start the gateway
 
 Minimal config:
 
@@ -73,17 +44,33 @@ Minimal config:
 }
 ```
 
+## How it works
+
+1. The gateway connects to AgentMail via WebSocket on startup
+2. When an email arrives at your inbox, AgentMail pushes a real-time event
+3. Moltbot fetches the full thread for context and routes to the agent
+4. The agent's reply is sent via the AgentMail API (reply-all to preserve recipients)
+
+No public URL or webhook setup required - WebSocket connections are outbound only.
+
 ## Configuration
 
-| Key            | Type     | Description                                              |
-| -------------- | -------- | -------------------------------------------------------- |
-| `name`         | string   | Account name for identifying this configuration          |
-| `enabled`      | boolean  | Enable/disable the channel (default: true)               |
-| `token`        | string   | AgentMail API token (required)                           |
-| `emailAddress` | string   | AgentMail inbox email address to monitor (required)      |
-| `webhookUrl`   | string   | Full public webhook URL (e.g., `https://gw.ngrok.io/webhooks/agentmail`) |
-| `webhookPath`  | string   | Local webhook path (derived from URL or default: `/webhooks/agentmail`) |
-| `allowFrom`    | string[] | Allowed sender emails/domains (empty = allow all)        |
+| Key            | Type     | Description                                         |
+| -------------- | -------- | --------------------------------------------------- |
+| `name`         | string   | Account name for identifying this configuration     |
+| `enabled`      | boolean  | Enable/disable the channel (default: true)          |
+| `token`        | string   | AgentMail API token (required)                      |
+| `emailAddress` | string   | AgentMail inbox email address to monitor (required) |
+| `allowFrom`    | string[] | Allowed sender emails/domains (empty = allow all)   |
+
+## Environment Variables
+
+| Variable                  | Description                   |
+| ------------------------- | ----------------------------- |
+| `AGENTMAIL_TOKEN`         | AgentMail API token           |
+| `AGENTMAIL_EMAIL_ADDRESS` | AgentMail inbox email address |
+
+If both env and config are set, config takes precedence.
 
 ## Sender Filtering
 
@@ -92,7 +79,7 @@ AgentMail uses `allowFrom` to filter incoming emails. The list accepts email add
 ### Filtering Logic
 
 1. If `allowFrom` is empty, all senders are allowed (open mode)
-2. If `allowFrom` is non-empty, only matching senders trigger Clawdbot
+2. If `allowFrom` is non-empty, only matching senders trigger Moltbot
 3. Allowed messages are labeled `allowed` in AgentMail
 4. Non-matching senders are silently ignored
 
@@ -120,39 +107,34 @@ Domain entries match any email from that domain:
 
 ## Thread Context
 
-When an email arrives, Clawdbot fetches the full email thread to provide conversation context
+When an email arrives, Moltbot fetches the full email thread to provide conversation context
 to the AI. This enables the assistant to understand prior messages in the thread and provide
 contextually relevant replies.
 
-Thread context is automatically included when:
-
-- The incoming email is part of an existing thread
-- The thread has more than one message
+Thread context includes:
+- Subject line
+- All senders and recipients
+- Message history with timestamps
+- Attachment metadata (filenames, sizes, types)
 
 The plugin uses AgentMail's `extracted_text` field which contains only the new content from
 each message (excluding quoted reply text). This provides cleaner context without duplicated
 quoted sections.
 
-## Environment Variables
+## Reply Behavior
 
-| Variable                   | Description                   |
-| -------------------------- | ----------------------------- |
-| `AGENTMAIL_TOKEN`          | AgentMail API token           |
-| `AGENTMAIL_EMAIL_ADDRESS`  | AgentMail inbox email address |
-| `AGENTMAIL_WEBHOOK_PATH`   | Custom webhook path           |
+Moltbot uses **reply-all** when responding to emails. This ensures all original recipients
+(To, Cc) receive the reply, maintaining proper email thread etiquette.
 
-## Webhook Security
+## WebSocket Connection
 
-AgentMail webhooks should be configured with HTTPS endpoints. Ensure your gateway is
-accessible from the internet and properly secured.
+The AgentMail channel uses WebSockets for real-time message delivery:
 
-For local development, you can use tools like ngrok to tunnel webhooks to your local machine:
+- **Automatic reconnection**: The SDK handles reconnection with up to 30 retry attempts
+- **Resubscription**: On reconnect, the channel automatically resubscribes to inbox events
+- **No public URL needed**: WebSocket connections are outbound-only, no firewall configuration required
 
-```bash
-ngrok http 18789
-```
-
-Then register the ngrok URL as your webhook endpoint in the AgentMail dashboard.
+Connection status is visible in gateway logs and `moltbot channels status`.
 
 ## Capabilities
 
@@ -165,23 +147,61 @@ Then register the ngrok URL as your webhook endpoint in the AgentMail dashboard.
 | Reactions           | No                   |
 | Polls               | No                   |
 
+## Agent Tools
+
+The AgentMail channel provides tools for the agent to interact with email:
+
+- List and search threads
+- Read message content and attachments
+- Send new emails
+- Reply to existing threads
+- Manage labels
+
+Tools are provided by the [AgentMail Toolkit](https://github.com/nicholasgriffintn/agentmail-toolkit).
+
 ## Troubleshooting
 
 ### Messages not being received
 
-1. Verify the webhook is registered in AgentMail dashboard
-2. Check that the webhook URL is correct and accessible
-3. Ensure `token` and `emailAddress` are configured correctly
-4. Check the gateway logs for webhook errors
+1. Verify the API token is valid (check AgentMail dashboard)
+2. Confirm the email address matches an inbox you own
+3. Check gateway logs for WebSocket connection errors
+4. Run `moltbot channels status --probe` to verify connectivity
+
+### WebSocket connection issues
+
+1. Check network connectivity to AgentMail servers
+2. Look for `WebSocket closed` or `WebSocket error` in logs
+3. The SDK auto-reconnects; persistent failures indicate token or network issues
 
 ### Replies not being sent
 
 1. Verify the API token has send permissions
 2. Check the gateway logs for outbound errors
-3. Ensure the email address is correct
+3. Ensure the email address is correctly configured
 
 ### Sender not allowed
 
 1. Check the `allowFrom` configuration
-2. Verify the sender email matches an entry in allowFrom
+2. Verify the sender email matches an entry in allowFrom (exact email or domain)
 3. Remember: empty allowFrom means all senders are allowed
+
+### Connection keeps reconnecting
+
+1. Check if the API token is valid and not expired
+2. Verify the inbox exists in your AgentMail account
+3. Check for network issues or firewall blocking outbound WebSocket connections
+
+## Status and Probing
+
+Check channel status:
+
+```bash
+moltbot channels status
+moltbot channels status --probe  # includes API connectivity test
+```
+
+The probe verifies:
+- API token is valid
+- Inbox exists and is accessible
+- WebSocket connection can be established

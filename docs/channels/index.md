@@ -15,6 +15,7 @@ Text is supported everywhere; media and reactions vary by channel.
 - [Telegram](/channels/telegram) — Bot API via grammY; supports groups.
 - [Discord](/channels/discord) — Discord Bot API + Gateway; supports servers, channels, and DMs.
 - [Slack](/channels/slack) — Bolt SDK; workspace apps.
+- [AgentMail](/channels/agentmail) — Email via AgentMail API; WebSocket-based real-time delivery.
 - [Google Chat](/channels/googlechat) — Google Chat API app via HTTP webhook.
 - [Mattermost](/channels/mattermost) — Bot API + WebSocket; channels, groups, DMs (plugin, installed separately).
 - [Signal](/channels/signal) — signal-cli; privacy-focused.

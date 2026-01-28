@@ -150,6 +150,14 @@
       "destination": "/cli/message"
     },
     {
+      "source": "/providers/agentmail",
+      "destination": "/channels/agentmail"
+    },
+    {
+      "source": "/providers/agentmail/",
+      "destination": "/channels/agentmail"
+    },
+    {
       "source": "/providers/discord",
       "destination": "/channels/discord"
     },
@@ -986,6 +994,7 @@
           "channels/telegram",
           "channels/grammy",
           "channels/discord",
+          "channels/agentmail",
           "channels/slack",
           "channels/googlechat",
           "channels/mattermost",
