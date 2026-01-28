@@ -4,7 +4,11 @@
 
 ## Overview
 
-The Supervisor is a read-only agent that validates Liam's outputs before delivery. It catches hallucinated file paths, security issues, breaking changes, and APEX violations.
+The Supervisor is a read-only agent that validates Liam's outputs before delivery. It supervises **both** communication channels:
+- **Telegram** (MiniMax M2.1 primary worker)
+- **Discord** (Kimi K2.5 primary worker)
+
+Both channels are reviewed by the same GLM-4.7 supervisor, catching hallucinated file paths, security issues, breaking changes, and APEX violations.
 
 ## Three-Tier System
 
@@ -111,28 +115,42 @@ When supervisor finds an issue, check for related problems:
 
 | Model | Role | Why |
 |-------|------|-----|
-| MiniMax M2.1 (audit) | Primary Worker (Telegram) | Best finish-rate, 200K context |
-| GLM-4.7 (deep) | Quality Gate / Reviewer | Different architecture catches MiniMax blind spots |
+| MiniMax M2.1 | Primary Worker (Telegram) | Best finish-rate, 200K context |
+| Kimi K2.5 | Primary Worker (Discord) | 131K output, strong reasoning |
+| GLM-4.7 | Quality Gate / Reviewer | Different architecture catches both models' blind spots |
 | GLM-4.7-flash | Pre-flight | Fast enough, more reliable than lfm2.5 |
-| GLM-4.7 (deep) | Subagents | High capability for complex tasks |
-| Kimi k2.5 (beta) | Testing Only | Cutting-edge but unstable |
+| GLM-4.7 | Subagents | High capability for complex tasks |
 
-## Cross-Validation Architecture
+## Dual-Channel Supervision Architecture
 
-**Key Insight:** Same model reviewing itself has identical blind spots. Cross-model validation catches more errors.
+**Key Insight:** Same model reviewing itself has identical blind spots. Both channels use different primary models, but BOTH are reviewed by GLM-4.7.
 
 ```
-[User Message] → MiniMax M2.1 (primary) → [Draft Response]
+TELEGRAM:
+[User Message] → MiniMax M2.1 (primary) → [Draft]
                                               ↓
-                              GLM-4.7 (reviewer) → [Validated Response]
+                              GLM-4.7 (supervisor) → [Validated]
                                               ↓
-                                         [Deliver to User]
+                                         [Deliver]
+
+DISCORD:
+[User Message] → Kimi K2.5 (primary) → [Draft]
+                                            ↓
+                            GLM-4.7 (supervisor) → [Validated]
+                                            ↓
+                                       [Deliver]
 ```
 
 **Why this works:**
-- MiniMax excels at task completion (best finish-rate)
-- GLM excels at reasoning and catching errors (preserved thinking)
+- MiniMax excels at task completion (best finish-rate on Telegram)
+- Kimi excels at extended reasoning (long-form on Discord)
+- GLM reviews BOTH - catches blind spots from either model
 - Different training data = different blind spots = better coverage
+
+**Supervisor Cron covers BOTH channels:**
+- Audits `liam-telegram` sessions (MiniMax M2.1 outputs)
+- Audits `liam-discord` sessions (Kimi K2.5 outputs)
+- Cross-validates: looks for errors one model caught that the other missed
 
 ## Usage
 
@@ -148,4 +166,4 @@ Run supervisor audit on recent session quality
 
 ---
 
-*Supervisor Skill v1.0 | APEX v6.2.0 Compliant | January 28, 2026*
+*Supervisor Skill v1.1 | Dual-Channel Architecture | APEX v6.2.0 Compliant | January 28, 2026*
