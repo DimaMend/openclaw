@@ -47,6 +47,12 @@ export type OutboundSendDeps = {
     text: string,
     opts?: { mediaUrl?: string },
   ) => Promise<{ messageId: string; conversationId: string }>;
+  sendMediaGroup?: (
+    to: string,
+    mediaUrls: string[],
+    caption?: string,
+    opts?: { messageThreadId?: number; replyToMessageId?: number; accountId?: string },
+  ) => Promise<{ messageIds: string[]; chatId: string }>;
 };
 
 export type OutboundDeliveryResult = {
