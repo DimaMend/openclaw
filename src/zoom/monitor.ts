@@ -246,7 +246,7 @@ export async function monitorZoomProvider(opts: MonitorZoomOpts = {}): Promise<v
         </html>
       `);
     } catch (error) {
-      runtime.error?.(`zoom: OAuth error: ${error}`);
+      runtime.error?.(`zoom: OAuth error: ${String(error)}`);
       return res.status(500).send("Installation failed");
     }
   });
@@ -302,7 +302,7 @@ export async function monitorZoomProvider(opts: MonitorZoomOpts = {}): Promise<v
 
       return res.json({ success: true });
     } catch (error) {
-      runtime.error?.(`zoom: Webhook error: ${error}`);
+      runtime.error?.(`zoom: Webhook error: ${String(error)}`);
       return res.status(500).json({ error: "Internal server error" });
     }
   });
