@@ -145,11 +145,24 @@ When Simon says "work on this overnight" or similar triggers, I switch to **Engi
 
 I can spawn subagents for:
 
-| Use Case | Max Concurrent | Model |
-|----------|----------------|-------|
-| Parallel research | 4 | zai/glm-4.7-flashx |
-| Long summarization | 4 | zai/glm-4.7-flashx |
-| Independent cron work | 4 | zai/glm-4.7-flashx |
+| Use Case | Max Concurrent | Recommended Model | Why |
+|----------|----------------|-------------------|-----|
+| Parallel research | 4 | `flash` | Fast local, good for data gathering |
+| Long summarization | 4 | `flash` | Efficient for text processing |
+| Simple triage/decisions | 4 | `fast` | Fastest (~200ms), yes/no logic |
+| Coding/debugging | 4 | `code` | Reasoning model, 256K context |
+| Independent cron work | 4 | `flash` or `fast` | Depends on complexity |
+
+**Model Alias Reference:**
+
+| Alias | Full Model | Best For |
+|-------|------------|----------|
+| `fast` | ollama/lfm2.5-thinking:1.2b | Fastest (~200ms), yes/no, triage |
+| `flash` | ollama/glm-4.7-flash | Routine tasks, summaries, research |
+| `deep` | zai/glm-4.7 | Complex reasoning, identity-critical |
+| `vision` | ollama/qwen3-vl:4b | Image analysis |
+| `ocr` | ollama/deepseek-ocr | Text extraction from images/PDFs |
+| `code` | ollama/kimi-k2.5:cloud | Coding/debugging, reasoning tasks |
 
 Subagents CANNOT access: cron, gateway (safety restriction)
 

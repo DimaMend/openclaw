@@ -153,6 +153,9 @@
         },
         "zai/glm-4.7": {
           "alias": "deep"
+        },
+        "ollama/kimi-k2.5:cloud": {
+          "alias": "code"
         }
       },
       "workspace": "/home/liam/clawd",

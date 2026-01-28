@@ -4,6 +4,18 @@
 
 ---
 
+## Archived Entries (Jan 28, 2026)
+
+### [2026-01-28-049] Add "code" Alias for Kimi K2.5 Cloud [RESOLVED]
+- **Proposed by:** Cursor (per Simon's request)
+- **Date:** 2026-01-28
+- **Category:** tools
+- **Target file:** ~/.clawdbot/clawdbot.json
+- **Status:** RESOLVED (2026-01-28)
+- **Resolution:** Added `"ollama/kimi-k2.5:cloud": { "alias": "code" }` to models section. Updated JOB.md delegation table to use `code` alias. Enables semantic model selection for coding-focused subagent tasks.
+
+---
+
 ## Archived Entries (Jan 25-26, 2026)
 
 *These entries were resolved and moved here to keep the main queue manageable.*
