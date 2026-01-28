@@ -17,7 +17,7 @@ import { EdgeTTS } from "node-edge-tts";
 import type { ReplyPayload } from "../auto-reply/types.js";
 import { normalizeChannelId } from "../channels/plugins/index.js";
 import type { ChannelId } from "../channels/plugins/types.js";
-import type { ClawdbotConfig } from "../config/config.js";
+import type { MoltbotConfig } from "../config/config.js";
 import type {
   TtsConfig,
   TtsAutoMode,
@@ -40,7 +40,7 @@ import { resolveModel } from "../agents/pi-embedded-runner/model.js";
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_TTS_MAX_LENGTH = 1500;
 const DEFAULT_TTS_SUMMARIZE = true;
-const DEFAULT_MAX_TEXT_LENGTH = 4000;
+const DEFAULT_MAX_TEXT_LENGTH = 4096;
 const TEMP_FILE_CLEANUP_DELAY_MS = 5 * 60 * 1000; // 5 minutes
 
 const DEFAULT_ELEVENLABS_BASE_URL = "https://api.elevenlabs.io";
@@ -74,6 +74,11 @@ const DEFAULT_OUTPUT = {
   elevenlabs: "mp3_44100_128",
   extension: ".mp3",
   voiceCompatible: false,
+};
+
+const TELEPHONY_OUTPUT = {
+  openai: { format: "pcm" as const, sampleRate: 24000 },
+  elevenlabs: { format: "pcm_22050", sampleRate: 22050 },
 };
 
 const TTS_AUTO_MODES = new Set<TtsAutoMode>(["off", "always", "inbound", "tagged"]);
@@ -180,6 +185,16 @@ export type TtsResult = {
   voiceCompatible?: boolean;
 };
 
+export type TtsTelephonyResult = {
+  success: boolean;
+  audioBuffer?: Buffer;
+  error?: string;
+  latencyMs?: number;
+  provider?: string;
+  outputFormat?: string;
+  sampleRate?: number;
+};
+
 type TtsStatusEntry = {
   timestamp: number;
   success: boolean;
@@ -230,7 +245,7 @@ function resolveModelOverridePolicy(
   };
 }
 
-export function resolveTtsConfig(cfg: ClawdbotConfig): ResolvedTtsConfig {
+export function resolveTtsConfig(cfg: MoltbotConfig): ResolvedTtsConfig {
   const raw: TtsConfig = cfg.messages?.tts ?? {};
   const providerSource = raw.provider ? "config" : "default";
   const edgeOutputFormat = raw.edge?.outputFormat?.trim();
@@ -315,7 +330,7 @@ export function resolveTtsAutoMode(params: {
   return params.config.auto;
 }
 
-export function buildTtsSystemPromptHint(cfg: ClawdbotConfig): string | undefined {
+export function buildTtsSystemPromptHint(cfg: MoltbotConfig): string | undefined {
   const config = resolveTtsConfig(cfg);
   const prefsPath = resolveTtsPrefsPath(config);
   const autoMode = resolveTtsAutoMode({ config, prefsPath });
@@ -736,7 +751,17 @@ function parseTtsDirectives(
   };
 }
 
-export const OPENAI_TTS_MODELS = ["gpt-4o-mini-tts"] as const;
+export const OPENAI_TTS_MODELS = ["gpt-4o-mini-tts", "tts-1", "tts-1-hd"] as const;
+
+/**
+ * Custom OpenAI-compatible TTS endpoint.
+ * When set, model/voice validation is relaxed to allow non-OpenAI models.
+ * Example: OPENAI_TTS_BASE_URL=http://localhost:8880/v1
+ */
+const OPENAI_TTS_BASE_URL = (
+  process.env.OPENAI_TTS_BASE_URL?.trim() || "https://api.openai.com/v1"
+).replace(/\/+$/, "");
+const isCustomOpenAIEndpoint = OPENAI_TTS_BASE_URL !== "https://api.openai.com/v1";
 export const OPENAI_TTS_VOICES = [
   "alloy",
   "ash",
@@ -752,10 +777,14 @@ export const OPENAI_TTS_VOICES = [
 type OpenAiTtsVoice = (typeof OPENAI_TTS_VOICES)[number];
 
 function isValidOpenAIModel(model: string): boolean {
+  // Allow any model when using custom endpoint (e.g., Kokoro, LocalAI)
+  if (isCustomOpenAIEndpoint) return true;
   return OPENAI_TTS_MODELS.includes(model as (typeof OPENAI_TTS_MODELS)[number]);
 }
 
 function isValidOpenAIVoice(voice: string): voice is OpenAiTtsVoice {
+  // Allow any voice when using custom endpoint (e.g., Kokoro Chinese voices)
+  if (isCustomOpenAIEndpoint) return true;
   return OPENAI_TTS_VOICES.includes(voice as OpenAiTtsVoice);
 }
 
@@ -772,7 +801,7 @@ type SummaryModelSelection = {
 };
 
 function resolveSummaryModelRef(
-  cfg: ClawdbotConfig,
+  cfg: MoltbotConfig,
   config: ResolvedTtsConfig,
 ): SummaryModelSelection {
   const defaultRef = resolveDefaultModelForAgent({ cfg });
@@ -796,7 +825,7 @@ function isTextContentBlock(block: { type: string }): block is TextContent {
 async function summarizeText(params: {
   text: string;
   targetLength: number;
-  cfg: ClawdbotConfig;
+  cfg: MoltbotConfig;
   config: ResolvedTtsConfig;
   timeoutMs: number;
 }): Promise<SummarizeResult> {
@@ -966,7 +995,7 @@ async function openaiTTS(params: {
   apiKey: string;
   model: string;
   voice: string;
-  responseFormat: "mp3" | "opus";
+  responseFormat: "mp3" | "opus" | "pcm";
   timeoutMs: number;
 }): Promise<Buffer> {
   const { text, apiKey, model, voice, responseFormat, timeoutMs } = params;
@@ -982,7 +1011,7 @@ async function openaiTTS(params: {
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+    const response = await fetch(`${OPENAI_TTS_BASE_URL}/audio/speech`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -1041,7 +1070,7 @@ async function edgeTTS(params: {
 
 export async function textToSpeech(params: {
   text: string;
-  cfg: ClawdbotConfig;
+  cfg: MoltbotConfig;
   prefsPath?: string;
   channel?: string;
   overrides?: TtsDirectiveOverrides;
@@ -1210,9 +1239,103 @@ export async function textToSpeech(params: {
   };
 }
 
+export async function textToSpeechTelephony(params: {
+  text: string;
+  cfg: MoltbotConfig;
+  prefsPath?: string;
+}): Promise<TtsTelephonyResult> {
+  const config = resolveTtsConfig(params.cfg);
+  const prefsPath = params.prefsPath ?? resolveTtsPrefsPath(config);
+
+  if (params.text.length > config.maxTextLength) {
+    return {
+      success: false,
+      error: `Text too long (${params.text.length} chars, max ${config.maxTextLength})`,
+    };
+  }
+
+  const userProvider = getTtsProvider(config, prefsPath);
+  const providers = resolveTtsProviderOrder(userProvider);
+
+  let lastError: string | undefined;
+
+  for (const provider of providers) {
+    const providerStart = Date.now();
+    try {
+      if (provider === "edge") {
+        lastError = "edge: unsupported for telephony";
+        continue;
+      }
+
+      const apiKey = resolveTtsApiKey(config, provider);
+      if (!apiKey) {
+        lastError = `No API key for ${provider}`;
+        continue;
+      }
+
+      if (provider === "elevenlabs") {
+        const output = TELEPHONY_OUTPUT.elevenlabs;
+        const audioBuffer = await elevenLabsTTS({
+          text: params.text,
+          apiKey,
+          baseUrl: config.elevenlabs.baseUrl,
+          voiceId: config.elevenlabs.voiceId,
+          modelId: config.elevenlabs.modelId,
+          outputFormat: output.format,
+          seed: config.elevenlabs.seed,
+          applyTextNormalization: config.elevenlabs.applyTextNormalization,
+          languageCode: config.elevenlabs.languageCode,
+          voiceSettings: config.elevenlabs.voiceSettings,
+          timeoutMs: config.timeoutMs,
+        });
+
+        return {
+          success: true,
+          audioBuffer,
+          latencyMs: Date.now() - providerStart,
+          provider,
+          outputFormat: output.format,
+          sampleRate: output.sampleRate,
+        };
+      }
+
+      const output = TELEPHONY_OUTPUT.openai;
+      const audioBuffer = await openaiTTS({
+        text: params.text,
+        apiKey,
+        model: config.openai.model,
+        voice: config.openai.voice,
+        responseFormat: output.format,
+        timeoutMs: config.timeoutMs,
+      });
+
+      return {
+        success: true,
+        audioBuffer,
+        latencyMs: Date.now() - providerStart,
+        provider,
+        outputFormat: output.format,
+        sampleRate: output.sampleRate,
+      };
+    } catch (err) {
+      const error = err as Error;
+      if (error.name === "AbortError") {
+        lastError = `${provider}: request timed out`;
+      } else {
+        lastError = `${provider}: ${error.message}`;
+      }
+    }
+  }
+
+  return {
+    success: false,
+    error: `TTS conversion failed: ${lastError || "no providers available"}`,
+  };
+}
+
 export async function maybeApplyTtsToPayload(params: {
   payload: ReplyPayload;
-  cfg: ClawdbotConfig;
+  cfg: MoltbotConfig;
   channel?: string;
   kind?: "tool" | "block" | "final";
   inboundAudio?: boolean;
@@ -1263,32 +1386,34 @@ export async function maybeApplyTtsToPayload(params: {
 
   if (textForAudio.length > maxLength) {
     if (!isSummarizationEnabled(prefsPath)) {
+      // Truncate text when summarization is disabled
       logVerbose(
-        `TTS: skipping long text (${textForAudio.length} > ${maxLength}), summarization disabled.`,
+        `TTS: truncating long text (${textForAudio.length} > ${maxLength}), summarization disabled.`,
       );
-      return nextPayload;
-    }
-
-    try {
-      const summary = await summarizeText({
-        text: textForAudio,
-        targetLength: maxLength,
-        cfg: params.cfg,
-        config,
-        timeoutMs: config.timeoutMs,
-      });
-      textForAudio = summary.summary;
-      wasSummarized = true;
-      if (textForAudio.length > config.maxTextLength) {
-        logVerbose(
-          `TTS: summary exceeded hard limit (${textForAudio.length} > ${config.maxTextLength}); truncating.`,
-        );
-        textForAudio = `${textForAudio.slice(0, config.maxTextLength - 3)}...`;
+      textForAudio = `${textForAudio.slice(0, maxLength - 3)}...`;
+    } else {
+      // Summarize text when enabled
+      try {
+        const summary = await summarizeText({
+          text: textForAudio,
+          targetLength: maxLength,
+          cfg: params.cfg,
+          config,
+          timeoutMs: config.timeoutMs,
+        });
+        textForAudio = summary.summary;
+        wasSummarized = true;
+        if (textForAudio.length > config.maxTextLength) {
+          logVerbose(
+            `TTS: summary exceeded hard limit (${textForAudio.length} > ${config.maxTextLength}); truncating.`,
+          );
+          textForAudio = `${textForAudio.slice(0, config.maxTextLength - 3)}...`;
+        }
+      } catch (err) {
+        const error = err as Error;
+        logVerbose(`TTS: summarization failed, truncating instead: ${error.message}`);
+        textForAudio = `${textForAudio.slice(0, maxLength - 3)}...`;
       }
-    } catch (err) {
-      const error = err as Error;
-      logVerbose(`TTS: summarization failed: ${error.message}`);
-      return nextPayload;
     }
   }
 
@@ -1313,12 +1438,12 @@ export async function maybeApplyTtsToPayload(params: {
 
     const channelId = resolveChannelId(params.channel);
     const shouldVoice = channelId === "telegram" && result.voiceCompatible === true;
-
-    return {
+    const finalPayload = {
       ...nextPayload,
       mediaUrl: result.audioPath,
       audioAsVoice: shouldVoice || params.payload.audioAsVoice,
     };
+    return finalPayload;
   }
 
   lastTtsAttempt = {
