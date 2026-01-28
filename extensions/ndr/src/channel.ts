@@ -83,31 +83,36 @@ export const ndrPlugin: ChannelPlugin<ResolvedNdrAccount> = {
       if (!bus) {
         throw new Error(`NDR bus not running for account ${aid}`);
       }
+      // Resolve npub to chat_id if needed
+      const chatId = await resolveNpubToChatId(bus, to);
       const tableMode = core.channel.text.resolveMarkdownTableMode({
         cfg: core.config.loadConfig(),
         channel: "ndr",
         accountId: aid,
       });
       const message = core.channel.text.convertMarkdownTables(text ?? "", tableMode);
-      await bus.sendMessage(to, message);
-      return { channel: "ndr", to };
+      await bus.sendMessage(chatId, message);
+      return { channel: "ndr", to: chatId };
     },
-    sendMedia: async ({ to, media, accountId }) => {
+    sendMedia: async ({ to, text, mediaUrl, accountId }) => {
       const core = getNdrRuntime();
       const aid = accountId ?? DEFAULT_ACCOUNT_ID;
       const bus = activeBuses.get(aid);
       if (!bus) {
         throw new Error(`NDR bus not running for account ${aid}`);
       }
-      const caption = media.caption ? `${media.caption}\n` : "";
+      // Resolve npub to chat_id if needed
+      const chatId = await resolveNpubToChatId(bus, to);
+      const caption = text ? `${text}\n` : "";
 
-      // Try to upload via htree if we have a local file path
-      let mediaLink = media.url ?? "[media attachment]";
-      if (media.path) {
+      // mediaUrl could be a local file path or a remote URL
+      let mediaLink = mediaUrl ?? "[media attachment]";
+      if (mediaUrl && !mediaUrl.startsWith("http")) {
+        // Local file path - upload via htree
         try {
           const { execSync } = await import("child_process");
           // Properly escape the file path for shell
-          const escapedPath = media.path.replace(/'/g, "'\\''");
+          const escapedPath = mediaUrl.replace(/'/g, "'\\''");
           const output = execSync(`htree add '${escapedPath}'`, {
             encoding: "utf-8",
             timeout: 60000,
@@ -118,14 +123,14 @@ export const ndrPlugin: ChannelPlugin<ResolvedNdrAccount> = {
             mediaLink = urlMatch[1];
           }
         } catch {
-          // htree not available or failed - fall back to URL or placeholder
-          mediaLink = media.url ?? "[media: upload failed]";
+          // htree not available or failed - fall back to original URL
+          mediaLink = mediaUrl ?? "[media: upload failed]";
         }
       }
 
       const message = `${caption}${mediaLink}`;
-      await bus.sendMessage(to, message);
-      return { channel: "ndr", to };
+      await bus.sendMessage(chatId, message);
+      return { channel: "ndr", to: chatId };
     },
   },
 
@@ -361,4 +366,83 @@ export const ndrPlugin: ChannelPlugin<ResolvedNdrAccount> = {
  */
 export function getActiveNdrBuses(): Map<string, NdrBusHandle> {
   return new Map(activeBuses);
+}
+
+/**
+ * Resolve npub to chat_id by looking up the chat list.
+ * If the target is already a chat_id (8-char hex), returns it unchanged.
+ * If it's an npub, finds the chat with matching their_pubkey.
+ */
+async function resolveNpubToChatId(bus: NdrBusHandle, target: string): Promise<string> {
+  const trimmed = target.trim();
+
+  // If it's already a chat_id (8-char hex), return as-is
+  if (/^[0-9a-fA-F]{8}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  // If it's an npub, resolve to chat_id
+  if (trimmed.startsWith("npub1")) {
+    // Convert npub to hex pubkey
+    const hexPubkey = npubToHex(trimmed);
+    if (!hexPubkey) {
+      throw new Error(`Invalid npub: ${trimmed}`);
+    }
+
+    // Look up the chat with this pubkey
+    const chats = await bus.listChats();
+    const chat = chats.find((c) => c.their_pubkey === hexPubkey);
+    if (!chat) {
+      const availableChats = chats.length > 0
+        ? ` Available chats: ${chats.map((c) => c.id).join(", ")}`
+        : " No active chats found.";
+      throw new Error(`No chat found with pubkey ${trimmed.slice(0, 20)}...${availableChats}`);
+    }
+    return chat.id;
+  }
+
+  // Unknown format, try as-is (let ndr CLI handle it)
+  return trimmed;
+}
+
+/**
+ * Convert bech32 npub to hex pubkey
+ */
+function npubToHex(npub: string): string | null {
+  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const CHARSET_REV: Record<string, number> = {};
+  for (let i = 0; i < CHARSET.length; i++) {
+    CHARSET_REV[CHARSET[i]] = i;
+  }
+
+  const bech = npub.toLowerCase();
+  const pos = bech.lastIndexOf("1");
+  if (pos < 1 || pos + 7 > bech.length) return null;
+
+  const hrp = bech.slice(0, pos);
+  if (hrp !== "npub") return null;
+
+  const data: number[] = [];
+  for (const c of bech.slice(pos + 1)) {
+    if (!(c in CHARSET_REV)) return null;
+    data.push(CHARSET_REV[c]);
+  }
+
+  // Remove checksum (last 6 chars)
+  const dataWithoutChecksum = data.slice(0, -6);
+
+  // Convert from 5-bit to 8-bit
+  let acc = 0;
+  let bits = 0;
+  const result: number[] = [];
+  for (const value of dataWithoutChecksum) {
+    acc = (acc << 5) | value;
+    bits += 5;
+    while (bits >= 8) {
+      bits -= 8;
+      result.push((acc >> bits) & 0xff);
+    }
+  }
+
+  return result.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
