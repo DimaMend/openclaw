@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -264,16 +267,45 @@ fun RootScreen(viewModel: MainViewModel) {
     }
   }
 
-  // Always show the orb as a PTT button - pulses when active, static when inactive
-  Popup(alignment = Alignment.Center, properties = PopupProperties(focusable = false)) {
-    TalkOrbOverlay(
-      seamColor = seamColor,
-      statusText = talkStatusText,
-      isListening = talkIsListening,
-      isSpeaking = talkIsSpeaking,
-      isActive = talkEnabled,
-      onTap = { viewModel.setTalkEnabled(!talkEnabled) },
-    )
+  // Chat overlay + PTT orb at bottom
+  Popup(alignment = Alignment.BottomCenter, properties = PopupProperties(focusable = false)) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .windowInsetsPadding(WindowInsets.navigationBars)
+        .padding(bottom = 24.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      // Chat messages above the orb
+      val messages by viewModel.chatMessages.collectAsState()
+      val pendingRunCount by viewModel.pendingRunCount.collectAsState()
+      val pendingToolCalls by viewModel.chatPendingToolCalls.collectAsState()
+      val streamingText by viewModel.chatStreamingAssistantText.collectAsState()
+      
+      if (messages.isNotEmpty() || pendingRunCount > 0 || pendingToolCalls.isNotEmpty() || !streamingText.isNullOrBlank()) {
+        com.clawdbot.android.ui.chat.ChatMessageListCard(
+          messages = messages,
+          pendingRunCount = pendingRunCount,
+          pendingToolCalls = pendingToolCalls,
+          streamingAssistantText = streamingText,
+          modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f, fill = false)
+            .heightIn(max = 400.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+      }
+      
+      // PTT orb
+      TalkOrbOverlay(
+        seamColor = seamColor,
+        statusText = talkStatusText,
+        isListening = talkIsListening,
+        isSpeaking = talkIsSpeaking,
+        isActive = talkEnabled,
+        onTap = { viewModel.setTalkEnabled(!talkEnabled) },
+      )
+    }
   }
 
   val currentSheet = sheet
