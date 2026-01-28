@@ -186,10 +186,13 @@ export const enUS = {
       connected: "Connected",
     },
 
+    // General
+    accounts: "Accounts",
+
     // WhatsApp
     whatsapp: {
       title: "WhatsApp",
-      desc: "WhatsApp via Baileys (multi-device).",
+      desc: "Link WhatsApp Web and monitor connection health.",
       start: "Start",
       relink: "Relink",
       logout: "Logout",
@@ -197,6 +200,12 @@ export const enUS = {
       linking: "Linking…",
       waitingForQr: "Waiting for QR code…",
       notConfigured: "Not configured.",
+      linked: "Linked",
+      lastConnect: "Last connect",
+      authAge: "Auth age",
+      showQr: "Show QR",
+      waitForScan: "Wait for scan",
+      working: "Working…",
     },
 
     // Telegram

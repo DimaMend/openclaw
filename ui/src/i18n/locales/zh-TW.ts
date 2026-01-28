@@ -78,7 +78,7 @@ export const zhTW = {
       instances: "實例",
       sessions: "工作階段",
       cron: "排程任務",
-      skills: "技能",
+      skills: "Skills",
       nodes: "節點",
       chat: "對話",
       config: "組態",
@@ -91,7 +91,7 @@ export const zhTW = {
       instances: "來自已連線用戶端與節點的存在訊號。",
       sessions: "檢視進行中的工作階段並調整個別設定。",
       cron: "排程喚醒與週期性代理執行。",
-      skills: "管理技能的啟用狀態與 API 金鑰。",
+      skills: "管理 Skills 的啟用狀態與 API 金鑰。",
       nodes: "已配對的裝置、功能與指令權限。",
       chat: "直接與閘道器對話，進行快速操作。",
       config: "安全地編輯 ~/.clawdbot/moltbot.json 設定檔。",
@@ -107,7 +107,7 @@ export const zhTW = {
     gatewayAccess: "閘道器連線",
     gatewayAccessDesc: "控制台連線位置與認證方式。",
     websocketUrl: "WebSocket 網址",
-    gatewayToken: "閘道器 Token",
+    gatewayToken: "Gateway Token",
     password: "密碼（不會儲存）",
     passwordPlaceholder: "系統或共用密碼",
     defaultSessionKey: "預設工作階段金鑰",
@@ -193,10 +193,13 @@ export const zhTW = {
       connected: "已連線",
     },
 
+    // 一般
+    accounts: "帳號",
+
     // WhatsApp
     whatsapp: {
       title: "WhatsApp",
-      desc: "透過 Baileys 連接 WhatsApp（多裝置）。",
+      desc: "連結 WhatsApp Web 並監控連線狀態。",
       start: "開始",
       relink: "重新連結",
       logout: "登出",
@@ -204,6 +207,12 @@ export const zhTW = {
       linking: "連結中…",
       waitingForQr: "等待 QR Code…",
       notConfigured: "尚未設定。",
+      linked: "已連結",
+      lastConnect: "上次連線",
+      authAge: "認證時長",
+      showQr: "顯示 QR",
+      waitForScan: "等待掃描",
+      working: "處理中…",
     },
 
     // Telegram
@@ -388,12 +397,12 @@ export const zhTW = {
     },
   },
 
-  // 技能頁面
+  // Skills 頁面
   skills: {
-    title: "技能",
-    desc: "管理內建與已安裝的技能。",
-    noSkills: "找不到技能。",
-    filter: "篩選技能",
+    title: "Skills",
+    desc: "管理內建與已安裝的 Skills。",
+    noSkills: "找不到 Skills。",
+    filter: "篩選 Skills",
     shown: "個顯示中",
     apiKey: "API 金鑰",
     saveKey: "儲存金鑰",
@@ -417,7 +426,7 @@ export const zhTW = {
     desc: "已配對的裝置與即時連結。",
     noNodes: "找不到節點。",
     devices: "裝置",
-    devicesDesc: "配對請求與角色權杖。",
+    devicesDesc: "配對請求與角色 Token。",
     noDevices: "沒有已配對的裝置。",
     approve: "核准",
     reject: "拒絕",
@@ -427,8 +436,8 @@ export const zhTW = {
     paired: "已配對",
     approved: "已核准",
     offline: "離線",
-    tokens: "權杖",
-    tokensNone: "權杖：無",
+    tokens: "Token",
+    tokensNone: "Token：無",
     role: "角色",
     requested: "請求於",
     repair: "修復",
@@ -530,7 +539,7 @@ export const zhTW = {
       messages: "訊息",
       commands: "指令",
       hooks: "鉤子",
-      skills: "技能",
+      skills: "Skills",
       tools: "工具",
       gateway: "閘道器",
       wizard: "設定精靈",
