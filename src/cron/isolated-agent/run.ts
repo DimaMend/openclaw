@@ -59,6 +59,7 @@ import {
   pickLastNonEmptyTextFromPayloads,
   pickSummaryFromOutput,
   pickSummaryFromPayloads,
+  collectFullOutput,
   resolveHeartbeatAckMaxChars,
 } from "./helpers.js";
 import { resolveCronSession } from "./session.js";
@@ -414,7 +415,7 @@ export async function runCronIsolatedAgentTurn(params: {
   }
   const firstText = payloads[0]?.text ?? "";
   const summary = pickSummaryFromPayloads(payloads) ?? pickSummaryFromOutput(firstText);
-  const outputText = pickLastNonEmptyTextFromPayloads(payloads);
+  const outputText = collectFullOutput(payloads) ?? summary;
 
   // Skip delivery for heartbeat-only responses (HEARTBEAT_OK with no real content).
   const ackMaxChars = resolveHeartbeatAckMaxChars(agentCfg);
