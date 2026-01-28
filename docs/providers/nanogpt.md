@@ -1,12 +1,12 @@
 ---
-summary: "Use NanoGPT's OpenAI-compatible API in Clawdbot"
+summary: "Use NanoGPT's OpenAI-compatible API in Moltbot"
 read_when:
   - You want to use NanoGPT as a model provider
   - You need a NanoGPT API key or base URL setup
 ---
 # NanoGPT
 
-NanoGPT exposes OpenAI-compatible endpoints. Clawdbot registers it as the
+NanoGPT exposes OpenAI-compatible endpoints. Moltbot registers it as the
 `nanogpt` provider.
 
 ## Quick setup
@@ -15,7 +15,7 @@ NanoGPT exposes OpenAI-compatible endpoints. Clawdbot registers it as the
 2) Run onboarding:
 
 ```bash
-clawdbot onboard --auth-choice nanogpt-api-key
+moltbot onboard --auth-choice nanogpt-api-key
 ```
 
 The default model is set to:
