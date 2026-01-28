@@ -86,10 +86,11 @@ export function renderChatControls(state: AppViewState) {
           ${repeat(
             sessionOptions,
             (entry) => entry.key,
-            (entry) =>
-              html`<option value=${entry.key}>
-                ${entry.displayName ?? entry.key}
-              </option>`,
+            (entry) => {
+              const base = entry.displayName ?? entry.key;
+              const text = entry.label ? `${base} — ${entry.label}` : base;
+              return html`<option value=${entry.key}>${text}</option>`;
+            },
           )}
         </select>
       </label>
@@ -183,7 +184,7 @@ function resolveSessionOptions(
   mainSessionKey?: string | null,
 ) {
   const seen = new Set<string>();
-  const options: Array<{ key: string; displayName?: string }> = [];
+  const options: Array<{ key: string; displayName?: string; label?: string }> = [];
 
   const resolvedMain =
     mainSessionKey && sessions?.sessions?.find((s) => s.key === mainSessionKey);
@@ -192,13 +193,13 @@ function resolveSessionOptions(
   // Add main session key first
   if (mainSessionKey) {
     seen.add(mainSessionKey);
-    options.push({ key: mainSessionKey, displayName: resolvedMain?.displayName });
+    options.push({ key: mainSessionKey, displayName: resolvedMain?.displayName, label: resolvedMain?.label });
   }
 
   // Add current session key next
   if (!seen.has(sessionKey)) {
     seen.add(sessionKey);
-    options.push({ key: sessionKey, displayName: resolvedCurrent?.displayName });
+    options.push({ key: sessionKey, displayName: resolvedCurrent?.displayName, label: resolvedCurrent?.label });
   }
 
   // Add sessions from the result
@@ -206,7 +207,7 @@ function resolveSessionOptions(
     for (const s of sessions.sessions) {
       if (!seen.has(s.key)) {
         seen.add(s.key);
-        options.push({ key: s.key, displayName: s.displayName });
+        options.push({ key: s.key, displayName: s.displayName, label: s.label });
       }
     }
   }
