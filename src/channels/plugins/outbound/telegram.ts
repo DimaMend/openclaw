@@ -85,7 +85,8 @@ export const telegramOutbound: ChannelOutboundAdapter = {
 
     // Use media group (album) for 2-10 images - sends as a single album
     if (mediaUrls.length >= 2 && mediaUrls.length <= 10) {
-      const groupResult = await sendMediaGroupTelegram(to, mediaUrls, text, {
+      const sendGroup = deps?.sendMediaGroup ?? sendMediaGroupTelegram;
+      const groupResult = await sendGroup(to, mediaUrls, text, {
         messageThreadId,
         replyToMessageId,
         accountId: accountId ?? undefined,

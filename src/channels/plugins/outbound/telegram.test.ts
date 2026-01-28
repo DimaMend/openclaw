@@ -34,11 +34,9 @@ describe("telegramOutbound.sendPayload", () => {
     expect(result).toEqual({ channel: "telegram", messageId: "m1", chatId: "c1" });
   });
 
-  it("sends media payloads and attaches buttons only to first", async () => {
-    const sendTelegram = vi
-      .fn()
-      .mockResolvedValueOnce({ messageId: "m1", chatId: "c1" })
-      .mockResolvedValueOnce({ messageId: "m2", chatId: "c1" });
+  it("sends media payloads as album and buttons in follow-up", async () => {
+    const sendTelegram = vi.fn().mockResolvedValue({ messageId: "m-btn", chatId: "c1" });
+    const sendMediaGroup = vi.fn().mockResolvedValue({ messageIds: ["m1", "m2"], chatId: "c1" });
 
     const result = await telegramOutbound.sendPayload?.({
       cfg: {} as MoltbotConfig,
@@ -53,12 +51,50 @@ describe("telegramOutbound.sendPayload", () => {
           },
         },
       },
+      deps: { sendTelegram, sendMediaGroup },
+    });
+
+    // Media group is sent with both URLs
+    expect(sendMediaGroup).toHaveBeenCalledTimes(1);
+    expect(sendMediaGroup).toHaveBeenCalledWith(
+      "telegram:123",
+      ["https://example.com/a.png", "https://example.com/b.png"],
+      "Caption",
+      expect.objectContaining({ accountId: undefined }),
+    );
+    // Buttons sent in follow-up message (media groups don't support buttons)
+    expect(sendTelegram).toHaveBeenCalledTimes(1);
+    expect(sendTelegram).toHaveBeenCalledWith(
+      "telegram:123",
+      "",
+      expect.objectContaining({
+        buttons: [[{ text: "Go", callback_data: "/go" }]],
+      }),
+    );
+    expect(result).toEqual({ channel: "telegram", messageId: "m1", chatId: "c1" });
+  });
+
+  it("sends single media with buttons directly", async () => {
+    const sendTelegram = vi.fn().mockResolvedValue({ messageId: "m1", chatId: "c1" });
+
+    const result = await telegramOutbound.sendPayload?.({
+      cfg: {} as MoltbotConfig,
+      to: "telegram:123",
+      text: "ignored",
+      payload: {
+        text: "Caption",
+        mediaUrls: ["https://example.com/a.png"],
+        channelData: {
+          telegram: {
+            buttons: [[{ text: "Go", callback_data: "/go" }]],
+          },
+        },
+      },
       deps: { sendTelegram },
     });
 
-    expect(sendTelegram).toHaveBeenCalledTimes(2);
-    expect(sendTelegram).toHaveBeenNthCalledWith(
-      1,
+    expect(sendTelegram).toHaveBeenCalledTimes(1);
+    expect(sendTelegram).toHaveBeenCalledWith(
       "telegram:123",
       "Caption",
       expect.objectContaining({
@@ -66,16 +102,6 @@ describe("telegramOutbound.sendPayload", () => {
         buttons: [[{ text: "Go", callback_data: "/go" }]],
       }),
     );
-    const secondOpts = sendTelegram.mock.calls[1]?.[2] as { buttons?: unknown } | undefined;
-    expect(sendTelegram).toHaveBeenNthCalledWith(
-      2,
-      "telegram:123",
-      "",
-      expect.objectContaining({
-        mediaUrl: "https://example.com/b.png",
-      }),
-    );
-    expect(secondOpts?.buttons).toBeUndefined();
-    expect(result).toEqual({ channel: "telegram", messageId: "m2", chatId: "c1" });
+    expect(result).toEqual({ channel: "telegram", messageId: "m1", chatId: "c1" });
   });
 });

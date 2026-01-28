@@ -745,7 +745,9 @@ export async function sendMediaGroupTelegram(
 
     // Media groups only support photos and videos
     if (kind !== "image" && kind !== "video" && !isGif) {
-      throw new Error(`Media group only supports photos and videos. Got: ${kind} for ${trimmedUrl}`);
+      throw new Error(
+        `Media group only supports photos and videos. Got: ${kind} for ${trimmedUrl}`,
+      );
     }
 
     const fileName = media.fileName ?? inferFilename(kind) ?? "file";
@@ -765,9 +767,7 @@ export async function sendMediaGroupTelegram(
   const mediaGroup = mediaItems.map((item, index) => ({
     type: item.type,
     media: item.media,
-    ...(index === 0 && htmlCaption
-      ? { caption: htmlCaption, parse_mode: "HTML" as const }
-      : {}),
+    ...(index === 0 && htmlCaption ? { caption: htmlCaption, parse_mode: "HTML" as const } : {}),
   }));
 
   const groupParams = {
