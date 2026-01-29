@@ -172,6 +172,10 @@ function mergeConfig(
     modelCacheDir: overrides?.local?.modelCacheDir ?? defaults?.local?.modelCacheDir,
   };
   const sources = normalizeSources(overrides?.sources ?? defaults?.sources, sessionMemory);
+  const rawPaths = [...(defaults?.extraPaths ?? []), ...(overrides?.extraPaths ?? [])]
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const extraPaths = Array.from(new Set(rawPaths));
   const vector = {
     enabled: overrides?.store?.vector?.enabled ?? defaults?.store?.vector?.enabled ?? true,
     extensionPath:
@@ -260,6 +264,7 @@ function mergeConfig(
   return {
     enabled,
     sources,
+    extraPaths,
     provider,
     remote,
     experimental: {
