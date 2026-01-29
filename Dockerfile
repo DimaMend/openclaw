@@ -55,7 +55,7 @@ COPY extensions/zalouser/package.json ./extensions/zalouser/package.json
 RUN pnpm install --no-frozen-lockfile
 
 COPY . .
-RUN pnpm build
+RUN CLAWDBOT_A2UI_SKIP_MISSING=1 pnpm build
 # Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
 ENV CLAWDBOT_PREFER_PNPM=1
 RUN pnpm ui:install
