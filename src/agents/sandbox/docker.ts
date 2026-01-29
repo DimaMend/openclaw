@@ -1,3 +1,4 @@
+import os from "node:os";
 import { spawn } from "node:child_process";
 
 import { defaultRuntime } from "../../runtime.js";
@@ -7,6 +8,41 @@ import { readRegistry, updateRegistry } from "./registry.js";
 import { computeSandboxConfigHash } from "./config-hash.js";
 import { resolveSandboxAgentId, resolveSandboxScopeKey, slugifySessionKey } from "./shared.js";
 import type { SandboxConfig, SandboxDockerConfig, SandboxWorkspaceAccess } from "./types.js";
+
+/**
+ * For Docker-in-Docker scenarios, remap container paths to host paths.
+ * When the gateway runs in a container and creates sandbox containers,
+ * the volume mount paths must be host paths, not container paths.
+ *
+ * Uses environment variables set by docker-compose:
+ * - CLAWDBOT_SANDBOX_HOST_CONFIG_DIR: host path for ~/.clawdbot
+ * - CLAWDBOT_SANDBOX_HOST_WORKSPACE_DIR: host path for ~/clawd
+ */
+export function remapPathForDinD(containerPath: string): string {
+  const hostConfigDir = process.env.CLAWDBOT_SANDBOX_HOST_CONFIG_DIR;
+  const hostWorkspaceDir = process.env.CLAWDBOT_SANDBOX_HOST_WORKSPACE_DIR;
+
+  // If no host path mappings are set, we're not in Docker-in-Docker mode
+  if (!hostConfigDir && !hostWorkspaceDir) {
+    return containerPath;
+  }
+
+  const home = os.homedir();
+  const containerConfigDir = `${home}/.clawdbot`;
+  const containerWorkspaceDir = `${home}/clawd`;
+
+  // Remap config directory paths
+  if (hostConfigDir && containerPath.startsWith(containerConfigDir)) {
+    return containerPath.replace(containerConfigDir, hostConfigDir);
+  }
+
+  // Remap workspace directory paths
+  if (hostWorkspaceDir && containerPath.startsWith(containerWorkspaceDir)) {
+    return containerPath.replace(containerWorkspaceDir, hostWorkspaceDir);
+  }
+
+  return containerPath;
+}
 
 const HOT_CONTAINER_WINDOW_MS = 5 * 60 * 1000;
 
@@ -189,12 +225,15 @@ async function createSandboxContainer(params: {
   args.push("--workdir", cfg.workdir);
   const mainMountSuffix =
     params.workspaceAccess === "ro" && workspaceDir === params.agentWorkspaceDir ? ":ro" : "";
-  args.push("-v", `${workspaceDir}:${cfg.workdir}${mainMountSuffix}`);
+  // Remap paths for Docker-in-Docker scenarios
+  const hostWorkspaceDir = remapPathForDinD(workspaceDir);
+  args.push("-v", `${hostWorkspaceDir}:${cfg.workdir}${mainMountSuffix}`);
   if (params.workspaceAccess !== "none" && workspaceDir !== params.agentWorkspaceDir) {
     const agentMountSuffix = params.workspaceAccess === "ro" ? ":ro" : "";
+    const hostAgentWorkspaceDir = remapPathForDinD(params.agentWorkspaceDir);
     args.push(
       "-v",
-      `${params.agentWorkspaceDir}:${SANDBOX_AGENT_WORKSPACE_MOUNT}${agentMountSuffix}`,
+      `${hostAgentWorkspaceDir}:${SANDBOX_AGENT_WORKSPACE_MOUNT}${agentMountSuffix}`,
     );
   }
   args.push(cfg.image, "sleep", "infinity");

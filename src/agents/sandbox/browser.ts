@@ -12,6 +12,7 @@ import {
   dockerContainerState,
   execDocker,
   readDockerPort,
+  remapPathForDinD,
 } from "./docker.js";
 import { updateBrowserRegistry } from "./registry.js";
 import { slugifySessionKey } from "./shared.js";
@@ -134,12 +135,15 @@ export async function ensureSandboxBrowser(params: {
       params.cfg.workspaceAccess === "ro" && params.workspaceDir === params.agentWorkspaceDir
         ? ":ro"
         : "";
-    args.push("-v", `${params.workspaceDir}:${params.cfg.docker.workdir}${mainMountSuffix}`);
+    // Remap paths for Docker-in-Docker scenarios
+    const hostWorkspaceDir = remapPathForDinD(params.workspaceDir);
+    args.push("-v", `${hostWorkspaceDir}:${params.cfg.docker.workdir}${mainMountSuffix}`);
     if (params.cfg.workspaceAccess !== "none" && params.workspaceDir !== params.agentWorkspaceDir) {
       const agentMountSuffix = params.cfg.workspaceAccess === "ro" ? ":ro" : "";
+      const hostAgentWorkspaceDir = remapPathForDinD(params.agentWorkspaceDir);
       args.push(
         "-v",
-        `${params.agentWorkspaceDir}:${SANDBOX_AGENT_WORKSPACE_MOUNT}${agentMountSuffix}`,
+        `${hostAgentWorkspaceDir}:${SANDBOX_AGENT_WORKSPACE_MOUNT}${agentMountSuffix}`,
       );
     }
     args.push("-p", `127.0.0.1::${params.cfg.browser.cdpPort}`);
