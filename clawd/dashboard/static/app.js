@@ -477,6 +477,59 @@ function handleAgentEvent(evt) {
         summary = data?.message || data?.reason || 'Unknown error';
         updateLiamStatus('error');
         statusClass = 'event-error';
+    } else if (stream === 'queue') {
+        // Queue events for observability
+        const phase = data?.phase;
+        if (phase === 'enqueue') {
+            eventType = 'QUEUE';
+            summary = `Queued: ${data?.prompt?.slice(0, 40) || '...'}`;
+            statusClass = 'event-queue';
+        } else if (phase === 'drain_start') {
+            eventType = 'DRAIN';
+            summary = `Processing ${data?.queueDepth || 0} queued items`;
+            statusClass = 'event-queue';
+        } else if (phase === 'drain_complete') {
+            eventType = 'DRAINED';
+            summary = `Queue processed (${data?.remainingItems || 0} remaining)`;
+            statusClass = 'event-done';
+        }
+    } else if (stream === 'model') {
+        // Model selection events
+        const phase = data?.phase;
+        if (phase === 'selected') {
+            eventType = 'MODEL';
+            summary = `Using ${data?.provider}/${data?.modelId}`;
+            statusClass = 'event-model';
+        } else if (phase === 'fallback') {
+            eventType = 'FALLBACK';
+            summary = `Falling back to ${data?.modelId}`;
+            statusClass = 'event-warn';
+        }
+    } else if (stream === 'context') {
+        // Context window events
+        eventType = 'CONTEXT';
+        const pct = Math.round((data?.tokens / (data?.tokens + 32000)) * 100) || 0;
+        summary = `Context: ${data?.tokens?.toLocaleString() || 0} tokens (${pct}%)`;
+        statusClass = data?.shouldWarn ? 'event-warn' : 'event-info';
+    } else if (stream === 'minimax') {
+        // MiniMax tool call detection events
+        eventType = 'MINIMAX';
+        if (data?.phase === 'tool_calls_detected') {
+            summary = `XML tools detected: ${data?.toolCalls?.map(t => t.name).join(', ') || 'unknown'}`;
+            statusClass = 'event-warn';
+        }
+    } else if (stream === 'compaction') {
+        // Compaction events
+        const phase = data?.phase;
+        if (phase === 'start') {
+            eventType = 'COMPACT';
+            summary = 'Starting context compaction...';
+            statusClass = 'event-compaction';
+        } else if (phase === 'complete') {
+            eventType = 'COMPACT';
+            summary = `Compacted in ${data?.durationMs || 0}ms`;
+            statusClass = 'event-done';
+        }
     }
 
     // Add to activity feed

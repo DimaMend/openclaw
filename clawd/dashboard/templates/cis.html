@@ -12,13 +12,14 @@
             <div class="app-header-content">
                 <nav class="main-nav">
                     <a href="/" class="nav-link" data-module="dashboard">🦞 Dashboard</a>
-                    <a href="/cis.html" class="nav-link active" data-module="cis">CIS</a>
+                    <a href="/cis.html" class="nav-link active" data-module="cis">Content Intelligence</a>
                     <a href="/sticker-business.html" class="nav-link" data-module="sticker">Stickers</a>
                     <a href="/ceramics-intelligence.html" class="nav-link" data-module="ceramics">Ceramics</a>
                     <a href="/natural-capture.html" class="nav-link" data-module="capture">Capture</a>
+                    <a href="/cicd.html" class="nav-link" data-module="cicd">CI/CD</a>
                 </nav>
-                <h1 class="app-title">Continuous Integration System</h1>
-                <p class="app-subtitle">Build orchestration • Testing • Deployment</p>
+                <h1 class="app-title">Content Intelligence System</h1>
+                <p class="app-subtitle">RSS Harvesting • Insight Extraction • PARA Routing</p>
             </div>
         </header>
 
@@ -27,115 +28,179 @@
                 <!-- Stats Bar -->
                 <div class="stats-bar">
                     <div class="stat-card accent-cis">
-                        <div class="stat-value" id="builds-count">0</div>
-                        <div class="stat-label">Builds Today</div>
+                        <div class="stat-value" id="articles-count">130</div>
+                        <div class="stat-label">Articles</div>
                     </div>
                     <div class="stat-card accent-cis">
-                        <div class="stat-value" id="success-rate">100%</div>
-                        <div class="stat-label">Success Rate</div>
+                        <div class="stat-value" id="insights-count">544</div>
+                        <div class="stat-label">Insights</div>
                     </div>
                     <div class="stat-card accent-cis">
-                        <div class="stat-value" id="avg-duration">--</div>
-                        <div class="stat-label">Avg Duration</div>
+                        <div class="stat-value" id="sources-count">6</div>
+                        <div class="stat-label">Sources</div>
                     </div>
                     <div class="stat-card accent-cis">
-                        <div class="stat-value" id="queue-length">0</div>
-                        <div class="stat-label">Queue Length</div>
+                        <div class="stat-value" id="last-harvest">--</div>
+                        <div class="stat-label">Last Harvest</div>
                     </div>
                 </div>
 
-                <!-- Build Status -->
+                <!-- Source Cards -->
+                <div class="grid-3 mb-lg">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Nate Jones</div>
+                            <span class="badge badge-success">High</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grid-2">
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Articles</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">21</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Insights</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">91</div>
+                                </div>
+                            </div>
+                            <a href="https://natesnewsletter.substack.com/" target="_blank" class="btn btn-sm btn-subtle mt-md">Visit Source →</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Slow AI</div>
+                            <span class="badge badge-success">High</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grid-2">
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Articles</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">20</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Insights</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">97</div>
+                                </div>
+                            </div>
+                            <a href="https://theslowai.substack.com/" target="_blank" class="btn btn-sm btn-subtle mt-md">Visit Source →</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Rhys Morgan</div>
+                            <span class="badge badge-success">High</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grid-2">
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Articles</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">30</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Insights</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">78</div>
+                                </div>
+                            </div>
+                            <a href="https://rhysmorgan.substack.com/" target="_blank" class="btn btn-sm btn-subtle mt-md">Visit Source →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- More Sources -->
+                <div class="grid-3 mb-lg">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Aakash Gupta</div>
+                            <span class="badge badge-subtle">Medium</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grid-2">
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Articles</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">20</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Insights</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">90</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">NEW ECONOMIES</div>
+                            <span class="badge badge-subtle">Medium</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grid-2">
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Articles</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">19</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Insights</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">95</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Sabrina Ramonov</div>
+                            <span class="badge badge-success">High</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="grid-2">
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Articles</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">20</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted" style="font-size:0.75rem;">Insights</div>
+                                    <div class="stat-value" style="font-size:1.5rem;">91</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PARA Distribution -->
                 <div class="card mb-lg">
                     <div class="card-header">
-                        <div class="card-title">Current Status</div>
-                        <span class="badge badge-success">Operational</span>
+                        <div class="card-title">PARA Distribution</div>
                     </div>
                     <div class="card-body">
-                        <div class="grid-4">
-                            <div class="flex flex-col gap-sm">
-                                <span class="text-muted" style="font-size:0.75rem;text-transform:uppercase;">GitHub Actions</span>
-                                <span class="badge badge-success">Connected</span>
+                        <div class="grid-3">
+                            <div class="stat-card" style="background:var(--accent-projects);">
+                                <div class="stat-value">38</div>
+                                <div class="stat-label">Projects (6%)</div>
                             </div>
-                            <div class="flex flex-col gap-sm">
-                                <span class="text-muted" style="font-size:0.75rem;text-transform:uppercase;">Docker Registry</span>
-                                <span class="badge badge-success">Ready</span>
+                            <div class="stat-card" style="background:var(--accent-areas);">
+                                <div class="stat-value">449</div>
+                                <div class="stat-label">Areas (71%)</div>
                             </div>
-                            <div class="flex flex-col gap-sm">
-                                <span class="text-muted" style="font-size:0.75rem;text-transform:uppercase;">Test Environment</span>
-                                <span class="badge badge-pending">Not Configured</span>
-                            </div>
-                            <div class="flex flex-col gap-sm">
-                                <span class="text-muted" style="font-size:0.75rem;text-transform:uppercase;">Staging</span>
-                                <span class="badge badge-subtle">Offline</span>
+                            <div class="stat-card" style="background:var(--accent-resources);">
+                                <div class="stat-value">143</div>
+                                <div class="stat-label">Resources (23%)</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Pipeline Diagram -->
-                <div class="card mb-lg">
-                    <div class="card-header">
-                        <div class="card-title">Build Pipeline</div>
-                    </div>
-                    <div class="card-body">
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 0;">
-                            <div style="text-align:center;flex:1;">
-                                <div style="width:60px;height:60px;border:2px solid var(--accent-cis);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;">📝</div>
-                                <div style="margin-top:0.5rem;font-size:0.8rem;">Commit</div>
-                            </div>
-                            <div style="flex:1;height:2px;background:var(--border-default);"></div>
-                            <div style="text-align:center;flex:1;">
-                                <div style="width:60px;height:60px;border:2px solid var(--border-default);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;">🔨</div>
-                                <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-muted);">Build</div>
-                            </div>
-                            <div style="flex:1;height:2px;background:var(--border-default);"></div>
-                            <div style="text-align:center;flex:1;">
-                                <div style="width:60px;height:60px;border:2px solid var(--border-default);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;">🧪</div>
-                                <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-muted);">Test</div>
-                            </div>
-                            <div style="flex:1;height:2px;background:var(--border-default);"></div>
-                            <div style="text-align:center;flex:1;">
-                                <div style="width:60px;height:60px;border:2px solid var(--border-default);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;">🚀</div>
-                                <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-muted);">Deploy</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Builds -->
-                <div class="card mb-lg">
-                    <div class="card-header">
-                        <div class="card-title">Recent Builds</div>
-                        <button class="btn btn-sm btn-primary">Trigger Build</button>
-                    </div>
-                    <div class="card-body" style="padding:0;">
-                        <div class="table-container">
-                            <table id="builds-table">
-                                <thead>
-                                    <tr>
-                                        <th>Build</th>
-                                        <th>Branch</th>
-                                        <th>Status</th>
-                                        <th>Duration</th>
-                                        <th>Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td colspan="5" class="empty">No builds recorded yet</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Build Logs -->
+                <!-- Actions -->
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">Build Logs</div>
+                        <div class="card-title">Actions</div>
                     </div>
                     <div class="card-body">
-                        <div style="background:var(--bg-tertiary);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:1rem;font-family:var(--font-mono);font-size:0.8rem;max-height:300px;overflow-y:auto;">
-                            <div style="color:var(--text-muted);"># Waiting for next build...</div>
+                        <div class="flex gap-md">
+                            <button class="btn btn-primary" onclick="harvestFeed()">Harvest All Feeds</button>
+                            <button class="btn btn-secondary" onclick="extractInsights()">Extract Insights</button>
+                            <button class="btn btn-subtle" onclick="viewRawData()">View Raw Data</button>
                         </div>
                     </div>
                 </div>
@@ -144,25 +209,42 @@
     </div>
 
     <script>
-        // Simple fetch for CIS data
-        async function fetchBuilds() {
+        async function harvestFeed() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Harvesting...';
+            
             try {
-                const res = await fetch('/api/cis/builds');
+                const res = await fetch('/api/cis/harvest', { method: 'POST' });
                 const data = await res.json();
-                updateBuilds(data);
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Harvest failed: ' + data.error);
+                }
             } catch (err) {
-                console.log('CIS API not yet implemented');
+                alert('Error: ' + err.message);
             }
+            
+            btn.disabled = false;
+            btn.textContent = 'Harvest All Feeds';
         }
 
-        function updateBuilds(data) {
-            document.getElementById('builds-count').textContent = data.count || 0;
-            // Update table, etc.
+        function extractInsights() {
+            alert('LLM-based extraction requires ZAI API access');
         }
 
-        // Initial fetch
-        fetchBuilds();
-        setInterval(fetchBuilds, 30000);
+        function viewRawData() {
+            window.open('/content-intelligence/', '_blank');
+        }
+
+        // Fetch stats on load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('/api/cis/stats').then(r => r.json()).then(data => {
+                if (data.articles) document.getElementById('articles-count').textContent = data.articles;
+                if (data.insights) document.getElementById('insights-count').textContent = data.insights;
+            });
+        });
     </script>
 </body>
 </html>

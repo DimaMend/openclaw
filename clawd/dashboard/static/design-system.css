@@ -543,6 +543,12 @@ tr:hover td {
 .activity-item.event-result .activity-type { color: var(--accent-success); }
 .activity-item.event-done .activity-type { color: var(--accent-success); }
 .activity-item.event-error .activity-type { color: var(--accent-error); }
+/* New observability event colors (LOBSTER_PALETTE aligned) */
+.activity-item.event-queue .activity-type { color: #FF8A5B; } /* lobster info */
+.activity-item.event-model .activity-type { color: #FF5A2D; } /* lobster accent */
+.activity-item.event-warn .activity-type { color: #FFB020; } /* lobster warn */
+.activity-item.event-compaction .activity-type { color: #8B7F77; } /* lobster muted */
+.activity-item.event-info .activity-type { color: var(--text-secondary); }
 
 /* === RESPONSIVE === */
 @media (max-width: 768px) {

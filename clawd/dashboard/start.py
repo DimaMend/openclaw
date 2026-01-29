@@ -373,6 +373,56 @@ def get_natural_capture_counts():
     except Exception:
         return {'ideas': 0, 'todos': 0, 'notes': 0, 'total': 0}
 
+# === CONTENT INTELLIGENCE SYSTEM ===
+def get_cis_stats():
+    """Get CIS operational statistics."""
+    cis_dir = BASE_DIR / 'content-intelligence'
+    if not cis_dir.exists():
+        return {'articles': 0, 'insights': 0, 'sources': 0}
+    
+    # Count articles and insights from directory structure
+    total_articles = 0
+    total_insights = 0
+    sources_dir = cis_dir / 'sources'
+    
+    if sources_dir.exists():
+        for source_dir in sources_dir.iterdir():
+            if source_dir.is_dir():
+                archive_dir = source_dir / 'archive'
+                insights_dir = source_dir / 'insights'
+                
+                if archive_dir.exists():
+                    total_articles += len(list(archive_dir.glob('*.json')))
+                if insights_dir.exists():
+                    total_insights += len(list(insights_dir.glob('*.json')))
+    
+    return {
+        'articles': total_articles,
+        'insights': total_insights,
+        'sources': len([d for d in sources_dir.iterdir() if d.is_dir()])
+    }
+
+def harvest_cis_feeds():
+    """Trigger CIS feed harvest."""
+    cis_dir = BASE_DIR / 'content-intelligence'
+    harvester = cis_dir / 'cis_harvester.py'
+    
+    if not harvester.exists():
+        return {'success': False, 'error': 'Harvester not found'}
+    
+    try:
+        # Run harvester in background
+        subprocess.Popen(
+            ['python3', str(harvester)],
+            cwd=str(cis_dir),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE
+        )
+        return {'success': True, 'message': 'Harvest started'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
 def process_natural_capture(text, source='dashboard'):
     """Process a new capture through Natural Capture."""
     try:
@@ -622,6 +672,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.send_file(TEMPLATES_DIR / 'index.html', 'text/html')
         elif path == '/cis.html':
             self.send_file(TEMPLATES_DIR / 'cis.html', 'text/html')
+        elif path == '/cicd.html':
+            self.send_file(TEMPLATES_DIR / 'cicd.html', 'text/html')
         elif path == '/sticker-business.html':
             self.send_file(TEMPLATES_DIR / 'sticker-business.html', 'text/html')
         elif path == '/natural-capture.html':
@@ -777,6 +829,11 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             counts = get_natural_capture_counts()
             self.send_json(counts)
 
+        # === CONTENT INTELLIGENCE API ===
+        elif path == '/api/cis/stats':
+            stats = get_cis_stats()
+            self.send_json(stats)
+
         else:
             self.send_error(404, 'Not found')
 
@@ -800,6 +857,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 self.send_json({'success': False, 'error': 'Invalid JSON'}, status=400)
             except Exception as e:
                 self.send_json({'success': False, 'error': str(e)}, status=500)
+        
+        # === CONTENT INTELLIGENCE API ===
+        elif path == '/api/cis/harvest':
+            try:
+                result = harvest_cis_feeds()
+                self.send_json(result)
+            except Exception as e:
+                self.send_json({'success': False, 'error': str(e)}, status=500)
+        
         else:
             self.send_error(404, 'Not found')
 
