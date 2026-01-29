@@ -7,7 +7,7 @@
 
 import type { ClawdbotConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
-import type { ResolvedFeishuAccount } from "./accounts.js";
+import { getStartupChatIds, type ResolvedFeishuAccount } from "./accounts.js";
 import type { FeishuMessageContext } from "./monitor.js";
 import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { dispatchInboundMessageWithBufferedDispatcher } from "../auto-reply/dispatch.js";
@@ -54,6 +54,21 @@ function isFeishuSenderAllowed(
 ): { allowed: boolean; reason?: string } {
   const isGroup = ctx.chatType === "group";
   const senderId = ctx.senderId;
+
+  // When allowOnlyStartupChats is true: only groups in startupChatId may send; no DMs
+  if (account.config.allowOnlyStartupChats) {
+    const allowedChatIds = getStartupChatIds(account.config);
+    if (allowedChatIds.length === 0) {
+      return { allowed: false, reason: "allow_only_startup_chats_no_list" };
+    }
+    if (!isGroup) {
+      return { allowed: false, reason: "allow_only_startup_chats_no_dm" };
+    }
+    if (!allowedChatIds.includes(ctx.chatId)) {
+      return { allowed: false, reason: "allow_only_startup_chats_group_not_allowed" };
+    }
+    return { allowed: true };
+  }
 
   if (isGroup) {
     // Check group policy
@@ -247,13 +262,18 @@ export async function dispatchFeishuMessage(params: DispatchFeishuMessageParams)
           log(
             `feishu: deliver callback called - hasText=${!!payload.text}, textLength=${payload.text?.length ?? 0}`,
           );
-          // Send response back to Feishu
+          // Send response back to Feishu; in groups, @mention the user who asked
           if (payload.text) {
+            let replyText = payload.text;
+            if (ctx.chatType === "group" && ctx.senderId) {
+              // Feishu text/interactive: <at id="open_id"></at> mentions the user
+              replyText = `<at id="${ctx.senderId}"></at> ${replyText}`;
+            }
             try {
               log(`feishu: sending reply to ${ctx.chatId}...`);
               await sendMessageFeishu({
                 to: ctx.chatId,
-                text: payload.text,
+                text: replyText,
                 accountId: account.accountId,
                 config: cfg,
                 receiveIdType: "chat_id",

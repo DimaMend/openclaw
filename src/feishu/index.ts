@@ -23,6 +23,7 @@ export {
   type FeishuInteractiveCard,
 } from "./send.js";
 export {
+  getStartupChatIds,
   resolveFeishuAccount,
   listFeishuAccountIds,
   listEnabledFeishuAccounts,

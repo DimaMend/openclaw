@@ -15,7 +15,7 @@ import { computeBackoff, sleepWithAbort } from "../infra/backoff.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { formatDurationMs } from "../infra/format-duration.js";
 import type { RuntimeEnv } from "../runtime.js";
-import { resolveFeishuAccount, type ResolvedFeishuAccount } from "./accounts.js";
+import { getStartupChatIds, resolveFeishuAccount, type ResolvedFeishuAccount } from "./accounts.js";
 import { createFeishuClient, type FeishuClient } from "./client.js";
 import {
   parseFeishuEvent,
@@ -693,9 +693,9 @@ export async function monitorFeishuProvider(opts: MonitorFeishuOpts = {}): Promi
     throw new Error(`Feishu authentication failed: ${formatErrorMessage(err)}`);
   }
 
-  // Send startup message if startupChatId is configured
-  const startupChatId = account.config.startupChatId?.trim();
-  if (startupChatId) {
+  // Send startup message to all configured startup chat IDs
+  const startupChatIds = getStartupChatIds(account.config);
+  if (startupChatIds.length > 0) {
     const localIp = getLocalIPv4();
     const hostname = os.hostname();
     const version = process.env.CLAWDBOT_VERSION ?? process.env.npm_package_version ?? "unknown";
@@ -712,11 +712,13 @@ export async function monitorFeishuProvider(opts: MonitorFeishuOpts = {}): Promi
       `启动时间: ${timestamp}`,
     ].join("\n");
 
-    try {
-      await client.sendTextMessage(startupChatId, startupMessage);
-      log(`feishu: sent startup message to chat ${startupChatId}`);
-    } catch (err) {
-      log(`feishu: failed to send startup message: ${formatErrorMessage(err)}`);
+    for (const chatId of startupChatIds) {
+      try {
+        await client.sendTextMessage(chatId, startupMessage);
+        log(`feishu: sent startup message to chat ${chatId}`);
+      } catch (err) {
+        log(`feishu: failed to send startup message to ${chatId}: ${formatErrorMessage(err)}`);
+      }
     }
   }
 

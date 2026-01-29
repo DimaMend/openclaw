@@ -237,15 +237,20 @@ function parseMarkdownLine(line: string): FeishuPostElement[] {
 }
 
 /**
- * Check if text contains markdown that would benefit from rich text rendering
+ * Check if text contains markdown that would benefit from rich text rendering.
+ * When true, sendMessageFeishu uses interactive card for full markdown support.
  */
 export function hasMarkdown(text: string): boolean {
   return (
     /\*\*.+?\*\*/.test(text) || // bold
     /\*.+?\*/.test(text) || // italic
     /~~.+?~~/.test(text) || // strikethrough
-    /`.+?`/.test(text) || // code
-    /\[.+?\]\(.+?\)/.test(text) // links
+    /`.+?`/.test(text) || // inline code
+    /\[.+?\]\(.+?\)/.test(text) || // links
+    /^#{1,6}\s+/m.test(text) || // headings (# to ######)
+    /^[-*]\s+/m.test(text) || // unordered list
+    /^\d+\.\s+/m.test(text) || // ordered list
+    /```[\s\S]*?```/.test(text) // fenced code blocks
   );
 }
 
