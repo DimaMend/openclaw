@@ -110,8 +110,8 @@ export async function checkProactiveCompaction(params: {
     // Add estimate for the new prompt (default ~500 tokens if not provided)
     const promptEstimate = params.promptTokenEstimate ?? 500;
 
-    // Apply safety margin to account for estimation inaccuracy
-    const estimatedTotalTokens = Math.floor((existingTokens + promptEstimate) * SAFETY_MARGIN);
+    // Total estimated tokens (safety margin is already applied in threshold calculation)
+    const estimatedTotalTokens = existingTokens + promptEstimate;
 
     const shouldCompact = estimatedTotalTokens >= threshold;
 
