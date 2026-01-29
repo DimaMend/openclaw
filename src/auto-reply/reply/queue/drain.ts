@@ -1,3 +1,4 @@
+import { emitAgentEvent } from "../../../infra/agent-events.js";
 import { defaultRuntime } from "../../../runtime.js";
 import {
   buildCollectPrompt,
@@ -16,6 +17,19 @@ export function scheduleFollowupDrain(
   const queue = FOLLOWUP_QUEUES.get(key);
   if (!queue || queue.draining) return;
   queue.draining = true;
+
+  // Emit drain start event
+  const runId = queue.lastRun?.sessionId || `drain-${Date.now()}`;
+  emitAgentEvent({
+    runId,
+    stream: "queue",
+    data: {
+      phase: "drain_start",
+      queueKey: key,
+      queueDepth: queue.items.length,
+      mode: queue.mode,
+    },
+  });
   void (async () => {
     try {
       let forceIndividualCollect = false;
@@ -113,6 +127,19 @@ export function scheduleFollowupDrain(
       defaultRuntime.error?.(`followup queue drain failed for ${key}: ${String(err)}`);
     } finally {
       queue.draining = false;
+
+      // Emit drain complete event
+      emitAgentEvent({
+        runId,
+        stream: "queue",
+        data: {
+          phase: "drain_complete",
+          queueKey: key,
+          remainingItems: queue.items.length,
+          droppedCount: queue.droppedCount,
+        },
+      });
+
       if (queue.items.length === 0 && queue.droppedCount === 0) {
         FOLLOWUP_QUEUES.delete(key);
       } else {

@@ -52,6 +52,7 @@ import type { RunEmbeddedPiAgentParams } from "./run/params.js";
 import { buildEmbeddedRunPayloads } from "./run/payloads.js";
 import type { EmbeddedPiAgentMeta, EmbeddedPiRunResult } from "./types.js";
 import { describeUnknownError } from "./utils.js";
+import { emitAgentEvent } from "../../infra/agent-events.js";
 
 type ApiKeyInfo = ResolvedProviderAuth;
 
@@ -141,6 +142,21 @@ export async function runEmbeddedPiAgent(
         throw new Error(error ?? `Unknown model: ${provider}/${modelId}`);
       }
 
+      // Emit model selection event for observability
+      emitAgentEvent({
+        runId: params.runId || params.sessionId,
+        stream: "model",
+        data: {
+          phase: "selected",
+          provider,
+          modelId,
+          modelName: model.name,
+          reasoning: model.reasoning ?? false,
+          contextWindow: model.contextWindow,
+          fallbacksConfigured: fallbackConfigured,
+        },
+      });
+
       const ctxInfo = resolveContextWindowInfo({
         cfg: params.config,
         provider,
@@ -153,6 +169,21 @@ export async function runEmbeddedPiAgent(
         warnBelowTokens: CONTEXT_WINDOW_WARN_BELOW_TOKENS,
         hardMinTokens: CONTEXT_WINDOW_HARD_MIN_TOKENS,
       });
+      // Emit context window event for observability
+      emitAgentEvent({
+        runId: params.runId || params.sessionId,
+        stream: "context",
+        data: {
+          phase: "evaluated",
+          tokens: ctxGuard.tokens,
+          source: ctxGuard.source,
+          warnThreshold: CONTEXT_WINDOW_WARN_BELOW_TOKENS,
+          minThreshold: CONTEXT_WINDOW_HARD_MIN_TOKENS,
+          shouldWarn: ctxGuard.shouldWarn,
+          shouldBlock: ctxGuard.shouldBlock,
+        },
+      });
+
       if (ctxGuard.shouldWarn) {
         log.warn(
           `low context window: ${provider}/${modelId} ctx=${ctxGuard.tokens} (warn<${CONTEXT_WINDOW_WARN_BELOW_TOKENS}) source=${ctxGuard.source}`,

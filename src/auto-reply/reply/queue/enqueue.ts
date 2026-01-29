@@ -1,3 +1,4 @@
+import { emitAgentEvent } from "../../../infra/agent-events.js";
 import { applyQueueDropPolicy, shouldSkipQueueItem } from "../../../utils/queue-helpers.js";
 import { FOLLOWUP_QUEUES, getFollowupQueue } from "./state.js";
 import type { FollowupRun, QueueDedupeMode, QueueSettings } from "./types.js";
@@ -47,6 +48,22 @@ export function enqueueFollowupRun(
   if (!shouldEnqueue) return false;
 
   queue.items.push(run);
+
+  // Emit observability event for queue enqueue
+  if (run.run?.sessionId) {
+    emitAgentEvent({
+      runId: run.run.sessionId,
+      stream: "queue",
+      data: {
+        phase: "enqueue",
+        queueKey: key,
+        queueDepth: queue.items.length,
+        channel: run.originatingChannel || "unknown",
+        prompt: run.summaryLine || run.prompt.slice(0, 100),
+      },
+    });
+  }
+
   return true;
 }
 
