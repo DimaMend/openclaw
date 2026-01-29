@@ -125,6 +125,7 @@ export const HooksGmailSchema = z
         z.literal("high"),
       ])
       .optional(),
+    sanitizeBody: z.boolean().optional(),
   })
   .strict()
   .optional();

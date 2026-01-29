@@ -2,6 +2,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { CONFIG_PATH, type HookMappingConfig, type HooksConfig } from "../config/config.js";
+import { sanitizeEmailBody } from "../hooks/sanitize-email-body.js";
 import type { HookMessageChannel } from "./hooks.js";
 
 export type HookMappingResolved = {
@@ -22,6 +23,8 @@ export type HookMappingResolved = {
   thinking?: string;
   timeoutSeconds?: number;
   transform?: HookMappingTransformResolved;
+  /** When true, sanitise HTML email bodies in the payload before template rendering. */
+  sanitizeBody?: boolean;
 };
 
 export type HookMappingTransformResolved = {
@@ -103,16 +106,21 @@ type HookTransformFn = (
 export function resolveHookMappings(hooks?: HooksConfig): HookMappingResolved[] {
   const presets = hooks?.presets ?? [];
   const gmailAllowUnsafe = hooks?.gmail?.allowUnsafeExternalContent;
+  // sanitizeBody defaults to true unless explicitly set to false
+  const gmailSanitizeBody = hooks?.gmail?.sanitizeBody !== false;
   const mappings: HookMappingConfig[] = [];
   if (hooks?.mappings) mappings.push(...hooks.mappings);
   for (const preset of presets) {
     const presetMappings = hookPresetMappings[preset];
     if (!presetMappings) continue;
-    if (preset === "gmail" && typeof gmailAllowUnsafe === "boolean") {
+    if (preset === "gmail") {
       mappings.push(
         ...presetMappings.map((mapping) => ({
           ...mapping,
-          allowUnsafeExternalContent: gmailAllowUnsafe,
+          ...(typeof gmailAllowUnsafe === "boolean"
+            ? { allowUnsafeExternalContent: gmailAllowUnsafe }
+            : {}),
+          _sanitizeBody: gmailSanitizeBody,
         })),
       );
       continue;
@@ -137,7 +145,10 @@ export async function applyHookMappings(
   for (const mapping of mappings) {
     if (!mappingMatches(mapping, ctx)) continue;
 
-    const base = buildActionFromMapping(mapping, ctx);
+    // Sanitise email bodies in-place before template rendering
+    const effectiveCtx = mapping.sanitizeBody ? sanitizePayloadBodies(ctx) : ctx;
+
+    const base = buildActionFromMapping(mapping, effectiveCtx);
     if (!base.ok) return base;
 
     let override: HookTransformResult = null;
@@ -174,6 +185,11 @@ function normalizeHookMapping(
       }
     : undefined;
 
+  const sanitizeBody =
+    typeof (mapping as Record<string, unknown>)._sanitizeBody === "boolean"
+      ? ((mapping as Record<string, unknown>)._sanitizeBody as boolean)
+      : undefined;
+
   return {
     id,
     matchPath,
@@ -192,6 +208,7 @@ function normalizeHookMapping(
     thinking: mapping.thinking,
     timeoutSeconds: mapping.timeoutSeconds,
     transform,
+    sanitizeBody,
   };
 }
 
@@ -357,6 +374,25 @@ function resolveTemplateExpr(expr: string, ctx: HookMappingContext) {
     return getByPath(ctx.payload, expr.slice("payload.".length));
   }
   return getByPath(ctx.payload, expr);
+}
+
+/**
+ * Return a shallow-cloned context whose `messages[].body` fields have been
+ * sanitised from raw HTML to clean plain text.  The original context is not
+ * mutated.
+ */
+function sanitizePayloadBodies(ctx: HookMappingContext): HookMappingContext {
+  const messages = ctx.payload.messages;
+  if (!Array.isArray(messages) || messages.length === 0) return ctx;
+
+  const cleaned = messages.map((msg: unknown) => {
+    if (msg === null || typeof msg !== "object") return msg;
+    const rec = msg as Record<string, unknown>;
+    if (typeof rec.body !== "string") return msg;
+    return { ...rec, body: sanitizeEmailBody(rec.body) };
+  });
+
+  return { ...ctx, payload: { ...ctx.payload, messages: cleaned } };
 }
 
 function getByPath(input: Record<string, unknown>, pathExpr: string): unknown {

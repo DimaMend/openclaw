@@ -153,6 +153,62 @@ describe("hooks mapping", () => {
     }
   });
 
+  it("sanitises email body HTML for gmail preset by default", async () => {
+    const mappings = resolveHookMappings({ presets: ["gmail"] });
+    const result = await applyHookMappings(mappings, {
+      payload: {
+        messages: [
+          {
+            id: "msg1",
+            from: "test@example.com",
+            subject: "Test",
+            snippet: "Preview",
+            body: "<div><p>Hello <b>world</b></p><style>.x{color:red}</style><p>Unsubscribe from our list</p></div>",
+          },
+        ],
+      },
+      headers: {},
+      url: baseUrl,
+      path: "gmail",
+    });
+    expect(result?.ok).toBe(true);
+    if (result?.ok && result.action?.kind === "agent") {
+      expect(result.action.message).toContain("Hello world");
+      expect(result.action.message).not.toContain("<");
+      expect(result.action.message).not.toContain("style");
+      expect(result.action.message).not.toMatch(/unsubscribe/i);
+    }
+  });
+
+  it("skips sanitisation when sanitizeBody is false", async () => {
+    const mappings = resolveHookMappings({
+      presets: ["gmail"],
+      gmail: { sanitizeBody: false },
+    });
+    const result = await applyHookMappings(mappings, {
+      payload: {
+        messages: [
+          {
+            id: "msg1",
+            from: "test@example.com",
+            subject: "Test",
+            snippet: "Preview",
+            body: "<p>Hello <b>world</b></p>",
+          },
+        ],
+      },
+      headers: {},
+      url: baseUrl,
+      path: "gmail",
+    });
+    expect(result?.ok).toBe(true);
+    if (result?.ok && result.action?.kind === "agent") {
+      // Body should still contain HTML tags
+      expect(result.action.message).toContain("<p>");
+      expect(result.action.message).toContain("<b>");
+    }
+  });
+
   it("rejects missing message", async () => {
     const mappings = resolveHookMappings({
       mappings: [{ match: { path: "noop" }, action: "agent" }],

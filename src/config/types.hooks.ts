@@ -67,6 +67,8 @@ export type HooksGmailConfig = {
   model?: string;
   /** Optional thinking level override for Gmail hook processing. */
   thinking?: "off" | "minimal" | "low" | "medium" | "high";
+  /** Sanitise raw HTML email bodies to plain text before injecting into sessions (default: true). */
+  sanitizeBody?: boolean;
 };
 
 export type InternalHookHandlerConfig = {
