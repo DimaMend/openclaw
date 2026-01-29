@@ -6,9 +6,11 @@ import {
 import type { ModelAliasIndex } from "../../agents/model-selection.js";
 import { resolveSandboxRuntimeStatus } from "../../agents/sandbox.js";
 import type { MoltbotConfig } from "../../config/config.js";
+import { createConfigIO } from "../../config/io.js";
 import { type SessionEntry, updateSessionStore } from "../../config/sessions.js";
 import type { ExecAsk, ExecHost, ExecSecurity } from "../../infra/exec-approvals.js";
 import { enqueueSystemEvent } from "../../infra/system-events.js";
+import { normalizeAgentId } from "../../routing/session-key.js";
 import { applyVerboseOverride } from "../../sessions/level-overrides.js";
 import { applyModelOverrideToSessionEntry } from "../../sessions/model-overrides.js";
 import { formatThinkingLevels, formatXHighModelHint, supportsXHighThinking } from "../thinking.js";
@@ -57,6 +59,59 @@ function resolveExecDefaults(params: {
     node:
       (params.sessionEntry?.execNode as string | undefined) ?? agentExec?.node ?? globalExec?.node,
   };
+}
+
+/**
+ * Persists the thinking level default to the agent's config entry.
+ * This ensures the thinking level persists across session resets for the same agent.
+ *
+ * This function is fire-and-forget to avoid blocking the directive response.
+ * It reads the raw config (preserving user formatting) and only updates the
+ * specific agent's thinkingDefault field.
+ */
+function persistAgentThinkingDefault(agentId: string, thinkLevel: ThinkLevel): void {
+  // Validate agentId
+  if (!agentId?.trim()) return;
+  const normalizedId = normalizeAgentId(agentId);
+
+  // Fire-and-forget: don't block the response
+  void (async () => {
+    try {
+      const io = createConfigIO();
+      const snapshot = await io.readConfigFileSnapshot();
+
+      // Use parsed (raw JSON) to preserve user's config structure
+      if (!snapshot.exists || !snapshot.parsed) return;
+      const cfg = snapshot.parsed as MoltbotConfig;
+
+      const agents = cfg.agents?.list;
+      if (!Array.isArray(agents)) return;
+
+      // Use normalizeAgentId for consistent matching with rest of codebase
+      const agentIndex = agents.findIndex(
+        (a) => a && typeof a === "object" && normalizeAgentId(a.id) === normalizedId,
+      );
+      if (agentIndex === -1) return;
+
+      const agent = agents[agentIndex];
+      if (!agent) return;
+
+      // Skip if already set to the same value (avoid unnecessary writes)
+      if (agent.thinkingDefault === thinkLevel) return;
+
+      // Explicitly set the value (including "off") for clarity
+      // This ensures the user's intent is always persisted
+      agent.thinkingDefault = thinkLevel;
+
+      await io.writeConfigFile(cfg);
+    } catch (err) {
+      // Log warning but don't fail - this is best-effort persistence
+      console.warn(
+        `[directive-handling] Failed to persist thinkingDefault for agent "${agentId}":`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  })();
 }
 
 export async function handleDirectiveOnly(params: {
@@ -304,8 +359,13 @@ export async function handleDirectiveOnly(params: {
   if (directives.hasThinkDirective && directives.thinkLevel) {
     if (directives.thinkLevel === "off") delete sessionEntry.thinkingLevel;
     else sessionEntry.thinkingLevel = directives.thinkLevel;
+    // Persist user's explicit choice to agent config (fire-and-forget)
+    // This survives session resets (/new, /reset)
+    persistAgentThinkingDefault(activeAgentId, directives.thinkLevel);
   }
   if (shouldDowngradeXHigh) {
+    // Runtime downgrade only affects session, NOT persisted config
+    // User's preference (xhigh) is preserved for when model supports it
     sessionEntry.thinkingLevel = "high";
   }
   if (directives.hasVerboseDirective && directives.verboseLevel) {

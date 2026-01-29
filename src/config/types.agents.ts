@@ -24,6 +24,8 @@ export type AgentConfig = {
   workspace?: string;
   agentDir?: string;
   model?: AgentModelConfig;
+  /** Default thinking level for this agent when no /think directive is present. */
+  thinkingDefault?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
   memorySearch?: MemorySearchConfig;
   /** Human-like delay between block replies for this agent. */
   humanDelay?: HumanDelayConfig;
