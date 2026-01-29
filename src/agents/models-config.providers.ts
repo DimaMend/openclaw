@@ -458,7 +458,7 @@ export async function resolveImplicitProviders(params: {
   if (nanogptKey) {
     providers.nanogpt = { ...buildNanoGptProvider(), apiKey: nanogptKey };
   }
-  
+
   const xiaomiKey =
     resolveEnvApiKeyVarName("xiaomi") ??
     resolveApiKeyFromProfiles({ provider: "xiaomi", store: authStore });
