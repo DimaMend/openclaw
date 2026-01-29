@@ -13,7 +13,7 @@ export function createWebSendApi(params: {
   sock: {
     sendMessage: (jid: string, content: AnyMessageContent) => Promise<unknown>;
     sendPresenceUpdate: (presence: WAPresence, jid?: string) => Promise<unknown>;
-    onWhatsApp?: (jid: string) => Promise<OnWhatsAppResult[]>;
+    onWhatsApp?: (jid: string) => Promise<OnWhatsAppResult[] | undefined>;
   };
   defaultAccountId: string;
 }) {
@@ -23,7 +23,10 @@ export function createWebSendApi(params: {
       try {
         return await resolveBrazilianJid(params.sock, jid);
       } catch (err) {
-        console.warn('[send-api] Brazil JID resolution failed, using original:', (err as Error).message);
+        console.warn(
+          "[send-api] Brazil JID resolution failed, using original:",
+          (err as Error).message,
+        );
         return jid;
       }
     }

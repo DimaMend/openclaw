@@ -119,7 +119,7 @@ interface OnWhatsAppResult {
 }
 
 interface SockWithOnWhatsApp {
-  onWhatsApp?: (jid: string) => Promise<OnWhatsAppResult[]>;
+  onWhatsApp?: (jid: string) => Promise<OnWhatsAppResult[] | undefined>;
 }
 
 /**
