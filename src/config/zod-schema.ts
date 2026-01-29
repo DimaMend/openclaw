@@ -242,6 +242,7 @@ export const MoltbotSchema = z
         mappings: z.array(HookMappingSchema).optional(),
         gmail: HooksGmailSchema,
         internal: InternalHooksSchema,
+        sessionTtlMs: z.number().int().min(0).optional(),
       })
       .strict()
       .optional(),
