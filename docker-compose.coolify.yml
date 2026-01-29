@@ -1,0 +1,170 @@
+# Coolify-compatible Docker Compose for Moltbot
+# This file provides a production-ready setup for deploying Moltbot on Coolify
+#
+# Required environment variables in Coolify:
+# - ANTHROPIC_API_KEY (or other AI provider key)
+# - CLAWDBOT_GATEWAY_TOKEN (for secure gateway access)
+#
+# Optional but recommended:
+# - TELEGRAM_BOT_TOKEN, DISCORD_BOT_TOKEN, SLACK_BOT_TOKEN (for messaging)
+# - OPENAI_API_KEY, GEMINI_API_KEY (additional AI providers)
+#
+# Coolify will automatically:
+# - Pull the image from registry or build from Dockerfile
+# - Map volumes to persistent storage
+# - Generate unique ports if needed
+# - Handle SSL/TLS termination
+
+version: '3.8'
+
+services:
+  moltbot:
+    image: ${CLAWDBOT_IMAGE:-ghcr.io/moltbot/moltbot:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Optional: install additional system packages
+        CLAWDBOT_DOCKER_APT_PACKAGES: ${CLAWDBOT_DOCKER_APT_PACKAGES:-}
+    container_name: moltbot-gateway
+    restart: unless-stopped
+    init: true
+    
+    environment:
+      # Home directory for the node user
+      HOME: /home/node
+      TERM: xterm-256color
+      NODE_ENV: ${NODE_ENV:-production}
+      
+      # Gateway configuration
+      CLAWDBOT_GATEWAY_TOKEN: ${CLAWDBOT_GATEWAY_TOKEN}
+      CLAWDBOT_GATEWAY_PASSWORD: ${CLAWDBOT_GATEWAY_PASSWORD:-}
+      CLAWDBOT_GATEWAY_PORT: ${CLAWDBOT_GATEWAY_PORT:-18789}
+      CLAWDBOT_GATEWAY_BIND: ${CLAWDBOT_GATEWAY_BIND:-lan}
+      
+      # AI Provider Keys
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_OAUTH_TOKEN: ${ANTHROPIC_OAUTH_TOKEN:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      
+      # Claude Web Provider (optional)
+      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
+      CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY:-}
+      CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE:-}
+      
+      # AWS Bedrock (optional)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_PROFILE: ${AWS_PROFILE:-}
+      
+      # Messaging Channels
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:-}
+      LINE_CHANNEL_ACCESS_TOKEN: ${LINE_CHANNEL_ACCESS_TOKEN:-}
+      LINE_CHANNEL_SECRET: ${LINE_CHANNEL_SECRET:-}
+      MATRIX_HOMESERVER: ${MATRIX_HOMESERVER:-}
+      MATRIX_USER_ID: ${MATRIX_USER_ID:-}
+      MATRIX_ACCESS_TOKEN: ${MATRIX_ACCESS_TOKEN:-}
+      MSTEAMS_APP_ID: ${MSTEAMS_APP_ID:-}
+      MSTEAMS_APP_PASSWORD: ${MSTEAMS_APP_PASSWORD:-}
+      MSTEAMS_TENANT_ID: ${MSTEAMS_TENANT_ID:-}
+      
+      # GitHub Copilot
+      COPILOT_GITHUB_TOKEN: ${COPILOT_GITHUB_TOKEN:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      
+      # Web Search
+      BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+      
+      # TTS/Voice
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      
+      # Tunneling
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+      NGROK_DOMAIN: ${NGROK_DOMAIN:-}
+      
+      # Custom paths
+      CLAWDBOT_CONFIG_PATH: ${CLAWDBOT_CONFIG_PATH:-}
+      CLAWDBOT_STATE_DIR: ${CLAWDBOT_STATE_DIR:-}
+      CLAWDBOT_AGENT_DIR: ${CLAWDBOT_AGENT_DIR:-}
+      
+      # OpenTelemetry
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-moltbot}
+    
+    volumes:
+      # Persistent data directory (Coolify will manage this)
+      - moltbot_data:/home/node/.clawdbot
+      # Optional: mount workspace directory
+      - ${CLAWDBOT_WORKSPACE_DIR:-./workspace}:/home/node/clawd
+    
+    ports:
+      # Gateway API port
+      - "${CLAWDBOT_GATEWAY_PORT:-18789}:18789"
+      # Bridge port (for browser extension)
+      - "${CLAWDBOT_BRIDGE_PORT:-18790}:18790"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:18789/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    command:
+      - node
+      - dist/index.js
+      - gateway
+      - run
+      - --bind
+      - ${CLAWDBOT_GATEWAY_BIND:-lan}
+      - --port
+      - "18789"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '${CPU_LIMIT:-2}'
+          memory: ${MEMORY_LIMIT:-4G}
+        reservations:
+          cpus: '${CPU_RESERVATION:-0.5}'
+          memory: ${MEMORY_RESERVATION:-512M}
+    
+    # Network mode
+    network_mode: ${NETWORK_MODE:-bridge}
+    
+    # Labels for Coolify
+    labels:
+      - "coolify.managed=true"
+      - "coolify.name=moltbot"
+      - "coolify.type=service"
+      - "coolify.http.enabled=true"
+      - "coolify.http.port=18789"
+      - "coolify.http.path=/"
+      - "coolify.health_check=/health"
+
+volumes:
+  moltbot_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CLAWDBOT_DATA_DIR:-./data}
+
+networks:
+  default:
+    name: ${NETWORK_NAME:-moltbot-network}
