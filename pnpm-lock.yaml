@@ -6,8 +6,10 @@ settings:
 
 overrides:
   '@sinclair/typebox': 0.34.47
-  hono: 4.11.4
-  tar: 7.5.4
+  hono: 4.11.7
+  tar: 7.5.7
+  request>form-data: 2.5.5
+  request>qs: 6.14.1
 
 importers:
 
@@ -21,7 +23,7 @@ importers:
         version: 3.975.0
       '@buape/carbon':
         specifier: 0.14.0
-        version: 0.14.0(hono@4.11.4)
+        version: 0.14.0(hono@4.11.7)
       '@clack/prompts':
         specifier: ^0.11.0
         version: 0.11.0
@@ -110,8 +112,8 @@ importers:
         specifier: ^1.39.3
         version: 1.39.3
       hono:
-        specifier: 4.11.4
-        version: 4.11.4
+        specifier: 4.11.7
+        version: 4.11.7
       jiti:
         specifier: ^2.6.1
         version: 2.6.1
@@ -155,8 +157,8 @@ importers:
         specifier: 0.1.7-alpha.2
         version: 0.1.7-alpha.2
       tar:
-        specifier: 7.5.4
-        version: 7.5.4
+        specifier: 7.5.7
+        version: 7.5.7
       tslog:
         specifier: ^4.10.2
         version: 4.10.2
@@ -383,12 +385,12 @@ importers:
       '@microsoft/agents-hosting-extensions-teams':
         specifier: ^1.2.2
         version: 1.2.2
-      moltbot:
-        specifier: workspace:*
-        version: link:../..
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      moltbot:
+        specifier: workspace:*
+        version: link:../..
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -1090,7 +1092,7 @@ packages:
     resolution: {integrity: sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
-      hono: 4.11.4
+      hono: 4.11.7
 
   '@huggingface/jinja@0.5.3':
     resolution: {integrity: sha512-asqfZ4GQS0hD876Uw4qiUb7Tr/V5Q+JZuo2L+BtdrD4U40QU58nIRq3ZSgAzJgT874VLjhGVacaYfrdpXtEvtA==}
@@ -3214,11 +3216,6 @@ packages:
   class-variance-authority@0.7.1:
     resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
 
-  clawdbot@2026.1.24-3:
-    resolution: {integrity: sha512-zt9BzhWXduq8ZZR4rfzQDurQWAgmijTTyPZCQGrn5ew6wCEwhxxEr2/NHG7IlCwcfRsKymsY4se9KMhoNz0JtQ==}
-    engines: {node: '>=22.12.0'}
-    hasBin: true
-
   cli-cursor@5.0.0:
     resolution: {integrity: sha512-aCj4O5wKyszjMmDT4tZj93kxyydN/K5zPWSCe6/0AV/AA1pqe5ZBIw0a2ZfPQV7lL5/yb5HsUreJ6UFAF1tEQw==}
     engines: {node: '>=18'}
@@ -3632,10 +3629,6 @@ packages:
   forever-agent@0.6.1:
     resolution: {integrity: sha512-j0KLYPhm6zeac4lz3oJ3o65qvgQCcPubiyotZrXqEaG4hNagNYO8qdlUrX5vwqv9ohqeT/Z3j6+yW067yWWdUw==}
 
-  form-data@2.3.3:
-    resolution: {integrity: sha512-1lLKB2Mu3aGP1Q/2eCOx0fNbRMe7XdwktwOruhfqqd0rIJWwN4Dh+E3hrPSlDCXnSR7UtZ1N38rVXm+6+MEhJQ==}
-    engines: {node: '>= 0.12'}
-
   form-data@2.5.5:
     resolution: {integrity: sha512-jqdObeR2rxZZbPSGL+3VckHMYtu+f9//KXBsVny6JSX/pa38Fy+bGjuG8eW/H6USNQWhLi8Num++cU2yOCNz4A==}
     engines: {node: '>= 0.12'}
@@ -3793,8 +3786,8 @@ packages:
     resolution: {integrity: sha512-Xwwo44whKBVCYoliBQwaPvtd/2tYFkRQtXDWj1nackaV2JPXx3L0+Jvd8/qCJ2p+ML0/XVkJ2q+Mr+UVdpJK5w==}
     engines: {node: '>=12.0.0'}
 
-  hono@4.11.4:
-    resolution: {integrity: sha512-U7tt8JsyrxSRKspfhtLET79pU8K+tInj5QZXs1jSugO1Vq5dFj3kmZsRldo29mTBfcjDRVRXrEZ6LS63Cog9ZA==}
+  hono@4.11.7:
+    resolution: {integrity: sha512-l7qMiNee7t82bH3SeyUCt9UF15EVmaBvsppY2zQtrbIhl/yzBTny+YUxsVjSjQ6gaqaeVtZmGocom8TzBlA4Yw==}
     engines: {node: '>=16.9.0'}
 
   hookified@1.15.0:
@@ -4809,10 +4802,6 @@ packages:
     resolution: {integrity: sha512-4EK3+xJl8Ts67nLYNwqw/dsFVnCf+qR7RgXSK9jEEm9unao3njwMDdmsdvoKBKHzxd7tCYz5e5M+SnMjdtXGQQ==}
     engines: {node: '>=0.6'}
 
-  qs@6.5.3:
-    resolution: {integrity: sha512-qxXIEh4pCGfHICj1mAJQ2/2XVZkjCDTcEgfoSQxc/fYivUZxTkk7L3bDBJSoNrEzXI17oUO5Dp07ktqE5KzczA==}
-    engines: {node: '>=0.6'}
-
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
@@ -5190,8 +5179,8 @@ packages:
   tailwindcss@4.1.17:
     resolution: {integrity: sha512-j9Ee2YjuQqYT9bbRTfTZht9W/ytp5H+jJpZKiYdP/bpnXARAuELt9ofP0lPnmHjbga7SNQIxdTAXCmtKVYjN+Q==}
 
-  tar@7.5.4:
-    resolution: {integrity: sha512-AN04xbWGrSTDmVwlI4/GTlIIwMFk/XEv7uL8aa57zuvRy6s4hdBed+lVq2fAZ89XDa7Us3ANXcE3Tvqvja1kTA==}
+  tar@7.5.7:
+    resolution: {integrity: sha512-fov56fJiRuThVFXD6o6/Q354S7pnWMJIVlDBYijsTNx6jKSE4pvrDTs6lUnmGvNyfJwFQQwWy3owKz1ucIhveQ==}
     engines: {node: '>=18'}
 
   thenify-all@1.6.0:
@@ -6433,14 +6422,14 @@ snapshots:
 
   '@borewit/text-codec@0.2.1': {}
 
-  '@buape/carbon@0.14.0(hono@4.11.4)':
+  '@buape/carbon@0.14.0(hono@4.11.7)':
     dependencies:
       '@types/node': 25.0.10
       discord-api-types: 0.38.37
     optionalDependencies:
       '@cloudflare/workers-types': 4.20260120.0
       '@discordjs/voice': 0.19.0
-      '@hono/node-server': 1.19.9(hono@4.11.4)
+      '@hono/node-server': 1.19.9(hono@4.11.7)
       '@types/bun': 1.3.6
       '@types/ws': 8.18.1
       ws: 8.19.0
@@ -6696,9 +6685,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@hono/node-server@1.19.9(hono@4.11.4)':
+  '@hono/node-server@1.19.9(hono@4.11.7)':
     dependencies:
-      hono: 4.11.4
+      hono: 4.11.7
     optional: true
 
   '@huggingface/jinja@0.5.3':
@@ -9098,84 +9087,6 @@ snapshots:
     dependencies:
       clsx: 2.1.1
 
-  clawdbot@2026.1.24-3(@types/express@5.0.6)(audio-decode@2.2.3)(devtools-protocol@0.0.1561482)(typescript@5.9.3):
-    dependencies:
-      '@agentclientprotocol/sdk': 0.13.1(zod@4.3.6)
-      '@aws-sdk/client-bedrock': 3.975.0
-      '@buape/carbon': 0.14.0(hono@4.11.4)
-      '@clack/prompts': 0.11.0
-      '@grammyjs/runner': 2.0.3(grammy@1.39.3)
-      '@grammyjs/transformer-throttler': 1.2.1(grammy@1.39.3)
-      '@homebridge/ciao': 1.3.4
-      '@line/bot-sdk': 10.6.0
-      '@lydell/node-pty': 1.2.0-beta.3
-      '@mariozechner/pi-agent-core': 0.49.3(ws@8.19.0)(zod@4.3.6)
-      '@mariozechner/pi-ai': 0.49.3(ws@8.19.0)(zod@4.3.6)
-      '@mariozechner/pi-coding-agent': 0.49.3(ws@8.19.0)(zod@4.3.6)
-      '@mariozechner/pi-tui': 0.49.3
-      '@mozilla/readability': 0.6.0
-      '@sinclair/typebox': 0.34.47
-      '@slack/bolt': 4.6.0(@types/express@5.0.6)
-      '@slack/web-api': 7.13.0
-      '@whiskeysockets/baileys': 7.0.0-rc.9(audio-decode@2.2.3)(sharp@0.34.5)
-      ajv: 8.17.1
-      body-parser: 2.2.2
-      chalk: 5.6.2
-      chokidar: 5.0.0
-      chromium-bidi: 13.0.1(devtools-protocol@0.0.1561482)
-      cli-highlight: 2.1.11
-      commander: 14.0.2
-      croner: 9.1.0
-      detect-libc: 2.1.2
-      discord-api-types: 0.38.37
-      dotenv: 17.2.3
-      express: 5.2.1
-      file-type: 21.3.0
-      grammy: 1.39.3
-      hono: 4.11.4
-      jiti: 2.6.1
-      json5: 2.2.3
-      jszip: 3.10.1
-      linkedom: 0.18.12
-      long: 5.3.2
-      markdown-it: 14.1.0
-      node-edge-tts: 1.2.9
-      osc-progress: 0.3.0
-      pdfjs-dist: 5.4.530
-      playwright-core: 1.58.0
-      proper-lockfile: 4.1.2
-      qrcode-terminal: 0.12.0
-      sharp: 0.34.5
-      sqlite-vec: 0.1.7-alpha.2
-      tar: 7.5.4
-      tslog: 4.10.2
-      undici: 7.19.0
-      ws: 8.19.0
-      yaml: 2.8.2
-      zod: 4.3.6
-    optionalDependencies:
-      '@napi-rs/canvas': 0.1.88
-      node-llama-cpp: 3.15.0(typescript@5.9.3)
-    transitivePeerDependencies:
-      - '@discordjs/opus'
-      - '@modelcontextprotocol/sdk'
-      - '@types/express'
-      - audio-decode
-      - aws-crt
-      - bufferutil
-      - canvas
-      - debug
-      - devtools-protocol
-      - encoding
-      - ffmpeg-static
-      - jimp
-      - link-preview-js
-      - node-opus
-      - opusscript
-      - supports-color
-      - typescript
-      - utf-8-validate
-
   cli-cursor@5.0.0:
     dependencies:
       restore-cursor: 5.1.0
@@ -9217,7 +9128,7 @@ snapshots:
       npmlog: 6.0.2
       rc: 1.2.8
       semver: 7.7.3
-      tar: 7.5.4
+      tar: 7.5.7
       url-join: 4.0.1
       which: 2.0.2
       yargs: 17.7.2
@@ -9650,12 +9561,6 @@ snapshots:
 
   forever-agent@0.6.1: {}
 
-  form-data@2.3.3:
-    dependencies:
-      asynckit: 0.4.0
-      combined-stream: 1.0.8
-      mime-types: 2.1.35
-
   form-data@2.5.5:
     dependencies:
       asynckit: 0.4.0
@@ -9851,7 +9756,7 @@ snapshots:
 
   highlight.js@11.11.1: {}
 
-  hono@4.11.4: {}
+  hono@4.11.7: {}
 
   hookified@1.15.0: {}
 
@@ -10930,8 +10835,6 @@ snapshots:
     dependencies:
       side-channel: 1.1.0
 
-  qs@6.5.3: {}
-
   queue-microtask@1.2.3: {}
 
   quick-format-unescaped@4.0.4: {}
@@ -11035,7 +10938,7 @@ snapshots:
       combined-stream: 1.0.8
       extend: 3.0.2
       forever-agent: 0.6.1
-      form-data: 2.3.3
+      form-data: 2.5.5
       har-validator: 5.1.5
       http-signature: 1.2.0
       is-typedarray: 1.0.0
@@ -11044,7 +10947,7 @@ snapshots:
       mime-types: 2.1.35
       oauth-sign: 0.9.0
       performance-now: 2.1.0
-      qs: 6.5.3
+      qs: 6.14.1
       safe-buffer: 5.2.1
       tough-cookie: 2.5.0
       tunnel-agent: 0.6.0
@@ -11470,7 +11373,7 @@ snapshots:
 
   tailwindcss@4.1.17: {}
 
-  tar@7.5.4:
+  tar@7.5.7:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0

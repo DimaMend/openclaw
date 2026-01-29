@@ -14,6 +14,7 @@ import type { createSubsystemLogger } from "../logging/subsystem.js";
 import { handleSlackHttpRequest } from "../slack/http/index.js";
 import { resolveAgentAvatar } from "../agents/identity-avatar.js";
 import { handleControlUiAvatarRequest, handleControlUiHttpRequest } from "./control-ui.js";
+import { safeEqual } from "../security/safe-equal.js";
 import {
   extractHookToken,
   getHookChannelError,
@@ -77,7 +78,7 @@ export function createHooksRequestHandler(
     }
 
     const { token, fromQuery } = extractHookToken(req, url);
-    if (!token || token !== hooksConfig.token) {
+    if (!token || !hooksConfig.token || !safeEqual(token, hooksConfig.token)) {
       res.statusCode = 401;
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       res.end("Unauthorized");

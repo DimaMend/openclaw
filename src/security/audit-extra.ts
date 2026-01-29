@@ -9,6 +9,7 @@ import { resolveNativeSkillsEnabled } from "../config/commands.js";
 import { resolveOAuthDir } from "../config/paths.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { safeEqual } from "./safe-equal.js";
 import type { AgentToolsConfig } from "../config/types.tools.js";
 import { resolveBrowserConfig } from "../browser/config.js";
 import { isToolAllowedByPolicies } from "../agents/pi-tools.policy.js";
@@ -181,7 +182,7 @@ export function collectHooksHardeningFindings(cfg: MoltbotConfig): SecurityAudit
     gatewayAuth.token.trim()
       ? gatewayAuth.token.trim()
       : null;
-  if (token && gatewayToken && token === gatewayToken) {
+  if (token && gatewayToken && safeEqual(token, gatewayToken)) {
     findings.push({
       checkId: "hooks.token_reuse_gateway_token",
       severity: "warn",
