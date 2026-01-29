@@ -65,14 +65,21 @@ These files were configured by a more capable AI (Claude Opus 4.5). **DO NOT edi
 
 ### Option B: Staging Workflow (For Routine Config Changes)
 1. DO NOT modify the protected file directly
-2. Write your proposed version to `~/clawd/.staging/<filename>.proposed`
+2. **Read the current file first** (CRITICAL - prevents stale staging)
+3. Write your proposed version to `~/clawd/.staging/<filename>.proposed`
    - Example: `~/clawd/.staging/moltbot.json.proposed`
-3. Tell Simon: "I've staged changes to `<file>`. Review with:"
+4. Tell Simon: "I've staged changes to `<file>`. Review with:"
    ```
    diff ~/.clawdbot/<file> ~/clawd/.staging/<file>.proposed
    ```
-4. Simon reviews the diff and runs: `~/clawd/scripts/apply-staging.sh <filename>`
-5. Script shows diff, asks confirmation, applies changes, creates backup
+5. Simon reviews the diff and runs: `~/clawd/scripts/apply-staging.sh <filename>`
+6. Script shows diff, asks confirmation, applies changes, creates backup
+
+**CRITICAL: Stale Staging Prevention**
+- Always read the target file IMMEDIATELY before creating the staged version
+- If the target file changes after you stage (e.g., Cursor makes edits), your staged file becomes STALE
+- The `review-staging.sh` script detects stale files by comparing modification times
+- If flagged as stale, regenerate your staged file from the current target
 
 **When to use which:**
 - **Evolution Queue:** Architectural changes, security-sensitive, needs discussion

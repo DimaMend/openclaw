@@ -327,11 +327,33 @@ For JSON config files, Supervisor provides structured analysis:
 | `security.rateLimit` | `100` | May increase API costs |
 ```
 
+### Stale Staging Detection (CRITICAL)
+
+The `review-staging.sh` script automatically detects stale staged files:
+
+```
+STALE DETECTION LOGIC:
+─────────────────────
+If target_file.mtime > staged_file.mtime:
+  → Staged file is STALE
+  → May cause regressions if applied
+  → Recommend regeneration
+```
+
+**When this happens:**
+1. Liam reads target file at time T1
+2. Liam creates staged file at time T2
+3. Cursor (or someone else) modifies target file at time T3
+4. Liam's staged file is now based on outdated T1 content
+5. Applying it would overwrite T3 changes → REGRESSION
+
+**Supervisor response:** If stale staging detected, flag in report and recommend Liam regenerate.
+
 ### Automatic Review Cron
 
 **Schedule:** Every 30 minutes (checks for pending staged files)
 **Action:** If staged files exist without review, generate review document
-**Alert:** Notify Simon that staged changes await review
+**Alert:** Notify Simon that staged changes await review, including stale warnings
 
 ### Manual Review Invocation
 

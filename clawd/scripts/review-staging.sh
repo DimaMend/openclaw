@@ -6,6 +6,10 @@
 #
 # This script helps the Supervisor agent by providing a structured
 # diff that's easier to analyze than raw diff output.
+#
+# GUARDRAIL: Detects stale staged files by comparing modification times.
+# If the target file was modified AFTER the staged file was created,
+# the staged file is likely based on outdated content and should be regenerated.
 
 set -e
 
@@ -14,6 +18,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
 NC='\033[0m'
 
 # Function to get target path for a file
@@ -41,6 +46,21 @@ review_file() {
         return 1
     fi
     
+    # GUARDRAIL: Check for stale staged file
+    local staged_mtime=$(stat -c %Y "$staged" 2>/dev/null || stat -f %m "$staged")
+    local target_mtime=$(stat -c %Y "$target" 2>/dev/null || stat -f %m "$target")
+    local stale_warning=""
+    
+    if [ "$target_mtime" -gt "$staged_mtime" ]; then
+        stale_warning="YES"
+        echo -e "${MAGENTA}⚠️  STALE WARNING: Target file was modified AFTER staged file was created!${NC}"
+        echo -e "${MAGENTA}   Target modified: $(date -d @$target_mtime 2>/dev/null || date -r $target_mtime)${NC}"
+        echo -e "${MAGENTA}   Staged created:  $(date -d @$staged_mtime 2>/dev/null || date -r $staged_mtime)${NC}"
+        echo -e "${MAGENTA}   The staged file may be based on OUTDATED content.${NC}"
+        echo -e "${MAGENTA}   Recommendation: Regenerate the staged file from current target.${NC}"
+        echo ""
+    fi
+    
     # Generate review document
     cat > "$review_file" << EOF
 # Staging Review: $filename
@@ -49,6 +69,15 @@ review_file() {
 **Date:** $(date -u +"%Y-%m-%d %H:%M UTC")
 **Original:** $target
 **Proposed:** $staged
+$([ -n "$stale_warning" ] && echo "
+## ⚠️ STALE WARNING
+
+**The target file was modified AFTER the staged file was created.**
+
+This means the staged file may be based on OUTDATED content and could cause regressions if applied.
+
+**Recommendation:** Ask Liam to regenerate the staged file based on the current target, or manually verify that the staged changes don't conflict with recent modifications.
+")
 
 ## Diff Summary
 
