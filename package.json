@@ -276,5 +276,10 @@
       "apps/macos/.build/**",
       "dist/Clawdbot.app/**"
     ]
-  }
+  },
+  "trustedDependencies": [
+    "@whiskeysockets/baileys",
+    "node-llama-cpp",
+    "protobufjs"
+  ]
 }
