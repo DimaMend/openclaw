@@ -232,3 +232,107 @@ export function resolveToolProfilePolicy(profile?: string): ToolProfilePolicy | 
     deny: resolved.deny ? [...resolved.deny] : undefined,
   };
 }
+
+/**
+ * SECURITY: Sensitive tools that should require explicit opt-in
+ * or elevated permissions when used from certain contexts.
+ */
+export const SENSITIVE_TOOLS = new Set([
+  "exec",
+  "process",
+  "gateway",
+  "message",
+  "nodes",
+]);
+
+/**
+ * SECURITY: High-privilege tools that should be carefully considered.
+ */
+export const HIGH_PRIVILEGE_TOOLS = new Set([
+  "gateway", // Can restart, update, modify config
+  "exec", // Can run arbitrary commands
+  "process", // Can manage background processes
+  "nodes", // Can interact with paired devices
+]);
+
+export type PolicyValidationWarning = {
+  code: string;
+  message: string;
+  severity: "info" | "warn" | "critical";
+};
+
+/**
+ * SECURITY: Validate a tool policy for potential security issues.
+ * Returns warnings about dangerous configurations.
+ */
+export function validateToolPolicy(policy: ToolPolicyLike | undefined): PolicyValidationWarning[] {
+  const warnings: PolicyValidationWarning[] = [];
+
+  if (!policy) return warnings;
+
+  // Check for wildcards in allow list
+  if (policy.allow) {
+    const hasWildcard = policy.allow.some(
+      (entry) => entry === "*" || entry === "all" || entry === "group:all"
+    );
+    if (hasWildcard) {
+      warnings.push({
+        code: "policy.wildcard_allow",
+        message:
+          "Policy contains wildcard allow entry. This grants access to all tools, including sensitive ones.",
+        severity: "warn",
+      });
+    }
+
+    // Check if high-privilege tools are explicitly allowed without corresponding deny
+    const expanded = expandToolGroups(policy.allow);
+    const deniedSet = new Set(expandToolGroups(policy.deny));
+
+    for (const tool of HIGH_PRIVILEGE_TOOLS) {
+      if (expanded.includes(tool) && !deniedSet.has(tool)) {
+        warnings.push({
+          code: `policy.high_privilege.${tool}`,
+          message: `High-privilege tool '${tool}' is allowed. Ensure this is intentional.`,
+          severity: "info",
+        });
+      }
+    }
+  }
+
+  // Check for empty deny list when allow is broad
+  if (policy.allow && (!policy.deny || policy.deny.length === 0)) {
+    const expanded = expandToolGroups(policy.allow);
+    if (expanded.length > 10) {
+      warnings.push({
+        code: "policy.broad_allow_no_deny",
+        message:
+          "Broad allow list with no explicit deny list. Consider denying sensitive tools explicitly.",
+        severity: "info",
+      });
+    }
+  }
+
+  return warnings;
+}
+
+/**
+ * SECURITY: Check if a tool requires elevated permissions for the current context.
+ */
+export function toolRequiresElevation(
+  toolName: string,
+  context: { sandboxed?: boolean; channel?: string }
+): boolean {
+  const normalized = normalizeToolName(toolName);
+
+  // In sandbox mode, exec on gateway host requires elevation
+  if (context.sandboxed && normalized === "exec") {
+    return true;
+  }
+
+  // Gateway tool always requires careful consideration
+  if (normalized === "gateway") {
+    return true;
+  }
+
+  return false;
+}
