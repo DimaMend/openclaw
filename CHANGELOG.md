@@ -2,6 +2,19 @@
 
 Docs: https://docs.molt.bot
 
+## Unreleased
+
+### New Features
+- **Rate Limiting & Circuit Breakers**: Add proactive rate limiting system with circuit breaker pattern to prevent rate limit errors across all messaging channels. Includes sliding window + token bucket algorithms, per-channel/account isolation, comprehensive metrics, and automatic integration with Discord and Telegram. See [Rate Limiting docs](https://docs.molt.bot/gateway/rate-limiting) for configuration and monitoring.
+
+### Changes
+- Infra: add enhanced rate limiting system with sliding window and token bucket algorithms (`src/infra/rate-limiter.ts`).
+- Infra: add circuit breaker pattern for fault tolerance and graceful degradation.
+- Discord: add rate-limited API wrapper with per-guild/DM/global limits (`src/discord/rate-limited-api.ts`).
+- Telegram: add rate-limited API wrapper with per-chat/DM/global limits (`src/telegram/rate-limited-api.ts`).
+- Infra: add global rate limiter registry for centralized management and metrics aggregation.
+- Docs: add comprehensive rate limiting documentation with configuration examples, monitoring guide, and troubleshooting (`docs/gateway/rate-limiting.md`).
+
 ## 2026.1.27-beta.1
 Status: beta.
 
