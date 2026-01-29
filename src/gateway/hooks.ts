@@ -61,10 +61,10 @@ export function extractHookToken(req: IncomingMessage, url: URL): HookTokenResul
   return { token: undefined, fromQuery: false };
 }
 
-export async function readJsonBody(
+export async function readRawBody(
   req: IncomingMessage,
   maxBytes: number,
-): Promise<{ ok: true; value: unknown } | { ok: false; error: string }> {
+): Promise<{ ok: true; value: Buffer } | { ok: false; error: string }> {
   return await new Promise((resolve) => {
     let done = false;
     let total = 0;
@@ -83,17 +83,7 @@ export async function readJsonBody(
     req.on("end", () => {
       if (done) return;
       done = true;
-      const raw = Buffer.concat(chunks).toString("utf-8").trim();
-      if (!raw) {
-        resolve({ ok: true, value: {} });
-        return;
-      }
-      try {
-        const parsed = JSON.parse(raw) as unknown;
-        resolve({ ok: true, value: parsed });
-      } catch (err) {
-        resolve({ ok: false, error: String(err) });
-      }
+      resolve({ ok: true, value: Buffer.concat(chunks) });
     });
     req.on("error", (err) => {
       if (done) return;
@@ -101,6 +91,30 @@ export async function readJsonBody(
       resolve({ ok: false, error: String(err) });
     });
   });
+}
+
+export function parseJsonBody(
+  raw: Buffer,
+): { ok: true; value: unknown } | { ok: false; error: string } {
+  const str = raw.toString("utf-8").trim();
+  if (!str) {
+    return { ok: true, value: {} };
+  }
+  try {
+    const parsed = JSON.parse(str) as unknown;
+    return { ok: true, value: parsed };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+export async function readJsonBody(
+  req: IncomingMessage,
+  maxBytes: number,
+): Promise<{ ok: true; value: unknown } | { ok: false; error: string }> {
+  const raw = await readRawBody(req, maxBytes);
+  if (!raw.ok) return raw;
+  return parseJsonBody(raw.value);
 }
 
 export function normalizeHookHeaders(req: IncomingMessage) {

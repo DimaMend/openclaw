@@ -22,11 +22,13 @@ import {
   normalizeAgentPayload,
   normalizeHookHeaders,
   normalizeWakePayload,
+  parseJsonBody,
   readJsonBody,
+  readRawBody,
   resolveHookChannel,
   resolveHookDeliver,
 } from "./hooks.js";
-import { applyHookMappings } from "./hooks-mapping.js";
+import { applyHookMappings, findMappingVerifyAuth } from "./hooks-mapping.js";
 import { handleOpenAiHttpRequest } from "./openai-http.js";
 import { handleOpenResponsesHttpRequest } from "./openresponses-http.js";
 import { handleToolsInvokeHttpRequest } from "./tools-invoke-http.js";
@@ -76,21 +78,6 @@ export function createHooksRequestHandler(
       return false;
     }
 
-    const { token, fromQuery } = extractHookToken(req, url);
-    if (!token || token !== hooksConfig.token) {
-      res.statusCode = 401;
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      res.end("Unauthorized");
-      return true;
-    }
-    if (fromQuery) {
-      logHooks.warn(
-        "Hook token provided via query parameter is deprecated for security reasons. " +
-          "Tokens in URLs appear in logs, browser history, and referrer headers. " +
-          "Use Authorization: Bearer <token> or X-Moltbot-Token header instead.",
-      );
-    }
-
     if (req.method !== "POST") {
       res.statusCode = 405;
       res.setHeader("Allow", "POST");
@@ -107,15 +94,74 @@ export function createHooksRequestHandler(
       return true;
     }
 
-    const body = await readJsonBody(req, hooksConfig.maxBodyBytes);
-    if (!body.ok) {
-      const status = body.error === "payload too large" ? 413 : 400;
-      sendJson(res, status, { ok: false, error: body.error });
-      return true;
-    }
-
-    const payload = typeof body.value === "object" && body.value !== null ? body.value : {};
     const headers = normalizeHookHeaders(req);
+
+    // Check for custom auth via mapping transform's verifyAuth export
+    // This runs BEFORE normal token auth to support external webhook signatures (e.g., GitHub HMAC)
+    let payload: Record<string, unknown> = {};
+    const customVerifyAuth = await findMappingVerifyAuth(hooksConfig.mappings, subPath);
+
+    if (customVerifyAuth) {
+      // Read raw body for signature verification
+      const rawBody = await readRawBody(req, hooksConfig.maxBodyBytes);
+      if (!rawBody.ok) {
+        const status = rawBody.error === "payload too large" ? 413 : 400;
+        sendJson(res, status, { ok: false, error: rawBody.error });
+        return true;
+      }
+
+      // Call custom verifyAuth function
+      const authCtx = { headers, url, path: subPath, rawBody: rawBody.value };
+      let authResult: boolean;
+      try {
+        authResult = await customVerifyAuth(authCtx);
+      } catch (err) {
+        logHooks.warn(`custom verifyAuth failed: ${String(err)}`);
+        res.statusCode = 401;
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.end("Unauthorized");
+        return true;
+      }
+
+      if (!authResult) {
+        res.statusCode = 401;
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.end("Unauthorized");
+        return true;
+      }
+
+      // Auth passed, parse the JSON body from the raw buffer
+      const parsed = parseJsonBody(rawBody.value);
+      if (!parsed.ok) {
+        sendJson(res, 400, { ok: false, error: parsed.error });
+        return true;
+      }
+      payload = typeof parsed.value === "object" && parsed.value !== null ? parsed.value : {};
+    } else {
+      // Normal token auth
+      const { token, fromQuery } = extractHookToken(req, url);
+      if (!token || token !== hooksConfig.token) {
+        res.statusCode = 401;
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.end("Unauthorized");
+        return true;
+      }
+      if (fromQuery) {
+        logHooks.warn(
+          "Hook token provided via query parameter is deprecated for security reasons. " +
+            "Tokens in URLs appear in logs, browser history, and referrer headers. " +
+            "Use Authorization: Bearer <token> or X-Moltbot-Token header instead.",
+        );
+      }
+
+      const body = await readJsonBody(req, hooksConfig.maxBodyBytes);
+      if (!body.ok) {
+        const status = body.error === "payload too large" ? 413 : 400;
+        sendJson(res, status, { ok: false, error: body.error });
+        return true;
+      }
+      payload = typeof body.value === "object" && body.value !== null ? body.value : {};
+    }
 
     if (subPath === "wake") {
       const normalized = normalizeWakePayload(payload as Record<string, unknown>);
