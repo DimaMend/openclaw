@@ -14,6 +14,7 @@ export type AuthChoiceGroupId =
   | "copilot"
   | "openrouter"
   | "ai-gateway"
+  | "cloudflare-ai-gateway"
   | "moonshot"
   | "zai"
   | "xiaomi"
