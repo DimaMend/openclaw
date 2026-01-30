@@ -8,6 +8,7 @@ import { runInteractiveOnboarding } from "./onboard-interactive.js";
 import { runNonInteractiveOnboarding } from "./onboard-non-interactive.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { OnboardOptions } from "./onboard-types.js";
+import { t } from "../wizard/i18n.js";
 
 export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv = defaultRuntime) {
   assertSupportedRuntime(runtime);
@@ -21,18 +22,18 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
   if (opts.nonInteractive && (authChoice === "claude-cli" || authChoice === "codex-cli")) {
     runtime.error(
       [
-        `Auth choice "${authChoice}" is deprecated.`,
-        'Use "--auth-choice token" (Anthropic setup-token) or "--auth-choice openai-codex".',
+        t("onboarding.cli.deprecatedAuth").replace("{authChoice}", authChoice),
+        t("onboarding.cli.useAuthToken"),
       ].join("\n"),
     );
     runtime.exit(1);
     return;
   }
   if (authChoice === "claude-cli") {
-    runtime.log('Auth choice "claude-cli" is deprecated; using setup-token flow instead.');
+    runtime.log(t("onboarding.cli.authTokenFlow"));
   }
   if (authChoice === "codex-cli") {
-    runtime.log('Auth choice "codex-cli" is deprecated; using OpenAI Codex OAuth instead.');
+    runtime.log(t("onboarding.cli.authCodexFlow"));
   }
   const flow = opts.flow === "manual" ? ("advanced" as const) : opts.flow;
   const normalizedOpts =
@@ -43,8 +44,7 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
   if (normalizedOpts.nonInteractive && normalizedOpts.acceptRisk !== true) {
     runtime.error(
       [
-        "Non-interactive onboarding requires explicit risk acknowledgement.",
-        "Read: https://docs.openclaw.ai/security",
+        t("onboarding.cli.nonInteractiveRisk"),
         `Re-run with: ${formatCliCommand("openclaw onboard --non-interactive --accept-risk ...")}`,
       ].join("\n"),
     );
@@ -61,13 +61,7 @@ export async function onboardCommand(opts: OnboardOptions, runtime: RuntimeEnv =
   }
 
   if (process.platform === "win32") {
-    runtime.log(
-      [
-        "Windows detected.",
-        "WSL2 is strongly recommended; native Windows is untested and more problematic.",
-        "Guide: https://docs.openclaw.ai/windows",
-      ].join("\n"),
-    );
+    runtime.log(t("onboarding.cli.winWarning"));
   }
 
   if (normalizedOpts.nonInteractive) {

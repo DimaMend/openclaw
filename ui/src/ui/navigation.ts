@@ -2,13 +2,13 @@ import type { IconName } from "./icons.js";
 import { t } from "./i18n.js";
 
 export const TAB_GROUPS = [
-  { label: "Chat", tabs: ["chat"] },
+  { label: t("sidebarGroups.chat"), tabs: ["chat"] },
   {
-    label: "Control",
+    label: t("sidebarGroups.control"),
     tabs: ["overview", "channels", "instances", "sessions", "cron"],
   },
-  { label: "Agent", tabs: ["skills", "nodes"] },
-  { label: "Settings", tabs: ["config", "debug", "logs"] },
+  { label: t("sidebarGroups.agent"), tabs: ["skills", "nodes"] },
+  { label: t("sidebarGroups.settings"), tabs: ["config", "debug", "logs"] },
 ] as const;
 
 export type Tab =
@@ -155,7 +155,7 @@ export function titleForTab(tab: Tab) {
     case "logs":
       return t("tabs.logs");
     default:
-      return "Control";
+      return t("sidebarGroups.control");
   }
 }
 

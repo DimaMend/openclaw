@@ -1,4 +1,5 @@
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 
 import { formatAgo } from "../format";
 import type { SignalStatus } from "../types";
@@ -15,50 +16,50 @@ export function renderSignalCard(params: {
   return html`
     <div class="card">
       <div class="card-title">Signal</div>
-      <div class="card-sub">signal-cli status and channel configuration.</div>
+      <div class="card-sub">${t("channels.signal.subtitle")}</div>
       ${accountCountLabel}
 
       <div class="status-list" style="margin-top: 16px;">
         <div>
-          <span class="label">Configured</span>
-          <span>${signal?.configured ? "Yes" : "No"}</span>
+          <span class="label">${t("channels.configured")}</span>
+          <span>${signal?.configured ? t("channels.yes") : t("channels.no")}</span>
         </div>
         <div>
-          <span class="label">Running</span>
-          <span>${signal?.running ? "Yes" : "No"}</span>
+          <span class="label">${t("channels.running")}</span>
+          <span>${signal?.running ? t("channels.yes") : t("channels.no")}</span>
         </div>
         <div>
-          <span class="label">Base URL</span>
-          <span>${signal?.baseUrl ?? "n/a"}</span>
+          <span class="label">${t("channels.signal.baseUrl")}</span>
+          <span>${signal?.baseUrl ?? t("common.na")}</span>
         </div>
         <div>
-          <span class="label">Last start</span>
-          <span>${signal?.lastStartAt ? formatAgo(signal.lastStartAt) : "n/a"}</span>
+          <span class="label">${t("channels.lastStart")}</span>
+          <span>${signal?.lastStartAt ? formatAgo(signal.lastStartAt) : t("common.na")}</span>
         </div>
         <div>
-          <span class="label">Last probe</span>
-          <span>${signal?.lastProbeAt ? formatAgo(signal.lastProbeAt) : "n/a"}</span>
+          <span class="label">${t("channels.lastProbe")}</span>
+          <span>${signal?.lastProbeAt ? formatAgo(signal.lastProbeAt) : t("common.na")}</span>
         </div>
       </div>
 
       ${signal?.lastError
-        ? html`<div class="callout danger" style="margin-top: 12px;">
+      ? html`<div class="callout danger" style="margin-top: 12px;">
             ${signal.lastError}
           </div>`
-        : nothing}
+      : nothing}
 
       ${signal?.probe
-        ? html`<div class="callout" style="margin-top: 12px;">
-            Probe ${signal.probe.ok ? "ok" : "failed"} ·
+      ? html`<div class="callout" style="margin-top: 12px;">
+            ${t("channels.probe")} ${signal.probe.ok ? t("channels.probeOk") : t("channels.probeFailed")} ·
             ${signal.probe.status ?? ""} ${signal.probe.error ?? ""}
           </div>`
-        : nothing}
+      : nothing}
 
       ${renderChannelConfigSection({ channelId: "signal", props })}
 
       <div class="row" style="margin-top: 12px;">
         <button class="btn" @click=${() => props.onRefresh(true)}>
-          Probe
+          ${t("channels.probe")}
         </button>
       </div>
     </div>

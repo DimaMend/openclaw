@@ -6,7 +6,7 @@ const locales: Record<string, any> = {
     "zh-CN": zhCN,
 };
 
-export function t(key: string): string {
+export function t(key: string, params?: Record<string, any>): string {
     const keys = key.split(".");
     let value: any = locales[currentLocale];
 
@@ -18,5 +18,11 @@ export function t(key: string): string {
         }
     }
 
-    return typeof value === "string" ? value : key;
+    let str = typeof value === "string" ? value : key;
+    if (params) {
+        for (const [k, v] of Object.entries(params)) {
+            str = str.replace(`{${k}}`, String(v));
+        }
+    }
+    return str;
 }

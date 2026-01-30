@@ -1,4 +1,5 @@
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 import type { ConfigUiHints } from "../types";
 import { icons } from "../icons";
 import {
@@ -54,37 +55,15 @@ const sectionIcons = {
   default: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`,
 };
 
-// Section metadata
-export const SECTION_META: Record<string, { label: string; description: string }> = {
-  env: { label: "Environment Variables", description: "Environment variables passed to the gateway process" },
-  update: { label: "Updates", description: "Auto-update settings and release channel" },
-  agents: { label: "Agents", description: "Agent configurations, models, and identities" },
-  auth: { label: "Authentication", description: "API keys and authentication profiles" },
-  channels: { label: "Channels", description: "Messaging channels (Telegram, Discord, Slack, etc.)" },
-  messages: { label: "Messages", description: "Message handling and routing settings" },
-  commands: { label: "Commands", description: "Custom slash commands" },
-  hooks: { label: "Hooks", description: "Webhooks and event hooks" },
-  skills: { label: "Skills", description: "Skill packs and capabilities" },
-  tools: { label: "Tools", description: "Tool configurations (browser, search, etc.)" },
-  gateway: { label: "Gateway", description: "Gateway server settings (port, auth, binding)" },
-  wizard: { label: "Setup Wizard", description: "Setup wizard state and history" },
-  // Additional sections
-  meta: { label: "Metadata", description: "Gateway metadata and version information" },
-  logging: { label: "Logging", description: "Log levels and output configuration" },
-  browser: { label: "Browser", description: "Browser automation settings" },
-  ui: { label: "UI", description: "User interface preferences" },
-  models: { label: "Models", description: "AI model configurations and providers" },
-  bindings: { label: "Bindings", description: "Key bindings and shortcuts" },
-  broadcast: { label: "Broadcast", description: "Broadcast and notification settings" },
-  audio: { label: "Audio", description: "Audio input/output settings" },
-  session: { label: "Session", description: "Session management and persistence" },
-  cron: { label: "Cron", description: "Scheduled tasks and automation" },
-  web: { label: "Web", description: "Web server and API settings" },
-  discovery: { label: "Discovery", description: "Service discovery and networking" },
-  canvasHost: { label: "Canvas Host", description: "Canvas rendering and display" },
-  talk: { label: "Talk", description: "Voice and speech settings" },
-  plugins: { label: "Plugins", description: "Plugin management and extensions" },
-};
+// Section metadata is now retrieved via getSectionMeta(key) to support localization
+function getSectionMeta(key: string): { label: string; description: string } {
+  return (
+    (t(`configSections.${key}` as any) as any) ?? {
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      description: "",
+    }
+  );
+}
 
 function getSectionIcon(key: string) {
   return sectionIcons[key as keyof typeof sectionIcons] ?? sectionIcons.default;
@@ -93,7 +72,7 @@ function getSectionIcon(key: string) {
 function matchesSearch(key: string, schema: JsonSchema, query: string): boolean {
   if (!query) return true;
   const q = query.toLowerCase();
-  const meta = SECTION_META[key];
+  const meta = getSectionMeta(key);
 
   // Check key name
   if (key.toLowerCase().includes(q)) return true;
@@ -142,12 +121,12 @@ function schemaMatches(schema: JsonSchema, query: string): boolean {
 
 export function renderConfigForm(props: ConfigFormProps) {
   if (!props.schema) {
-    return html`<div class="muted">Schema unavailable.</div>`;
+    return html`<div class="muted">${t("configErrors.schemaUnavailable")}</div>`;
   }
   const schema = props.schema;
   const value = props.value ?? {};
   if (schemaType(schema) !== "object" || !schema.properties) {
-    return html`<div class="callout danger">Unsupported schema. Use Raw.</div>`;
+    return html`<div class="callout danger">${t("configErrors.unsupportedSchema")}</div>`;
   }
   const unsupported = new Set(props.unsupportedPaths ?? []);
   const properties = schema.properties;
@@ -193,8 +172,8 @@ export function renderConfigForm(props: ConfigFormProps) {
         <div class="config-empty__icon">${icons.search}</div>
         <div class="config-empty__text">
           ${searchQuery
-            ? `No settings match "${searchQuery}"`
-            : "No settings in this section"}
+        ? t("configErrors.noMatch", { query: searchQuery })
+        : t("configErrors.emptySection")}
         </div>
       </div>
     `;
@@ -203,75 +182,72 @@ export function renderConfigForm(props: ConfigFormProps) {
   return html`
     <div class="config-form config-form--modern">
       ${subsectionContext
-        ? (() => {
-            const { sectionKey, subsectionKey, schema: node } = subsectionContext;
-            const hint = hintForPath([sectionKey, subsectionKey], props.uiHints);
-            const label = hint?.label ?? node.title ?? humanize(subsectionKey);
-            const description = hint?.help ?? node.description ?? "";
-            const sectionValue = (value as Record<string, unknown>)[sectionKey];
-            const scopedValue =
-              sectionValue && typeof sectionValue === "object"
-                ? (sectionValue as Record<string, unknown>)[subsectionKey]
-                : undefined;
-            const id = `config-section-${sectionKey}-${subsectionKey}`;
-            return html`
+      ? (() => {
+        const { sectionKey, subsectionKey, schema: node } = subsectionContext;
+        const hint = hintForPath([sectionKey, subsectionKey], props.uiHints);
+        const label = hint?.label ?? node.title ?? humanize(subsectionKey);
+        const description = hint?.help ?? node.description ?? "";
+        const sectionValue = (value as Record<string, unknown>)[sectionKey];
+        const scopedValue =
+          sectionValue && typeof sectionValue === "object"
+            ? (sectionValue as Record<string, unknown>)[subsectionKey]
+            : undefined;
+        const id = `config-section-${sectionKey}-${subsectionKey}`;
+        return html`
               <section class="config-section-card" id=${id}>
                 <div class="config-section-card__header">
                   <span class="config-section-card__icon">${getSectionIcon(sectionKey)}</span>
                   <div class="config-section-card__titles">
                     <h3 class="config-section-card__title">${label}</h3>
                     ${description
-                      ? html`<p class="config-section-card__desc">${description}</p>`
-                      : nothing}
+            ? html`<p class="config-section-card__desc">${description}</p>`
+            : nothing}
                   </div>
                 </div>
                 <div class="config-section-card__content">
                   ${renderNode({
-                    schema: node,
-                    value: scopedValue,
-                    path: [sectionKey, subsectionKey],
-                    hints: props.uiHints,
-                    unsupported,
-                    disabled: props.disabled ?? false,
-                    showLabel: false,
-                    onPatch: props.onPatch,
-                  })}
+              schema: node,
+              value: scopedValue,
+              path: [sectionKey, subsectionKey],
+              hints: props.uiHints,
+              unsupported,
+              disabled: props.disabled ?? false,
+              showLabel: false,
+              onPatch: props.onPatch,
+            })}
                 </div>
               </section>
             `;
-          })()
-        : filteredEntries.map(([key, node]) => {
-            const meta = SECTION_META[key] ?? {
-              label: key.charAt(0).toUpperCase() + key.slice(1),
-              description: node.description ?? "",
-            };
+      })()
+      : filteredEntries.map(([key, node]) => {
+        const meta = getSectionMeta(key);
 
-            return html`
+        return html`
               <section class="config-section-card" id="config-section-${key}">
                 <div class="config-section-card__header">
                   <span class="config-section-card__icon">${getSectionIcon(key)}</span>
                   <div class="config-section-card__titles">
                     <h3 class="config-section-card__title">${meta.label}</h3>
                     ${meta.description
-                      ? html`<p class="config-section-card__desc">${meta.description}</p>`
-                      : nothing}
+            ? html`<p class="config-section-card__desc">${meta.description}</p>`
+            : nothing}
                   </div>
                 </div>
                 <div class="config-section-card__content">
                   ${renderNode({
-                    schema: node,
-                    value: (value as Record<string, unknown>)[key],
-                    path: [key],
-                    hints: props.uiHints,
-                    unsupported,
-                    disabled: props.disabled ?? false,
-                    showLabel: false,
-                    onPatch: props.onPatch,
-                  })}
+              schema: node,
+              value: (value as Record<string, unknown>)[key],
+              path: [key],
+              hints: props.uiHints,
+              unsupported,
+              disabled: props.disabled ?? false,
+              showLabel: false,
+              onPatch: props.onPatch,
+            })}
                 </div>
               </section>
             `;
-          })}
+      })}
     </div>
   `;
 }

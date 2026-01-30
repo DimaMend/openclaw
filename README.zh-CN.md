@@ -56,7 +56,7 @@
 
 ### 环境要求
 - **Node.js** ≥ 22
-- **操作系统**: macOS, Linux, Windows (via WSL2)
+- **操作系统**: macOS, Linux, Windows (推荐 WSL2)
 
 ### 安装
 

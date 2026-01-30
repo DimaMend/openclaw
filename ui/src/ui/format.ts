@@ -1,26 +1,27 @@
+import { t } from "./i18n.js";
 import { stripReasoningTagsFromText } from "../../../src/shared/text/reasoning-tags.js";
 
 export function formatMs(ms?: number | null): string {
-  if (!ms && ms !== 0) return "n/a";
+  if (!ms && ms !== 0) return t("format.na");
   return new Date(ms).toLocaleString();
 }
 
 export function formatAgo(ms?: number | null): string {
-  if (!ms && ms !== 0) return "n/a";
+  if (!ms && ms !== 0) return t("format.na");
   const diff = Date.now() - ms;
-  if (diff < 0) return "just now";
+  if (diff < 0) return t("format.justNow");
   const sec = Math.round(diff / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return t("format.agoSec", { count: sec });
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t("format.agoMin", { count: min });
   const hr = Math.round(min / 60);
-  if (hr < 48) return `${hr}h ago`;
+  if (hr < 48) return t("format.agoHr", { count: hr });
   const day = Math.round(hr / 24);
-  return `${day}d ago`;
+  return t("format.agoDay", { count: day });
 }
 
 export function formatDurationMs(ms?: number | null): string {
-  if (!ms && ms !== 0) return "n/a";
+  if (!ms && ms !== 0) return t("format.na");
   if (ms < 1000) return `${ms}ms`;
   const sec = Math.round(ms / 1000);
   if (sec < 60) return `${sec}s`;
@@ -33,7 +34,7 @@ export function formatDurationMs(ms?: number | null): string {
 }
 
 export function formatList(values?: Array<string | null | undefined>): string {
-  if (!values || values.length === 0) return "none";
+  if (!values || values.length === 0) return t("format.none");
   return values.filter((v): v is string => Boolean(v && v.trim())).join(", ");
 }
 

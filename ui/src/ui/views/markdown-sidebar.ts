@@ -1,4 +1,5 @@
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
 import { icons } from "../icons";
@@ -15,22 +16,22 @@ export function renderMarkdownSidebar(props: MarkdownSidebarProps) {
   return html`
     <div class="sidebar-panel">
       <div class="sidebar-header">
-        <div class="sidebar-title">Tool Output</div>
-        <button @click=${props.onClose} class="btn" title="Close sidebar">
+        <div class="sidebar-title">${t("markdownSidebar.title")}</div>
+        <button @click=${props.onClose} class="btn" title=${t("markdownSidebar.close")}>
           ${icons.x}
         </button>
       </div>
       <div class="sidebar-content">
         ${props.error
-          ? html`
+      ? html`
               <div class="callout danger">${props.error}</div>
               <button @click=${props.onViewRawText} class="btn" style="margin-top: 12px;">
-                View Raw Text
+                ${t("markdownSidebar.viewRaw")}
               </button>
             `
-          : props.content
-            ? html`<div class="sidebar-markdown">${unsafeHTML(toSanitizedMarkdownHtml(props.content))}</div>`
-            : html`<div class="muted">No content available</div>`}
+      : props.content
+        ? html`<div class="sidebar-markdown">${unsafeHTML(toSanitizedMarkdownHtml(props.content))}</div>`
+        : html`<div class="muted">${t("markdownSidebar.noContent")}</div>`}
       </div>
     </div>
   `;
