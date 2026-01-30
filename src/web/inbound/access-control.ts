@@ -10,6 +10,8 @@ import { resolveWhatsAppAccount } from "../accounts.js";
 
 export type InboundAccessControlResult = {
   allowed: boolean;
+  /** When true the message should be stored as pending group context even though it did not pass sender allowlists. */
+  storeForContext: boolean;
   shouldMarkRead: boolean;
   isSelfChat: boolean;
   resolvedAccountId: string;
@@ -84,6 +86,7 @@ export async function checkInboundAccessControl(params: {
     logVerbose("Blocked group message (groupPolicy: disabled)");
     return {
       allowed: false,
+      storeForContext: false,
       shouldMarkRead: false,
       isSelfChat,
       resolvedAccountId: account.accountId,
@@ -94,6 +97,7 @@ export async function checkInboundAccessControl(params: {
       logVerbose("Blocked group message (groupPolicy: allowlist, no groupAllowFrom)");
       return {
         allowed: false,
+        storeForContext: false,
         shouldMarkRead: false,
         isSelfChat,
         resolvedAccountId: account.accountId,
@@ -104,10 +108,11 @@ export async function checkInboundAccessControl(params: {
       (params.senderE164 != null && normalizedGroupAllowFrom.includes(params.senderE164));
     if (!senderAllowed) {
       logVerbose(
-        `Blocked group message from ${params.senderE164 ?? "unknown sender"} (groupPolicy: allowlist)`,
+        `Group message from ${params.senderE164 ?? "unknown sender"} not in groupAllowFrom (storing for context)`,
       );
       return {
         allowed: false,
+        storeForContext: true,
         shouldMarkRead: false,
         isSelfChat,
         resolvedAccountId: account.accountId,
@@ -121,6 +126,7 @@ export async function checkInboundAccessControl(params: {
       logVerbose("Skipping outbound DM (fromMe); no pairing reply needed.");
       return {
         allowed: false,
+        storeForContext: false,
         shouldMarkRead: false,
         isSelfChat,
         resolvedAccountId: account.accountId,
@@ -130,6 +136,7 @@ export async function checkInboundAccessControl(params: {
       logVerbose("Blocked dm (dmPolicy: disabled)");
       return {
         allowed: false,
+        storeForContext: false,
         shouldMarkRead: false,
         isSelfChat,
         resolvedAccountId: account.accountId,
@@ -172,6 +179,7 @@ export async function checkInboundAccessControl(params: {
         }
         return {
           allowed: false,
+          storeForContext: false,
           shouldMarkRead: false,
           isSelfChat,
           resolvedAccountId: account.accountId,
@@ -182,6 +190,7 @@ export async function checkInboundAccessControl(params: {
 
   return {
     allowed: true,
+    storeForContext: false,
     shouldMarkRead: true,
     isSelfChat,
     resolvedAccountId: account.accountId,
