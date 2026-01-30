@@ -164,7 +164,9 @@ export function resolveDefaultConfigCandidates(
     const resolved = resolveUserPath(openclawStateDir);
     return [
       path.join(resolved, CONFIG_FILENAME),
-      ...LEGACY_CONFIG_FILENAMES.map((name) => path.join(resolved, name)),
+      path.join(resolved, "clawdbot.json"),
+      path.join(resolved, "moltbot.json"),
+      path.join(resolved, "moldbot.json"),
     ];
   }
 

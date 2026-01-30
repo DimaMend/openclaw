@@ -55,11 +55,12 @@ describe("state + config path candidates", () => {
   it("returns legacy filenames when state dir override is set", () => {
     const env = { OPENCLAW_STATE_DIR: "/custom/state" } as NodeJS.ProcessEnv;
     const candidates = resolveDefaultConfigCandidates(env, () => "/home/test");
+    const base = path.resolve("/custom/state");
     expect(candidates).toEqual([
-      "/custom/state/openclaw.json",
-      "/custom/state/clawdbot.json",
-      "/custom/state/moltbot.json",
-      "/custom/state/moldbot.json",
+      path.join(base, "openclaw.json"),
+      path.join(base, "clawdbot.json"),
+      path.join(base, "moltbot.json"),
+      path.join(base, "moldbot.json"),
     ]);
   });
 
