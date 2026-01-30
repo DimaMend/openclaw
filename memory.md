@@ -18,15 +18,19 @@
 
 ## Infrastructure Rebranding (Jan 2026)
 
-The open source project is transitioning from **Clawdbot → Moltbot**:
-- Primary domain: **molt.bot** (clawdbot.dev redirects)
-- CLI: `moltbot` (was `clawdbot`)
-- Package: `@moltbot/*` on npm
-- Gateway config: `~/.moltbot/` (was `~/.clawdbot/`)
-- Hub: Still ClawdHub for now (clawdhub.com → will become molthub or similar)
+The open source project rebranded twice: **Clawdbot → Moltbot → OpenClaw** 🦞
+
+**Current (OpenClaw) - as of Jan 30, 2026:**
+- Primary domain: **openclaw.ai**
+- Docs: **docs.openclaw.ai**
+- CLI: `openclaw` (was `moltbot`, was `clawdbot`)
+- Package: `@openclaw/*` on npm
+- Gateway config: `~/.openclaw/` 
+- macOS app: `OpenClaw.app`
+- iOS bundle: `ai.openclaw.ios`
 - My local workspace: still `~/clawd` (unchanged)
 
-Note: Some references to "clawdbot" remain in older code/docs during transition.
+Note: Some references to "moltbot" or "clawdbot" may remain in older code/configs during transition.
 
 ## Cron Job Best Practices
 
