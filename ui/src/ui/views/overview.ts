@@ -53,7 +53,7 @@ export function renderOverview(props: OverviewProps) {
           <div style="margin-top: 6px;">
             <a
               class="session-link"
-              href="https://docs.molt.bot/web/dashboard"
+              href="https://docs.openclaw.ai/web/dashboard"
               target="_blank"
               rel="noreferrer"
               title=${t(locale, "overview.auth.docsTitle")}
@@ -69,7 +69,7 @@ export function renderOverview(props: OverviewProps) {
         <div style="margin-top: 6px;">
           <a
             class="session-link"
-            href="https://docs.molt.bot/web/dashboard"
+            href="https://docs.openclaw.ai/web/dashboard"
             target="_blank"
             rel="noreferrer"
             title=${t(locale, "overview.auth.docsTitle")}
@@ -96,7 +96,7 @@ export function renderOverview(props: OverviewProps) {
         <div style="margin-top: 6px;">
           <a
             class="session-link"
-            href="https://docs.molt.bot/gateway/tailscale"
+            href="https://docs.openclaw.ai/gateway/tailscale"
             target="_blank"
             rel="noreferrer"
             title=${t(locale, "overview.insecure.docsTailscaleTitle")}
@@ -105,7 +105,7 @@ export function renderOverview(props: OverviewProps) {
           <span class="muted"> · </span>
           <a
             class="session-link"
-            href="https://docs.molt.bot/web/control-ui#insecure-http"
+            href="https://docs.openclaw.ai/web/control-ui#insecure-http"
             target="_blank"
             rel="noreferrer"
             title=${t(locale, "overview.insecure.docsHttpTitle")}
