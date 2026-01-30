@@ -1,9 +1,9 @@
 /**
  * Remote Pairing Approval API
- * 
+ *
  * Provides a secure HTTP endpoint for approving device pairings from remote
  * administrators without CLI access. Designed for cloud deployments like Railway.
- * 
+ *
  * Security:
  * - Authorization header only (secret never in JSON body)
  * - HMAC-SHA256 signature verification
@@ -15,7 +15,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { DevicePairingPendingRequest } from "../infra/device-pairing.js";
 import { approveDevicePairing, listDevicePairing } from "../infra/device-pairing.js";
-import type { MoltbotConfig } from "../config/types.clawdbot.js";
+import type { OpenClawConfig } from "../config/types.js";
 
 /**
  * Configuration for remote pairing approval
@@ -42,17 +42,19 @@ export type RemotePairingResolvedConfig = {
 };
 
 /**
- * Resolve remote pairing config from MoltbotConfig
+ * Resolve remote pairing config from OpenClawConfig
  */
-export function resolveRemotePairingConfig(cfg: MoltbotConfig): RemotePairingResolvedConfig | null {
+export function resolveRemotePairingConfig(
+  cfg: OpenClawConfig,
+): RemotePairingResolvedConfig | null {
   const raw = cfg.gateway?.remotePairing;
   if (raw?.enabled !== true) return null;
-  
+
   const secret = raw.adminSecret?.trim();
   if (!secret) {
     throw new Error("gateway.remotePairing.enabled requires gateway.remotePairing.adminSecret");
   }
-  
+
   return {
     enabled: true,
     adminSecret: secret,
@@ -81,11 +83,11 @@ export function verifySignature(
   const expected = createHmac("sha256", secret).update(payload).digest("hex");
   const sigBuffer = Buffer.from(signature, "hex");
   const expBuffer = Buffer.from(expected, "hex");
-  
+
   if (sigBuffer.length !== expBuffer.length || sigBuffer.length === 0) {
     return { ok: false, error: "invalid signature format" };
   }
-  
+
   try {
     if (!timingSafeEqual(sigBuffer, expBuffer)) {
       return { ok: false, error: "signature mismatch" };
@@ -93,7 +95,7 @@ export function verifySignature(
   } catch {
     return { ok: false, error: "signature comparison failed" };
   }
-  
+
   return { ok: true };
 }
 
@@ -115,16 +117,16 @@ export function parseAuthHeader(auth: string | undefined): string | null {
 class NonceCache {
   private cache: Set<string>;
   private maxSize: number;
-  
+
   constructor(maxSize: number) {
     this.cache = new Set();
     this.maxSize = maxSize;
   }
-  
+
   checkAndAdd(nonce: string): boolean {
     if (this.cache.has(nonce)) return false;
     this.cache.add(nonce);
-    
+
     // Evict oldest if over size limit
     if (this.cache.size > this.maxSize) {
       const iterator = this.cache.values();
@@ -136,7 +138,7 @@ class NonceCache {
     }
     return true;
   }
-  
+
   clear(): void {
     this.cache.clear();
   }
@@ -174,24 +176,24 @@ export async function handleRemotePairingRequest(
   config: RemotePairingResolvedConfig,
 ): Promise<boolean> {
   const url = new URL(req.url ?? "/", "http://localhost");
-  
+
   // Check if this is a pairing path
   if (!url.pathname.endsWith("/approve") && !url.pathname.endsWith("/pending")) {
     return false;
   }
-  
+
   // Extract auth (required for all pairing endpoints)
   const auth = parseAuthHeader(req.headers.authorization);
   if (!auth) {
     sendError(res, 401, "missing authorization header");
     return true;
   }
-  
+
   if (auth !== config.adminSecret) {
     sendError(res, 401, "invalid authorization");
     return true;
   }
-  
+
   // Handle GET /pending - list pending requests
   if (req.method === "GET" && url.pathname.endsWith("/pending")) {
     const list = await listDevicePairing();
@@ -211,30 +213,34 @@ export async function handleRemotePairingRequest(
     });
     return true;
   }
-  
+
   // Only handle POST to /approve
   if (req.method !== "POST") {
     sendError(res, 405, "method not allowed");
     return true;
   }
-  
+
   // Extract signature headers
   const timestamp = req.headers["x-moltbot-timestamp"];
   const nonce = req.headers["x-moltbot-nonce"];
   const signature = req.headers["x-moltbot-signature"];
-  
+
   if (!timestamp || !nonce || !signature) {
-    sendError(res, 400, "missing required headers: X-Moltbot-Timestamp, X-Moltbot-Nonce, X-Moltbot-Signature");
+    sendError(
+      res,
+      400,
+      "missing required headers: X-Moltbot-Timestamp, X-Moltbot-Nonce, X-Moltbot-Signature",
+    );
     return true;
   }
-  
+
   // Verify timestamp
   const ts = parseInt(String(timestamp), 10);
   if (isNaN(ts) || Math.abs(Date.now() / 1000 - ts) > config.timestampValiditySeconds) {
     sendError(res, 401, "timestamp expired or invalid");
     return true;
   }
-  
+
   // Check nonce (replay protection)
   const nonceKey = `${auth.slice(0, 8)}:${nonce}`;
   const cache = getNonceCache(config.nonceCacheSize);
@@ -242,14 +248,14 @@ export async function handleRemotePairingRequest(
     sendError(res, 401, "nonce already used (replay attack?)");
     return true;
   }
-  
+
   // Read body
   const body = await readRequestBody(req);
   if (!body.ok) {
     sendError(res, 400, body.error || "invalid request body");
     return true;
   }
-  
+
   // Verify signature: timestamp.nonce.body
   const signedPayload = `${ts}.${nonce}.${JSON.stringify(body.value)}`;
   const sigResult = verifySignature(signedPayload, String(signature), config.adminSecret);
@@ -257,28 +263,28 @@ export async function handleRemotePairingRequest(
     sendError(res, 401, sigResult.error || "signature verification failed");
     return true;
   }
-  
+
   // Extract requestId
   const requestId = (body.value as Record<string, unknown>)?.requestId;
   if (typeof requestId !== "string" || !requestId.trim()) {
     sendError(res, 400, "missing or invalid requestId");
     return true;
   }
-  
+
   // Approve pairing
   const approved = await approveDevicePairing(requestId.trim());
   if (!approved) {
     sendError(res, 404, "pairing request not found");
     return true;
   }
-  
+
   sendJson(res, 200, {
     ok: true,
     deviceId: approved.device.deviceId,
     role: approved.device.role,
     scopes: approved.device.scopes,
   });
-  
+
   return true;
 }
 
@@ -299,7 +305,7 @@ async function readRequestBody(
     const chunks: Buffer[] = [];
     let total = 0;
     const maxBytes = 1024; // Small limit for pairing requests
-    
+
     req.on("data", (chunk: Buffer) => {
       total += chunk.length;
       if (total > maxBytes) {
@@ -309,7 +315,7 @@ async function readRequestBody(
       }
       chunks.push(chunk);
     });
-    
+
     req.on("end", () => {
       try {
         const raw = Buffer.concat(chunks).toString("utf-8").trim();
@@ -323,7 +329,7 @@ async function readRequestBody(
         resolve({ ok: false, error: String(err) });
       }
     });
-    
+
     req.on("error", (err: Error) => {
       resolve({ ok: false, error: String(err) });
     });
