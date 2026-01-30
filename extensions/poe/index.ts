@@ -1,4 +1,4 @@
-import { emptyPluginConfigSchema } from "clawdbot/plugin-sdk";
+import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
 
 const POE_BASE_URL = "https://api.poe.com/v1";
 const ENV_VAR = "POE_API_KEY";
