@@ -1,55 +1,63 @@
-# Moltbot + KakaoTalk Channel - Cloud Deployment
-# This Dockerfile creates a production-ready Moltbot instance with KakaoTalk integration
+# Moltbot + KakaoTalk LawCall - Production Deployment
+# Optimized for minimal size and fast startup
 
-FROM node:22-alpine AS base
+FROM node:22-alpine AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files first for layer caching
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY extensions/kakao/package.json extensions/kakao/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile --prod=false
+# Install all dependencies (including dev for build)
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
-# Build the project
+# Build TypeScript
 RUN pnpm build
 
-# Production stage
+# Prune dev dependencies
+RUN pnpm prune --prod
+
+# Production stage - minimal image
 FROM node:22-alpine AS production
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Add non-root user for security
+RUN addgroup -g 1001 -S moltbot && \
+    adduser -S moltbot -u 1001
 
 WORKDIR /app
 
-# Copy built artifacts
-COPY --from=base /app/dist ./dist
-COPY --from=base /app/package.json ./
-COPY --from=base /app/pnpm-lock.yaml ./
-COPY --from=base /app/node_modules ./node_modules
-COPY --from=base /app/extensions/kakao ./extensions/kakao
+# Copy only necessary files
+COPY --from=builder --chown=moltbot:moltbot /app/dist ./dist
+COPY --from=builder --chown=moltbot:moltbot /app/package.json ./
+COPY --from=builder --chown=moltbot:moltbot /app/node_modules ./node_modules
+COPY --from=builder --chown=moltbot:moltbot /app/extensions/kakao ./extensions/kakao
 
-# Create data directory for persistent storage
-RUN mkdir -p /data/.moltbot
+# Create data directory
+RUN mkdir -p /data/.moltbot && chown -R moltbot:moltbot /data
 
-# Set environment variables
-ENV NODE_ENV=production
-ENV MOLTBOT_DATA_DIR=/data/.moltbot
-ENV MOLTBOT_CONFIG_DIR=/data/.moltbot
+# Switch to non-root user
+USER moltbot
 
-# Expose webhook port (default for Kakao)
+# Environment defaults
+ENV NODE_ENV=production \
+    MOLTBOT_DATA_DIR=/data/.moltbot \
+    MOLTBOT_CONFIG_DIR=/data/.moltbot \
+    KAKAO_WEBHOOK_PORT=8788 \
+    KAKAO_WEBHOOK_PATH=/kakao/webhook
+
+# Expose webhook port
 EXPOSE 8788
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8788/health || exit 1
 
-# Run gateway with Kakao channel
+# Start gateway
 CMD ["node", "dist/cli/index.js", "gateway", "run", "--bind", "0.0.0.0", "--port", "8788"]

@@ -1,6 +1,9 @@
 import type {
   KakaoApiResponse,
+  KakaoBasicCard,
+  KakaoButton,
   KakaoFriendTalkMessage,
+  KakaoQuickReply,
   KakaoSimpleText,
   KakaoSkillResponse,
   ResolvedKakaoAccount,
@@ -64,6 +67,89 @@ export class KakaoApiClient {
       version: "2.0",
       template: { outputs },
     };
+  }
+
+  /**
+   * Build a Skill Response with webLink buttons
+   * Used for LawCall consultation links
+   */
+  buildSkillResponseWithLinks(
+    text: string,
+    buttons: Array<{ label: string; url: string }>,
+    quickReplies?: Array<{ label: string; messageText: string }>,
+  ): KakaoSkillResponse {
+    const response: KakaoSkillResponse = {
+      version: "2.0",
+      template: {
+        outputs: [
+          {
+            basicCard: {
+              description: this.truncateText(text, 400),
+              buttons: buttons.slice(0, 3).map((btn): KakaoButton => ({
+                label: btn.label.slice(0, 14),
+                action: "webLink",
+                webLinkUrl: btn.url,
+              })),
+            },
+          } as KakaoBasicCard,
+        ],
+      },
+    };
+
+    if (quickReplies && quickReplies.length > 0) {
+      response.template.quickReplies = quickReplies.slice(0, 10).map((qr): KakaoQuickReply => ({
+        label: qr.label.slice(0, 14),
+        action: "message",
+        messageText: qr.messageText,
+      }));
+    }
+
+    return response;
+  }
+
+  /**
+   * Build a Skill Response with text and webLink buttons
+   * Shows text first, then card with buttons
+   */
+  buildTextWithButtonResponse(
+    text: string,
+    buttonLabel: string,
+    buttonUrl: string,
+    quickReplies?: string[],
+  ): KakaoSkillResponse {
+    const response: KakaoSkillResponse = {
+      version: "2.0",
+      template: {
+        outputs: [
+          {
+            simpleText: {
+              text: this.truncateText(text),
+            },
+          } as KakaoSimpleText,
+          {
+            basicCard: {
+              buttons: [
+                {
+                  label: buttonLabel.slice(0, 14),
+                  action: "webLink",
+                  webLinkUrl: buttonUrl,
+                },
+              ],
+            },
+          } as KakaoBasicCard,
+        ],
+      },
+    };
+
+    if (quickReplies && quickReplies.length > 0) {
+      response.template.quickReplies = quickReplies.slice(0, 10).map((label): KakaoQuickReply => ({
+        label: label.slice(0, 14),
+        action: "message",
+        messageText: label,
+      }));
+    }
+
+    return response;
   }
 
   /**

@@ -3,6 +3,7 @@ import { kakaoPlugin } from "./src/channel.js";
 import { setKakaoRuntime } from "./src/runtime.js";
 import { createKakaoApiClient } from "./src/api-client.js";
 import { resolveKakaoAccount } from "./src/config.js";
+import { generateSystemPrompt, parseLawCallRoutes } from "./src/lawcall-router.js";
 
 /**
  * KakaoTalk Channel Plugin for Moltbot
@@ -148,6 +149,41 @@ const kakaoPluginDefinition = {
             } else {
               console.log(`❌ Failed: ${result.error}`);
             }
+          });
+
+        // LawCall routes status
+        kakaoCmd
+          .command("lawcall")
+          .description("Show LawCall routing configuration")
+          .action(async () => {
+            const routes = parseLawCallRoutes();
+
+            console.log(`\n⚖️  LawCall Routing Configuration`);
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`Service:    ${routes.serviceName}`);
+            console.log(`Lawyer:     ${routes.lawyerName}`);
+            console.log(`Default:    ${routes.defaultUrl}`);
+            console.log(`\n📋 Categories:`);
+
+            for (const cat of routes.categories) {
+              console.log(`\n  ${cat.name}:`);
+              console.log(`    URL: ${cat.url}`);
+              console.log(`    Keywords: ${cat.keywords.slice(0, 5).join(", ")}${cat.keywords.length > 5 ? "..." : ""}`);
+            }
+
+            console.log(`\n💡 환경변수로 설정:`);
+            console.log(`  LAWCALL_ROUTES='${JSON.stringify(Object.fromEntries(routes.categories.map(c => [c.name, c.url])))}'`);
+            console.log(`  LAWCALL_LAWYER_NAME='${routes.lawyerName}'`);
+            console.log(`  LAWCALL_SERVICE_NAME='${routes.serviceName}'`);
+          });
+
+        // Generate system prompt
+        kakaoCmd
+          .command("prompt")
+          .description("Generate system prompt for LawCall agent")
+          .action(async () => {
+            const prompt = generateSystemPrompt();
+            console.log(prompt);
           });
 
         // Setup wizard
