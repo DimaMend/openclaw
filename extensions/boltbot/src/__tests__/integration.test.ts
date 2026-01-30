@@ -25,7 +25,7 @@ describe("boltbot plugin integration", () => {
     const mod = await import("../../index.js");
     const plugin = mod.default;
     expect(plugin.id).toBe("boltbot");
-    expect(plugin.name).toBe("Boltbot — Trustless Hosting");
+    expect(plugin.name).toBe("Boltbot — Audit Dashboard");
   });
 
   it("register wires provider, hook, and routes", async () => {
@@ -46,20 +46,20 @@ describe("boltbot plugin integration", () => {
 
     plugin.register(mockApi as any);
 
-    // REQ-1: Provider registered
-    expect(registered.providers).toHaveLength(1);
-    expect(registered.providers[0].id).toBe("eigencloud");
+    // No provider in audit-only mode
+    expect(registered.providers).toHaveLength(0);
 
-    // REQ-3: after_tool_call hook registered
+    // after_tool_call hook registered
     expect(registered.hooks).toHaveLength(1);
     expect(registered.hooks[0].name).toBe("after_tool_call");
 
-    // REQ-7: 3 HTTP routes registered
-    expect(registered.routes).toHaveLength(3);
+    // 4 HTTP routes: receipts, receipt, stats, dashboard
+    expect(registered.routes).toHaveLength(4);
     const paths = registered.routes.map((r: any) => r.path);
     expect(paths).toContain("/boltbot/receipts");
     expect(paths).toContain("/boltbot/receipt");
     expect(paths).toContain("/boltbot/stats");
+    expect(paths).toContain("/boltbot/dashboard");
   });
 
   it("after_tool_call hook fires and creates receipt", async () => {
