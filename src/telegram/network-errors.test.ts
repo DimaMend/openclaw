@@ -31,6 +31,11 @@ describe("isRecoverableTelegramNetworkError", () => {
     expect(isRecoverableTelegramNetworkError(new Error("Undici: socket failure"))).toBe(true);
   });
 
+  it("detects grammY getUpdates timeout format", () => {
+    const err = new Error("Request to 'getUpdates' timed out after 500 seconds");
+    expect(isRecoverableTelegramNetworkError(err)).toBe(true);
+  });
+
   it("skips message matches for send context", () => {
     const err = new TypeError("fetch failed");
     expect(isRecoverableTelegramNetworkError(err, { context: "send" })).toBe(false);
