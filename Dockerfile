@@ -44,7 +44,8 @@ ENV NODE_ENV=production
 
 # Create persistent data directory for Railway deployments
 # This directory MUST be mounted as a volume in Railway to persist pairing state
-RUN mkdir -p /data/.clawdbot && chown -R node:node /data
+# Note: /data is mounted at runtime; chown happens in entrypoint.sh (railway mounts with root ownership)
+RUN mkdir -p /data/.clawdbot
 
 # Run the gateway server via entrypoint script
 # The script maps Railway's PORT env var to OPENCLAW_GATEWAY_PORT
