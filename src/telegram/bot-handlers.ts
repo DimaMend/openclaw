@@ -459,18 +459,18 @@ export const registerTelegramHandlers = ({
       if (!msg) return;
       if (shouldSkipUpdate(ctx)) return;
 
-      // Skip messages that will be handled by native command handlers.
-      // Native commands (e.g., /new) are processed by bot.command() handlers first.
-      // Without this check, the regular message handler would also process them,
-      // potentially causing duplicate session resets or targeting wrong agents.
-      if (nativeEnabled && nativeCommandNames && nativeCommandNames.size > 0) {
+      // Skip native commands in DMs - they will be handled by bot.command() handlers.
+      // In groups, we still process commands through the message handler for access
+      // control validation (groupPolicy, groupAllowFrom, etc.) before reply generation.
+      const isGroup = msg.chat.type === "group" || msg.chat.type === "supergroup";
+      if (!isGroup && nativeEnabled && nativeCommandNames && nativeCommandNames.size > 0) {
         const rawText = (msg.text ?? "").trim();
         if (rawText.startsWith("/")) {
           const commandMatch = rawText.match(/^\/([a-z0-9_]+)/i);
           if (commandMatch) {
             const commandName = commandMatch[1].toLowerCase();
             if (nativeCommandNames.has(commandName)) {
-              logVerbose(`telegram: skipping native command /${commandName} in regular handler`);
+              logVerbose(`telegram: skipping native command /${commandName} in DM handler`);
               return;
             }
           }
@@ -478,7 +478,6 @@ export const registerTelegramHandlers = ({
       }
 
       const chatId = msg.chat.id;
-      const isGroup = msg.chat.type === "group" || msg.chat.type === "supergroup";
       const messageThreadId = (msg as { message_thread_id?: number }).message_thread_id;
       const isForum = (msg.chat as { is_forum?: boolean }).is_forum === true;
       const resolvedThreadId = resolveTelegramForumThreadId({

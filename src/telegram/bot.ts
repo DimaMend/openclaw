@@ -256,8 +256,7 @@ export function createTelegramBot(opts: TelegramBotOptions) {
   // This prevents native commands (e.g., /new) from being processed twice.
   const nativeCommandNames = new Set<string>();
   if (nativeEnabled) {
-    const skillCommands =
-      nativeSkillsEnabled ? listSkillCommandsForAgents({ cfg }) : [];
+    const skillCommands = nativeSkillsEnabled ? listSkillCommandsForAgents({ cfg }) : [];
     const nativeSpecs = listNativeCommandSpecsForConfig(cfg, {
       skillCommands,
       provider: "telegram",
