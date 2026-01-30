@@ -3,7 +3,6 @@ import {
   getChatChannelMeta,
   listChatChannels,
   normalizeChatChannelId,
-  CHAT_CHANNEL_ORDER,
 } from "../channels/registry.js";
 import {
   getChannelPluginCatalogEntry,
