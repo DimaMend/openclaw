@@ -1010,6 +1010,7 @@
           "channels/msteams",
           "channels/line",
           "channels/matrix",
+          "channels/kakao",
           "channels/zalo",
           "channels/zalouser",
           "broadcast-groups",
