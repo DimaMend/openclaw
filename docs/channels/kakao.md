@@ -309,6 +309,15 @@ Configure agent routing for KakaoTalk:
 2. Check that the API key has proper permissions
 3. Ensure environment variables are loaded
 
+## Cloud Deployment
+
+For deploying Moltbot + KakaoTalk to the cloud for public users, see the [Cloud Deployment Guide](/channels/kakao-cloud-deploy).
+
+Quick options:
+- **Railway**: Easiest, GitHub integration
+- **Fly.io**: Free tier available
+- **Docker VPS**: Full control
+
 ## Example: Complete Configuration
 
 ```json
