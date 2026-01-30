@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import type { SecurityEvent, SecurityEventSeverity, SecurityEventCategory, SecurityEventOutcome } from "./schema.js";
 import { DEFAULT_LOG_DIR } from "../../logging/logger.js";
 import { getChildLogger } from "../../logging/index.js";
+import { getAlertManager } from "../alerting/manager.js";
 
 const SECURITY_LOG_PREFIX = "security";
 const SECURITY_LOG_SUFFIX = ".jsonl";
@@ -58,6 +59,14 @@ class SecurityEventLogger {
 
     // Also log to main logger for OTEL export and console output
     this.logToMainLogger(fullEvent);
+
+    // Trigger alerts (async, fire-and-forget)
+    const alertManager = getAlertManager();
+    if (alertManager?.isEnabled()) {
+      alertManager.handleEvent(fullEvent).catch((err) => {
+        this.logger.error(`failed to send alert: ${String(err)}`);
+      });
+    }
   }
 
   /**
