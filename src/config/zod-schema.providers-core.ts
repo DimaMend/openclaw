@@ -272,6 +272,24 @@ export const DiscordAccountSchema = z
       .object({
         presence: z.boolean().optional(),
         guildMembers: z.boolean().optional(),
+        voice: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+    voice: z
+      .object({
+        enabled: z.boolean().optional(),
+        autoJoin: z.boolean().optional(),
+        wakeWord: z.string().optional(),
+        interruptEnabled: z.boolean().optional(),
+        idleTimeoutMs: z.number().int().positive().optional(),
+        providers: z
+          .object({
+            stt: z.enum(["groq", "openai"]).optional(),
+            tts: z.enum(["elevenlabs", "openai"]).optional(),
+          })
+          .strict()
+          .optional(),
       })
       .strict()
       .optional(),

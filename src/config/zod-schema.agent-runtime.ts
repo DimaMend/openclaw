@@ -533,6 +533,12 @@ export const ToolsSchema = z
       })
       .strict()
       .optional(),
+    voice: z
+      .object({
+        allow: z.array(z.string()).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
