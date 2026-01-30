@@ -172,3 +172,9 @@ clawd/dashboard/dashboard.db-wal
 # Skill caches
 clawd/skills/*/__pycache__/
 clawd/skills/*/.venv/
+
+# Local runtime folders
+.clawd/
+.kokoro-models/
+clawd/.staging/
+snap/chromium/
