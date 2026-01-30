@@ -8,6 +8,7 @@ Docs: https://docs.openclaw.ai
 
 - Security: guard skill installer downloads with SSRF checks (block private/localhost URLs).
 - Media understanding: apply SSRF guardrails to provider fetches; allow private baseUrl overrides explicitly.
+- TUI: emit final assistant event when reply tags hide stream. (#4495) Thanks @ukeate.
 
 ## 2026.2.1
 
@@ -175,7 +176,6 @@ Docs: https://docs.openclaw.ai
 - **BREAKING:** Gateway auth mode "none" is removed; gateway now requires token/password (Tailscale Serve identity still allowed).
 
 ### Fixes
-
 - Skills: update session-logs paths to use ~/.openclaw. (#4502) Thanks @bonald.
 - Telegram: avoid silent empty replies by tracking normalization skips before fallback. (#3796)
 - Mentions: honor mentionPatterns even when explicit mentions are present. (#3303) Thanks @HirokiKobayashi-R.
