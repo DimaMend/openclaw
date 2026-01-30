@@ -119,7 +119,7 @@ export async function startKakaoWebhook(opts: KakaoWebhookOptions): Promise<{
 
     try {
       // Step 1: Check for billing commands (잔액, 충전, API키 등록 등)
-      const billingCmd = handleBillingCommand(userId, utterance);
+      const billingCmd = await handleBillingCommand(userId, utterance);
       if (billingCmd.handled) {
         let response: KakaoSkillResponse;
         if (billingCmd.paymentUrl) {
@@ -143,7 +143,7 @@ export async function startKakaoWebhook(opts: KakaoWebhookOptions): Promise<{
       }
 
       // Step 2: Pre-billing check (verify credits or custom API key)
-      const billingCheck = preBillingCheck(userId);
+      const billingCheck = await preBillingCheck(userId);
       if (billingCheck.handled) {
         const response = apiClient.buildSkillResponse(
           billingCheck.response ?? "",
@@ -172,7 +172,7 @@ export async function startKakaoWebhook(opts: KakaoWebhookOptions): Promise<{
       const estimatedOutputTokens = Math.ceil(result.text.length / 4);
       const model = process.env.MOLTBOT_MODEL ?? "claude-3-haiku-20240307";
 
-      const billingResult = postBillingDeduct(
+      const billingResult = await postBillingDeduct(
         userId,
         model,
         estimatedInputTokens,
@@ -181,7 +181,7 @@ export async function startKakaoWebhook(opts: KakaoWebhookOptions): Promise<{
       );
 
       // Step 5: Append credit status to response (if charged)
-      const creditMessage = getCreditStatusMessage(userId, billingResult.creditsUsed, usedPlatformKey);
+      const creditMessage = await getCreditStatusMessage(userId, billingResult.creditsUsed, usedPlatformKey);
       const finalText = result.text + creditMessage;
 
       // Check if this is a legal question and add consultation button

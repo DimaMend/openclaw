@@ -1,12 +1,13 @@
 /**
- * Credits & Billing System
+ * Credits & Billing System (Production - Supabase)
  *
  * Manages user credits for LLM API usage.
  * - Users with their own API key: FREE
  * - Users using platform API key: 2x cost in credits
  */
 
-import { createHash } from "node:crypto";
+import { createHash, createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { getSupabase, isSupabaseConfigured } from "./supabase.js";
 
 // Credit cost multiplier when using platform API
 const PLATFORM_API_MULTIPLIER = 2;
@@ -29,24 +30,32 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
 // Default model if not specified
 const DEFAULT_MODEL = "claude-3-haiku-20240307";
 
+// Encryption key for API keys (32 bytes for AES-256)
+function getEncryptionKey(): Buffer {
+  const key = process.env.LAWCALL_ENCRYPTION_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? "";
+  return createHash("sha256").update(key).digest();
+}
+
 export interface UserAccount {
-  oduserId: string; // Kakao user ID (hashed)
+  id: string; // UUID from database
+  kakaoUserId: string; // Hashed Kakao user ID
   credits: number; // Available credits
   totalSpent: number; // Total credits spent
   customApiKey?: string; // User's own API key (encrypted)
   customProvider?: "anthropic" | "openai"; // Provider for custom key
-  createdAt: number;
-  updatedAt: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface UsageRecord {
+  id: string;
   userId: string;
   model: string;
   inputTokens: number;
   outputTokens: number;
   creditsUsed: number;
   usedPlatformKey: boolean;
-  timestamp: number;
+  createdAt: Date;
 }
 
 export interface BillingResult {
@@ -59,57 +68,147 @@ export interface BillingResult {
   error?: string;
 }
 
-// In-memory storage (replace with database in production)
-const users: Map<string, UserAccount> = new Map();
-const usageHistory: UsageRecord[] = [];
+/**
+ * Hash user ID for privacy (one-way hash)
+ */
+export function hashUserId(kakaoUserId: string): string {
+  const salt = process.env.LAWCALL_USER_SALT ?? "lawcall-default-salt";
+  return createHash("sha256").update(kakaoUserId + salt).digest("hex");
+}
 
 /**
- * Hash user ID for privacy
+ * Encrypt API key for storage
  */
-function hashUserId(kakaoUserId: string): string {
-  return createHash("sha256").update(kakaoUserId).digest("hex").slice(0, 16);
+function encryptApiKey(apiKey: string): string {
+  const iv = randomBytes(16);
+  const cipher = createCipheriv("aes-256-cbc", getEncryptionKey(), iv);
+  let encrypted = cipher.update(apiKey, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return iv.toString("hex") + ":" + encrypted;
+}
+
+/**
+ * Decrypt API key from storage
+ */
+function decryptApiKey(encryptedKey: string): string {
+  try {
+    const [ivHex, encrypted] = encryptedKey.split(":");
+    const iv = Buffer.from(ivHex, "hex");
+    const decipher = createDecipheriv("aes-256-cbc", getEncryptionKey(), iv);
+    let decrypted = decipher.update(encrypted, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch {
+    return "";
+  }
 }
 
 /**
  * Get or create user account
  */
-export function getOrCreateUser(kakaoUserId: string): UserAccount {
-  const oduserId = hashUserId(kakaoUserId);
+export async function getOrCreateUser(kakaoUserId: string): Promise<UserAccount> {
+  const hashedId = hashUserId(kakaoUserId);
 
-  let user = users.get(oduserId);
-  if (!user) {
-    user = {
-      oduserId,
-      credits: Number(process.env.LAWCALL_FREE_CREDITS ?? 1000), // 1000 free credits for new users
+  if (!isSupabaseConfigured()) {
+    // Fallback to in-memory for development
+    return {
+      id: hashedId,
+      kakaoUserId: hashedId,
+      credits: Number(process.env.LAWCALL_FREE_CREDITS ?? 1000),
       totalSpent: 0,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
-    users.set(oduserId, user);
   }
 
-  return user;
+  const supabase = getSupabase();
+
+  // Try to get existing user
+  const { data: existingUser, error: fetchError } = await supabase
+    .from("lawcall_users")
+    .select("*")
+    .eq("kakao_user_id", hashedId)
+    .single();
+
+  if (existingUser && !fetchError) {
+    return {
+      id: existingUser.id,
+      kakaoUserId: existingUser.kakao_user_id,
+      credits: existingUser.credits,
+      totalSpent: existingUser.total_spent,
+      customApiKey: existingUser.custom_api_key
+        ? decryptApiKey(existingUser.custom_api_key)
+        : undefined,
+      customProvider: existingUser.custom_provider as "anthropic" | "openai" | undefined,
+      createdAt: new Date(existingUser.created_at),
+      updatedAt: new Date(existingUser.updated_at),
+    };
+  }
+
+  // Create new user
+  const defaultCredits = Number(process.env.LAWCALL_FREE_CREDITS ?? 1000);
+  const { data: newUser, error: insertError } = await supabase
+    .from("lawcall_users")
+    .insert({
+      kakao_user_id: hashedId,
+      credits: defaultCredits,
+      total_spent: 0,
+    })
+    .select()
+    .single();
+
+  if (insertError || !newUser) {
+    throw new Error(`Failed to create user: ${insertError?.message}`);
+  }
+
+  return {
+    id: newUser.id,
+    kakaoUserId: newUser.kakao_user_id,
+    credits: newUser.credits,
+    totalSpent: newUser.total_spent,
+    createdAt: new Date(newUser.created_at),
+    updatedAt: new Date(newUser.updated_at),
+  };
 }
 
 /**
  * Set user's custom API key
  */
-export function setUserApiKey(
+export async function setUserApiKey(
   kakaoUserId: string,
   apiKey: string,
   provider: "anthropic" | "openai",
-): void {
-  const user = getOrCreateUser(kakaoUserId);
-  user.customApiKey = apiKey; // In production, encrypt this!
-  user.customProvider = provider;
-  user.updatedAt = Date.now();
+): Promise<void> {
+  const hashedId = hashUserId(kakaoUserId);
+  const encryptedKey = encryptApiKey(apiKey);
+
+  if (!isSupabaseConfigured()) {
+    return; // Skip in development
+  }
+
+  const supabase = getSupabase();
+
+  // Ensure user exists
+  await getOrCreateUser(kakaoUserId);
+
+  const { error } = await supabase
+    .from("lawcall_users")
+    .update({
+      custom_api_key: encryptedKey,
+      custom_provider: provider,
+    })
+    .eq("kakao_user_id", hashedId);
+
+  if (error) {
+    throw new Error(`Failed to set API key: ${error.message}`);
+  }
 }
 
 /**
  * Check if user has custom API key
  */
-export function hasCustomApiKey(kakaoUserId: string): boolean {
-  const user = getOrCreateUser(kakaoUserId);
+export async function hasCustomApiKey(kakaoUserId: string): Promise<boolean> {
+  const user = await getOrCreateUser(kakaoUserId);
   return !!user.customApiKey;
 }
 
@@ -134,8 +233,8 @@ export function calculateCost(
     totalCost *= PLATFORM_API_MULTIPLIER;
   }
 
-  // Round up to nearest credit
-  return Math.ceil(totalCost);
+  // Minimum 1 credit, round up
+  return Math.max(1, Math.ceil(totalCost));
 }
 
 /**
@@ -153,12 +252,12 @@ export function estimateCost(
 /**
  * Check if user can make a request
  */
-export function checkBilling(
+export async function checkBilling(
   kakaoUserId: string,
   model: string = DEFAULT_MODEL,
-  estimatedTokens: number = 1000, // Estimate for typical request
-): BillingResult {
-  const user = getOrCreateUser(kakaoUserId);
+  estimatedTokens: number = 1000,
+): Promise<BillingResult> {
+  const user = await getOrCreateUser(kakaoUserId);
 
   // If user has custom API key, allow for free
   if (user.customApiKey && user.customProvider) {
@@ -195,75 +294,126 @@ export function checkBilling(
 }
 
 /**
- * Deduct credits after successful request
+ * Deduct credits after successful request (atomic operation)
  */
-export function deductCredits(
+export async function deductCredits(
   kakaoUserId: string,
   model: string,
   inputTokens: number,
   outputTokens: number,
   usedPlatformKey: boolean,
-): { creditsUsed: number; remainingCredits: number } {
-  const user = getOrCreateUser(kakaoUserId);
-
+): Promise<{ creditsUsed: number; remainingCredits: number }> {
   // No charge if using custom key
   if (!usedPlatformKey) {
+    const user = await getOrCreateUser(kakaoUserId);
     return { creditsUsed: 0, remainingCredits: user.credits };
   }
 
   const creditsUsed = calculateCost(model, inputTokens, outputTokens, true);
+  const hashedId = hashUserId(kakaoUserId);
 
-  user.credits = Math.max(0, user.credits - creditsUsed);
-  user.totalSpent += creditsUsed;
-  user.updatedAt = Date.now();
+  if (!isSupabaseConfigured()) {
+    // Fallback for development
+    return { creditsUsed, remainingCredits: 1000 - creditsUsed };
+  }
 
-  // Record usage
-  usageHistory.push({
-    userId: user.oduserId,
-    model,
-    inputTokens,
-    outputTokens,
-    creditsUsed,
-    usedPlatformKey,
-    timestamp: Date.now(),
+  const supabase = getSupabase();
+
+  // Use atomic deduction function
+  const { data, error } = await supabase.rpc("deduct_credits", {
+    p_kakao_user_id: hashedId,
+    p_amount: creditsUsed,
   });
 
-  return { creditsUsed, remainingCredits: user.credits };
+  if (error) {
+    console.error(`[billing] Failed to deduct credits: ${error.message}`);
+    // Don't throw - still record the usage
+  }
+
+  const result = data?.[0];
+  const newBalance = result?.new_balance ?? 0;
+
+  // Record usage
+  const user = await getOrCreateUser(kakaoUserId);
+  await supabase.from("lawcall_usage").insert({
+    user_id: user.id,
+    model,
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    credits_used: creditsUsed,
+    used_platform_key: usedPlatformKey,
+  });
+
+  return { creditsUsed, remainingCredits: newBalance };
 }
 
 /**
  * Add credits to user account (after payment)
  */
-export function addCredits(kakaoUserId: string, amount: number): number {
-  const user = getOrCreateUser(kakaoUserId);
-  user.credits += amount;
-  user.updatedAt = Date.now();
-  return user.credits;
+export async function addCredits(kakaoUserId: string, amount: number): Promise<number> {
+  const hashedId = hashUserId(kakaoUserId);
+
+  if (!isSupabaseConfigured()) {
+    return amount; // Fallback for development
+  }
+
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.rpc("add_credits", {
+    p_kakao_user_id: hashedId,
+    p_amount: amount,
+  });
+
+  if (error) {
+    throw new Error(`Failed to add credits: ${error.message}`);
+  }
+
+  return data?.[0]?.new_balance ?? amount;
 }
 
 /**
  * Get user's credit balance
  */
-export function getCredits(kakaoUserId: string): number {
-  const user = getOrCreateUser(kakaoUserId);
+export async function getCredits(kakaoUserId: string): Promise<number> {
+  const user = await getOrCreateUser(kakaoUserId);
   return user.credits;
 }
 
 /**
  * Get user's usage statistics
  */
-export function getUserStats(kakaoUserId: string): {
+export async function getUserStats(kakaoUserId: string): Promise<{
   credits: number;
   totalSpent: number;
   hasCustomKey: boolean;
   recentUsage: UsageRecord[];
-} {
-  const user = getOrCreateUser(kakaoUserId);
-  const oduserId = hashUserId(kakaoUserId);
+}> {
+  const user = await getOrCreateUser(kakaoUserId);
 
-  const recentUsage = usageHistory
-    .filter(u => u.userId === oduserId)
-    .slice(-10);
+  let recentUsage: UsageRecord[] = [];
+
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("lawcall_usage")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (data) {
+      recentUsage = data.map(u => ({
+        id: u.id,
+        userId: u.user_id,
+        model: u.model,
+        inputTokens: u.input_tokens,
+        outputTokens: u.output_tokens,
+        creditsUsed: u.credits_used,
+        usedPlatformKey: u.used_platform_key,
+        createdAt: new Date(u.created_at),
+      }));
+    }
+  }
 
   return {
     credits: user.credits,
@@ -300,4 +450,57 @@ export function getPricingMessage(): string {
 
 💰 크레딧 충전:
    "충전"이라고 말씀해주세요.`;
+}
+
+/**
+ * Remove user's custom API key
+ */
+export async function removeUserApiKey(kakaoUserId: string): Promise<void> {
+  const hashedId = hashUserId(kakaoUserId);
+
+  if (!isSupabaseConfigured()) {
+    return;
+  }
+
+  const supabase = getSupabase();
+
+  await supabase
+    .from("lawcall_users")
+    .update({
+      custom_api_key: null,
+      custom_provider: null,
+    })
+    .eq("kakao_user_id", hashedId);
+}
+
+/**
+ * Get user by ID (for admin purposes)
+ */
+export async function getUserById(userId: string): Promise<UserAccount | null> {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from("lawcall_users")
+    .select("*")
+    .eq("id", userId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    kakaoUserId: data.kakao_user_id,
+    credits: data.credits,
+    totalSpent: data.total_spent,
+    customApiKey: data.custom_api_key ? decryptApiKey(data.custom_api_key) : undefined,
+    customProvider: data.custom_provider as "anthropic" | "openai" | undefined,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 }

@@ -1,15 +1,18 @@
 /**
- * Payment Integration (Toss Payments)
+ * Payment Integration (Toss Payments + Supabase)
  *
  * Handles credit purchases via Toss Payments API.
  * https://docs.tosspayments.com/
  */
 
+import { getSupabase, isSupabaseConfigured } from "./supabase.js";
+import { hashUserId, addCredits, getOrCreateUser } from "./billing.js";
+
 export interface PaymentConfig {
-  clientKey: string; // Toss Payments Client Key
-  secretKey: string; // Toss Payments Secret Key
-  successUrl: string; // Payment success callback URL
-  failUrl: string; // Payment failure callback URL
+  clientKey: string;
+  secretKey: string;
+  successUrl: string;
+  failUrl: string;
 }
 
 export interface CreditPackage {
@@ -17,31 +20,45 @@ export interface CreditPackage {
   name: string;
   credits: number;
   price: number; // KRW
-  bonus?: number; // Bonus credits
+  bonus?: number;
 }
 
 // Available credit packages
 export const CREDIT_PACKAGES: CreditPackage[] = [
   { id: "basic", name: "기본", credits: 5000, price: 5000 },
-  { id: "standard", name: "표준", credits: 12000, price: 10000, bonus: 2000 },
-  { id: "premium", name: "프리미엄", credits: 30000, price: 20000, bonus: 10000 },
-  { id: "pro", name: "프로", credits: 60000, price: 50000, bonus: 10000 },
+  { id: "standard", name: "표준", credits: 10000, price: 10000, bonus: 2000 },
+  { id: "premium", name: "프리미엄", credits: 20000, price: 20000, bonus: 10000 },
+  { id: "pro", name: "프로", credits: 50000, price: 50000, bonus: 10000 },
 ];
 
 export interface PaymentSession {
+  id: string;
   orderId: string;
   userId: string;
   packageId: string;
   amount: number;
   credits: number;
-  status: "pending" | "completed" | "failed" | "cancelled";
-  createdAt: number;
-  completedAt?: number;
+  status: "pending" | "completed" | "failed" | "cancelled" | "refunded";
   paymentKey?: string;
+  createdAt: Date;
+  completedAt?: Date;
 }
 
-// In-memory storage (replace with database in production)
-const paymentSessions: Map<string, PaymentSession> = new Map();
+export interface TossPaymentResponse {
+  paymentKey: string;
+  orderId: string;
+  status: string;
+  totalAmount: number;
+  method: string;
+  approvedAt?: string;
+  receipt?: {
+    url: string;
+  };
+  failure?: {
+    code: string;
+    message: string;
+  };
+}
 
 /**
  * Get payment configuration from environment
@@ -64,6 +81,13 @@ function getPaymentConfig(): PaymentConfig | null {
 }
 
 /**
+ * Check if payments are configured
+ */
+export function isPaymentConfigured(): boolean {
+  return getPaymentConfig() !== null;
+}
+
+/**
  * Generate unique order ID
  */
 function generateOrderId(): string {
@@ -75,13 +99,13 @@ function generateOrderId(): string {
 /**
  * Create a payment session for credit purchase
  */
-export function createPaymentSession(
-  userId: string,
+export async function createPaymentSession(
+  kakaoUserId: string,
   packageId: string,
-): { session: PaymentSession; paymentUrl: string } | { error: string } {
+): Promise<{ session: PaymentSession; paymentUrl: string } | { error: string }> {
   const config = getPaymentConfig();
   if (!config) {
-    return { error: "결제 시스템이 설정되지 않았습니다." };
+    return { error: "결제 시스템이 설정되지 않았습니다. 관리자에게 문의해주세요." };
   }
 
   const pkg = CREDIT_PACKAGES.find(p => p.id === packageId);
@@ -89,32 +113,54 @@ export function createPaymentSession(
     return { error: "유효하지 않은 패키지입니다." };
   }
 
+  const user = await getOrCreateUser(kakaoUserId);
   const orderId = generateOrderId();
   const totalCredits = pkg.credits + (pkg.bonus ?? 0);
 
-  const session: PaymentSession = {
+  // Save payment session to database
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabase();
+
+    const { error: insertError } = await supabase.from("lawcall_payments").insert({
+      order_id: orderId,
+      user_id: user.id,
+      package_id: packageId,
+      amount: pkg.price,
+      credits: totalCredits,
+      status: "pending",
+    });
+
+    if (insertError) {
+      console.error(`[payment] Failed to create session: ${insertError.message}`);
+      return { error: "결제 세션 생성에 실패했습니다." };
+    }
+  }
+
+  // Build Toss Payments checkout URL
+  const orderName = `LawCall 크레딧 ${pkg.name} (${totalCredits.toLocaleString()} 크레딧)`;
+
+  const params = new URLSearchParams({
+    amount: pkg.price.toString(),
     orderId,
-    userId,
+    orderName,
+    successUrl: `${config.successUrl}?orderId=${orderId}`,
+    failUrl: `${config.failUrl}?orderId=${orderId}`,
+    customerKey: hashUserId(kakaoUserId),
+  });
+
+  // Toss Payments widget URL
+  const paymentUrl = `https://pay.toss.im/v2/checkout?clientKey=${config.clientKey}&${params}`;
+
+  const session: PaymentSession = {
+    id: orderId,
+    orderId,
+    userId: user.id,
     packageId,
     amount: pkg.price,
     credits: totalCredits,
     status: "pending",
-    createdAt: Date.now(),
+    createdAt: new Date(),
   };
-
-  paymentSessions.set(orderId, session);
-
-  // Toss Payments checkout URL
-  const params = new URLSearchParams({
-    clientKey: config.clientKey,
-    amount: pkg.price.toString(),
-    orderId,
-    orderName: `LawCall 크레딧 ${pkg.name} (${totalCredits.toLocaleString()} 크레딧)`,
-    successUrl: config.successUrl,
-    failUrl: config.failUrl,
-  });
-
-  const paymentUrl = `https://api.tosspayments.com/v1/payments?${params}`;
 
   return { session, paymentUrl };
 }
@@ -126,18 +172,41 @@ export async function confirmPayment(
   orderId: string,
   paymentKey: string,
   amount: number,
-): Promise<{ success: boolean; credits?: number; error?: string }> {
+): Promise<{
+  success: boolean;
+  credits?: number;
+  newBalance?: number;
+  error?: string;
+  receiptUrl?: string;
+}> {
   const config = getPaymentConfig();
   if (!config) {
     return { success: false, error: "결제 시스템 오류" };
   }
 
-  const session = paymentSessions.get(orderId);
-  if (!session) {
+  // Get payment session from database
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: "데이터베이스 연결 오류" };
+  }
+
+  const supabase = getSupabase();
+
+  // Verify payment session
+  const { data: payment, error: fetchError } = await supabase
+    .from("lawcall_payments")
+    .select("*, lawcall_users!inner(kakao_user_id)")
+    .eq("order_id", orderId)
+    .single();
+
+  if (fetchError || !payment) {
     return { success: false, error: "결제 세션을 찾을 수 없습니다." };
   }
 
-  if (session.amount !== amount) {
+  if (payment.status !== "pending") {
+    return { success: false, error: `결제가 이미 처리되었습니다. (상태: ${payment.status})` };
+  }
+
+  if (payment.amount !== amount) {
     return { success: false, error: "결제 금액이 일치하지 않습니다." };
   }
 
@@ -156,18 +225,46 @@ export async function confirmPayment(
       }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      return { success: false, error: error.message ?? "결제 확인 실패" };
+    const tossResponse: TossPaymentResponse = await response.json();
+
+    if (!response.ok || tossResponse.failure) {
+      // Update payment as failed
+      await supabase
+        .from("lawcall_payments")
+        .update({
+          status: "failed",
+          toss_response: tossResponse,
+        })
+        .eq("order_id", orderId);
+
+      return {
+        success: false,
+        error: tossResponse.failure?.message ?? "결제 확인 실패",
+      };
     }
 
-    // Update session
-    session.status = "completed";
-    session.completedAt = Date.now();
-    session.paymentKey = paymentKey;
+    // Use atomic function to complete payment and add credits
+    const { data: completionData, error: completionError } = await supabase.rpc("complete_payment", {
+      p_order_id: orderId,
+      p_payment_key: paymentKey,
+      p_toss_response: tossResponse,
+    });
 
-    return { success: true, credits: session.credits };
+    if (completionError) {
+      console.error(`[payment] Failed to complete payment: ${completionError.message}`);
+      return { success: false, error: "크레딧 추가에 실패했습니다." };
+    }
+
+    const result = completionData?.[0];
+
+    return {
+      success: true,
+      credits: result?.credits_added ?? payment.credits,
+      newBalance: result?.new_balance,
+      receiptUrl: tossResponse.receipt?.url,
+    };
   } catch (err) {
+    console.error(`[payment] Error confirming payment: ${err}`);
     return { success: false, error: "결제 처리 중 오류가 발생했습니다." };
   }
 }
@@ -175,8 +272,171 @@ export async function confirmPayment(
 /**
  * Get payment session by order ID
  */
-export function getPaymentSession(orderId: string): PaymentSession | null {
-  return paymentSessions.get(orderId) ?? null;
+export async function getPaymentSession(orderId: string): Promise<PaymentSession | null> {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from("lawcall_payments")
+    .select("*")
+    .eq("order_id", orderId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    id: data.id,
+    orderId: data.order_id,
+    userId: data.user_id,
+    packageId: data.package_id,
+    amount: data.amount,
+    credits: data.credits,
+    status: data.status as PaymentSession["status"],
+    paymentKey: data.payment_key ?? undefined,
+    createdAt: new Date(data.created_at),
+    completedAt: data.completed_at ? new Date(data.completed_at) : undefined,
+  };
+}
+
+/**
+ * Cancel pending payment
+ */
+export async function cancelPayment(orderId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return false;
+  }
+
+  const supabase = getSupabase();
+
+  const { error } = await supabase
+    .from("lawcall_payments")
+    .update({ status: "cancelled" })
+    .eq("order_id", orderId)
+    .eq("status", "pending");
+
+  return !error;
+}
+
+/**
+ * Request refund for completed payment
+ */
+export async function requestRefund(
+  orderId: string,
+  reason: string,
+): Promise<{ success: boolean; error?: string }> {
+  const config = getPaymentConfig();
+  if (!config) {
+    return { success: false, error: "결제 시스템 오류" };
+  }
+
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: "데이터베이스 연결 오류" };
+  }
+
+  const supabase = getSupabase();
+
+  // Get payment
+  const { data: payment, error: fetchError } = await supabase
+    .from("lawcall_payments")
+    .select("*")
+    .eq("order_id", orderId)
+    .single();
+
+  if (fetchError || !payment || !payment.payment_key) {
+    return { success: false, error: "결제 정보를 찾을 수 없습니다." };
+  }
+
+  if (payment.status !== "completed") {
+    return { success: false, error: "완료된 결제만 환불할 수 있습니다." };
+  }
+
+  try {
+    // Request refund from Toss
+    const response = await fetch(
+      `https://api.tosspayments.com/v1/payments/${payment.payment_key}/cancel`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${config.secretKey}:`).toString("base64")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cancelReason: reason,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { success: false, error: errorData.message ?? "환불 요청 실패" };
+    }
+
+    // Update payment status and deduct credits
+    await supabase
+      .from("lawcall_payments")
+      .update({ status: "refunded" })
+      .eq("order_id", orderId);
+
+    // Deduct the refunded credits (negative add)
+    const hashedUserId = await supabase
+      .from("lawcall_users")
+      .select("kakao_user_id")
+      .eq("id", payment.user_id)
+      .single();
+
+    if (hashedUserId.data) {
+      await addCredits(hashedUserId.data.kakao_user_id, -payment.credits);
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error(`[payment] Error requesting refund: ${err}`);
+    return { success: false, error: "환불 처리 중 오류가 발생했습니다." };
+  }
+}
+
+/**
+ * Get user's payment history
+ */
+export async function getPaymentHistory(
+  kakaoUserId: string,
+  limit: number = 10,
+): Promise<PaymentSession[]> {
+  if (!isSupabaseConfigured()) {
+    return [];
+  }
+
+  const user = await getOrCreateUser(kakaoUserId);
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from("lawcall_payments")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) {
+    return [];
+  }
+
+  return data.map(p => ({
+    id: p.id,
+    orderId: p.order_id,
+    userId: p.user_id,
+    packageId: p.package_id,
+    amount: p.amount,
+    credits: p.credits,
+    status: p.status as PaymentSession["status"],
+    paymentKey: p.payment_key ?? undefined,
+    createdAt: new Date(p.created_at),
+    completedAt: p.completed_at ? new Date(p.completed_at) : undefined,
+  }));
 }
 
 /**
@@ -255,7 +515,7 @@ API 키를 등록하면 무료로 이용할 수 있습니다!
 2. API keys 메뉴에서 키 생성
 3. 여기에 키 입력: "openai sk-..."
 
-⚠️ 키는 암호화되어 안전하게 저장됩니다.`;
+⚠️ 키는 AES-256으로 암호화되어 안전하게 저장됩니다.`;
 }
 
 /**
@@ -291,4 +551,50 @@ export function parseApiKey(message: string): {
   }
 
   return null;
+}
+
+/**
+ * Validate API key by making a test request
+ */
+export async function validateApiKey(
+  apiKey: string,
+  provider: "anthropic" | "openai",
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    if (provider === "anthropic") {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 1,
+          messages: [{ role: "user", content: "hi" }],
+        }),
+      });
+
+      if (response.status === 401) {
+        return { valid: false, error: "유효하지 않은 API 키입니다." };
+      }
+
+      return { valid: true };
+    } else {
+      const response = await fetch("https://api.openai.com/v1/models", {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      if (response.status === 401) {
+        return { valid: false, error: "유효하지 않은 API 키입니다." };
+      }
+
+      return { valid: true };
+    }
+  } catch (err) {
+    return { valid: false, error: "API 키 검증 중 오류가 발생했습니다." };
+  }
 }

@@ -21,7 +21,9 @@
   "exports": {
     ".": "./index.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
   "devDependencies": {
     "moltbot": "workspace:*"
   }

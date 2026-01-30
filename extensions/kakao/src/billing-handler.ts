@@ -1,5 +1,5 @@
 /**
- * Billing Handler
+ * Billing Handler (Production - Async/Supabase)
  *
  * Handles billing-related commands in KakaoTalk chat.
  * Integrates with billing.ts and payment.ts
@@ -24,6 +24,8 @@ import {
   getApiKeyGuide,
   parseApiKey,
   createPaymentSession,
+  validateApiKey,
+  getPaymentHistory,
   CREDIT_PACKAGES,
 } from "./payment.js";
 
@@ -44,15 +46,15 @@ export interface BillingHandlerResult {
  * Handle billing-related commands
  * Returns handled=true if the message was a billing command
  */
-export function handleBillingCommand(
+export async function handleBillingCommand(
   userId: string,
   message: string,
-): BillingHandlerResult {
+): Promise<BillingHandlerResult> {
   const normalizedMessage = message.toLowerCase().trim();
 
   // Check balance command
   if (normalizedMessage === "잔액" || normalizedMessage === "크레딧" || normalizedMessage === "잔고") {
-    const stats = getUserStats(userId);
+    const stats = await getUserStats(userId);
     const response = `💰 크레딧 잔액: ${formatCredits(stats.credits)}
 
 📊 누적 사용: ${formatCredits(stats.totalSpent)}
@@ -77,6 +79,32 @@ ${stats.hasCustomKey ? "" : '💡 "API키 등록"이라고 말씀하시면 무�
     };
   }
 
+  // Payment history command
+  if (normalizedMessage === "결제내역" || normalizedMessage === "결제 내역" || normalizedMessage === "충전내역") {
+    const history = await getPaymentHistory(userId, 5);
+
+    if (history.length === 0) {
+      return {
+        handled: true,
+        response: "결제 내역이 없습니다.",
+        quickReplies: ["충전", "잔액"],
+      };
+    }
+
+    const lines = ["📋 최근 결제 내역\n"];
+    for (const payment of history) {
+      const statusEmoji = payment.status === "completed" ? "✅" : payment.status === "refunded" ? "↩️" : "⏳";
+      const date = payment.createdAt.toLocaleDateString("ko-KR");
+      lines.push(`${statusEmoji} ${date} - ${payment.amount.toLocaleString()}원 (${payment.credits.toLocaleString()} 크레딧)`);
+    }
+
+    return {
+      handled: true,
+      response: lines.join("\n"),
+      quickReplies: ["충전", "잔액"],
+    };
+  }
+
   // API key registration guide
   if (isApiKeyCommand(message) && !parseApiKey(message)) {
     return {
@@ -89,7 +117,18 @@ ${stats.hasCustomKey ? "" : '💡 "API키 등록"이라고 말씀하시면 무�
   // API key registration
   const apiKeyInfo = parseApiKey(message);
   if (apiKeyInfo) {
-    setUserApiKey(userId, apiKeyInfo.apiKey, apiKeyInfo.provider);
+    // Validate the API key before saving
+    const validation = await validateApiKey(apiKeyInfo.apiKey, apiKeyInfo.provider);
+
+    if (!validation.valid) {
+      return {
+        handled: true,
+        response: `❌ API 키 등록 실패\n\n${validation.error}\n\n다시 확인 후 입력해주세요.`,
+        quickReplies: ["API키 등록", "충전"],
+      };
+    }
+
+    await setUserApiKey(userId, apiKeyInfo.apiKey, apiKeyInfo.provider);
     return {
       handled: true,
       response: `✅ API 키가 등록되었습니다!
@@ -114,7 +153,7 @@ ${stats.hasCustomKey ? "" : '💡 "API키 등록"이라고 말씀하시면 무�
   // Package selection
   const selectedPackage = parsePackageSelection(message);
   if (selectedPackage && isPaymentCommand(message)) {
-    const result = createPaymentSession(userId, selectedPackage.id);
+    const result = await createPaymentSession(userId, selectedPackage.id);
 
     if ("error" in result) {
       return {
@@ -133,9 +172,9 @@ ${stats.hasCustomKey ? "" : '💡 "API키 등록"이라고 말씀하시면 무�
 💰 금액: ${selectedPackage.price.toLocaleString()}원
 🎁 크레딧: ${totalCredits.toLocaleString()}
 
-아래 링크를 클릭하여 결제를 진행해주세요.`,
+아래 버튼을 클릭하여 결제를 진행해주세요.`,
       paymentUrl: result.paymentUrl,
-      quickReplies: ["취소"],
+      quickReplies: ["취소", "다른 패키지"],
     };
   }
 
@@ -147,11 +186,11 @@ ${stats.hasCustomKey ? "" : '💡 "API키 등록"이라고 말씀하시면 무�
  * Pre-check billing before making LLM request
  * Returns billing status and API key to use
  */
-export function preBillingCheck(
+export async function preBillingCheck(
   userId: string,
   estimatedTokens: number = 1000,
-): BillingHandlerResult {
-  const billingResult = checkBilling(userId, undefined, estimatedTokens);
+): Promise<BillingHandlerResult> {
+  const billingResult = await checkBilling(userId, undefined, estimatedTokens);
 
   if (!billingResult.allowed) {
     return {
@@ -178,24 +217,24 @@ export function preBillingCheck(
 /**
  * Post-billing: deduct credits after successful LLM request
  */
-export function postBillingDeduct(
+export async function postBillingDeduct(
   userId: string,
   model: string,
   inputTokens: number,
   outputTokens: number,
   usedPlatformKey: boolean,
-): { creditsUsed: number; remainingCredits: number } {
+): Promise<{ creditsUsed: number; remainingCredits: number }> {
   return deductCredits(userId, model, inputTokens, outputTokens, usedPlatformKey);
 }
 
 /**
  * Add credits after successful payment
  */
-export function completePayment(
+export async function completePayment(
   userId: string,
   credits: number,
-): string {
-  const newBalance = addCredits(userId, credits);
+): Promise<string> {
+  const newBalance = await addCredits(userId, credits);
   return `✅ 결제가 완료되었습니다!
 
 🎁 충전된 크레딧: ${formatCredits(credits)}
@@ -207,16 +246,16 @@ export function completePayment(
 /**
  * Get credit status message for appending to responses
  */
-export function getCreditStatusMessage(
+export async function getCreditStatusMessage(
   userId: string,
   creditsUsed: number,
   usedPlatformKey: boolean,
-): string {
+): Promise<string> {
   if (!usedPlatformKey) {
     return ""; // No charge for custom API key
   }
 
-  const remaining = getCredits(userId);
+  const remaining = await getCredits(userId);
 
   if (remaining < 100) {
     return `\n\n⚠️ 크레딧 잔액이 부족합니다 (${formatCredits(remaining)})\n"충전"이라고 말씀해주세요.`;
@@ -228,9 +267,9 @@ export function getCreditStatusMessage(
 /**
  * Check if user has enough credits or custom API key
  */
-export function canUserChat(userId: string): boolean {
-  if (hasCustomApiKey(userId)) {
+export async function canUserChat(userId: string): Promise<boolean> {
+  if (await hasCustomApiKey(userId)) {
     return true;
   }
-  return getCredits(userId) > 0;
+  return (await getCredits(userId)) > 0;
 }
