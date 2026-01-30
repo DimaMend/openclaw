@@ -16,6 +16,7 @@ import { createSessionsHistoryTool } from "./tools/sessions-history-tool.js";
 import { createSessionsListTool } from "./tools/sessions-list-tool.js";
 import { createSessionsSendTool } from "./tools/sessions-send-tool.js";
 import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
+import { createHipocapTool } from "./tools/hipocap-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 
@@ -56,11 +57,11 @@ export function createOpenClawTools(options?: {
 }): AnyAgentTool[] {
   const imageTool = options?.agentDir?.trim()
     ? createImageTool({
-        config: options?.config,
-        agentDir: options.agentDir,
-        sandboxRoot: options?.sandboxRoot,
-        modelHasVision: options?.modelHasVision,
-      })
+      config: options?.config,
+      agentDir: options.agentDir,
+      sandboxRoot: options?.sandboxRoot,
+      modelHasVision: options?.modelHasVision,
+    })
     : null;
   const webSearchTool = createWebSearchTool({
     config: options?.config,
@@ -132,6 +133,9 @@ export function createOpenClawTools(options?: {
     }),
     createSessionStatusTool({
       agentSessionKey: options?.agentSessionKey,
+      config: options?.config,
+    }),
+    createHipocapTool({
       config: options?.config,
     }),
     ...(webSearchTool ? [webSearchTool] : []),
