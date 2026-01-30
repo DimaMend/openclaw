@@ -5,15 +5,7 @@ const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 8192;
 
 // Fallback model ids if SDK model discovery fails
-const FALLBACK_MODEL_IDS = [
-  "gpt-4o",
-  "gpt-4.1",
-  "gpt-4.1-mini",
-  "gpt-4.1-nano",
-  "o1",
-  "o1-mini",
-  "o3-mini",
-] as const;
+const FALLBACK_MODEL_IDS = ["gpt-4o", "gpt-4.1", "gpt-5-mini", "grok-code-fast-1"] as const;
 
 /**
  * Get available model IDs from the Copilot SDK.
