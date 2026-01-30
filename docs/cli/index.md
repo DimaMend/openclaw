@@ -312,7 +312,6 @@ Options:
 - `--gemini-api-key <key>`
 - `--zai-api-key <key>`
 - `--minimax-api-key <key>`
-- `--venice-api-key <key>`
 - `--opencode-zen-api-key <key>`
 - `--gateway-port <port>`
 - `--gateway-bind <loopback|lan|tailnet|auto|custom>`

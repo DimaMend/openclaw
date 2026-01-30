@@ -1,8 +1,8 @@
 import AppKit
-import Foundation
-import Observation
 import OpenClawKit
 import OpenClawProtocol
+import Foundation
+import Observation
 import OSLog
 
 @MainActor
@@ -23,13 +23,8 @@ final class DevicePairingApprovalPrompter {
     private var resolvedByRequestId: Set<String> = []
 
     private final class AlertHostWindow: NSWindow {
-        override var canBecomeKey: Bool {
-            true
-        }
-
-        override var canBecomeMain: Bool {
-            true
-        }
+        override var canBecomeKey: Bool { true }
+        override var canBecomeMain: Bool { true }
     }
 
     private struct PairingList: Codable {
@@ -60,9 +55,7 @@ final class DevicePairingApprovalPrompter {
         let isRepair: Bool?
         let ts: Double
 
-        var id: String {
-            self.requestId
-        }
+        var id: String { self.requestId }
     }
 
     private struct PairingResolvedEvent: Codable {
