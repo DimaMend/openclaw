@@ -314,17 +314,17 @@ importers:
         specifier: ^10.5.0
         version: 10.5.0
     devDependencies:
-      moltbot:
+      openclaw:
         specifier: workspace:*
-        version: link:../../packages/moltbot
+        version: link:../..
 
   extensions/imessage: {}
 
   extensions/line:
     devDependencies:
-      moltbot:
+      openclaw:
         specifier: workspace:*
-        version: link:../../packages/moltbot
+        version: link:../..
 
   extensions/llm-task: {}
 
@@ -348,9 +348,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      moltbot:
+      openclaw:
         specifier: workspace:*
-        version: link:../../packages/moltbot
+        version: link:../..
 
   extensions/mattermost: {}
 
@@ -359,13 +359,17 @@ importers:
 =======
   extensions/memory-core:
     devDependencies:
-      moltbot:
+      openclaw:
         specifier: workspace:*
+<<<<<<< HEAD
 <<<<<<< HEAD
         version: link:../..
 >>>>>>> upstream/main
 =======
         version: link:../../packages/moltbot
+>>>>>>> upstream/main
+=======
+        version: link:../..
 >>>>>>> upstream/main
 
   extensions/memory-lancedb:
@@ -403,12 +407,16 @@ importers:
       express:
         specifier: ^5.2.1
         version: 5.2.1
-      moltbot:
+      openclaw:
         specifier: workspace:*
+<<<<<<< HEAD
 <<<<<<< HEAD
         version: link:../../packages/clawdbot
 =======
         version: link:../../packages/moltbot
+>>>>>>> upstream/main
+=======
+        version: link:../..
 >>>>>>> upstream/main
       proper-lockfile:
         specifier: ^4.1.2
@@ -418,12 +426,12 @@ importers:
 
   extensions/nostr:
     dependencies:
-      moltbot:
-        specifier: workspace:*
-        version: link:../../packages/moltbot
       nostr-tools:
         specifier: ^2.20.0
         version: 2.20.0(typescript@5.9.3)
+      openclaw:
+        specifier: workspace:*
+        version: link:../..
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -460,9 +468,9 @@ importers:
         specifier: ^4.3.5
         version: 4.3.6
     devDependencies:
-      moltbot:
+      openclaw:
         specifier: workspace:*
-        version: link:../../packages/moltbot
+        version: link:../..
 
   extensions/voice-call:
     dependencies:
@@ -480,9 +488,9 @@ importers:
 
   extensions/zalo:
     dependencies:
-      moltbot:
+      openclaw:
         specifier: workspace:*
-        version: link:../../packages/moltbot
+        version: link:../..
       undici:
         specifier: 7.19.0
         version: 7.19.0
@@ -492,9 +500,9 @@ importers:
       '@sinclair/typebox':
         specifier: 0.34.47
         version: 0.34.47
-      moltbot:
+      openclaw:
         specifier: workspace:*
-        version: link:../../packages/moltbot
+        version: link:../..
 
   packages/clawdbot:
     dependencies:
