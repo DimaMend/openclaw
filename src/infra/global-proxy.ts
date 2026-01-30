@@ -2,11 +2,11 @@
  * Global proxy support for Node.js fetch (undici).
  *
  * Node.js native fetch does not respect http_proxy/https_proxy/all_proxy
- * environment variables by default. This module sets up a global ProxyAgent
- * dispatcher so all fetch requests go through the proxy when configured.
+ * (or no_proxy) environment variables by default. This module sets up a
+ * global EnvHttpProxyAgent dispatcher so fetch respects those variables.
  */
 
-import { setGlobalDispatcher, ProxyAgent } from "undici";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 
 let initialized = false;
 
@@ -18,20 +18,23 @@ export function initGlobalProxy(): void {
   if (initialized) return;
   initialized = true;
 
-  const proxyUrl =
-    process.env.https_proxy ||
-    process.env.HTTPS_PROXY ||
-    process.env.http_proxy ||
-    process.env.HTTP_PROXY ||
-    process.env.all_proxy ||
-    process.env.ALL_PROXY;
+  const httpProxy = process.env.http_proxy || process.env.HTTP_PROXY;
+  const httpsProxy = process.env.https_proxy || process.env.HTTPS_PROXY;
+  const allProxy = process.env.all_proxy || process.env.ALL_PROXY;
+  const noProxy = process.env.no_proxy || process.env.NO_PROXY;
 
-  if (!proxyUrl) return;
+  if (!httpProxy && !httpsProxy && !allProxy) return;
 
   try {
-    // Normalize socks5h:// to socks5:// for undici compatibility
-    const normalizedUrl = proxyUrl.replace(/^socks5h:\/\//, "socks5://");
-    const agent = new ProxyAgent(normalizedUrl);
+    const normalizedHttp = httpProxy?.replace(/^socks5h:\/\//, "socks5://");
+    const normalizedHttps = httpsProxy?.replace(/^socks5h:\/\//, "socks5://");
+    const normalizedAll = allProxy?.replace(/^socks5h:\/\//, "socks5://");
+
+    const agent = new EnvHttpProxyAgent({
+      httpProxy: normalizedHttp ?? normalizedAll,
+      httpsProxy: normalizedHttps ?? normalizedAll,
+      noProxy: noProxy || undefined,
+    });
     setGlobalDispatcher(agent);
   } catch (err) {
     // Silently ignore proxy setup failures - fallback to direct connection
