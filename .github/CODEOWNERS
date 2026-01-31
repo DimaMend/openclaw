@@ -1,0 +1,20 @@
+# CODEOWNERS - Auto-assign reviewers based on file paths
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @steipete
+
+# Discord subsystem
+/src/discord/ @thewilloftheshadow
+/extensions/discord/ @thewilloftheshadow
+/docs/channels/discord.md @thewilloftheshadow
+
+# Slack subsystem
+/src/slack/ @thewilloftheshadow
+/extensions/slack/ @thewilloftheshadow
+/docs/channels/slack.md @thewilloftheshadow
+
+# Telegram subsystem
+/src/telegram/ @joshp123
+/extensions/telegram/ @joshp123
+/docs/channels/telegram.md @joshp123
