@@ -292,7 +292,7 @@ Outbound Discord API calls retry on rate limits (429) using Discord `retry_after
             enabled: true,
             windowSeconds: 60,
             positiveEmojis: ["👍", "✅", "👌"],
-            negativeEmojis: ["👎", "❌"]
+            negativeEmojis: ["👎", "❌"],
           },
           users: ["987654321098765432", "steipete"],
           channels: {
