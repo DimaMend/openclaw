@@ -177,6 +177,7 @@ const ORIGINAL_TZ = process.env.TZ;
 describe("createTelegramBot", () => {
   beforeEach(async () => {
     vi.resetModules();
+    vi.clearAllMocks();
     ({ resetInboundDedupe } = await import("../auto-reply/reply/inbound-dedupe.js"));
     ({ createTelegramBot, getTelegramSequentialKey } = await import("./bot.js"));
     replyModule = await import("../auto-reply/reply.js");
