@@ -67,6 +67,21 @@ describe("memory-redis plugin", () => {
     expect(config?.recallLimit).toBe(3);
     expect(config?.autoCapture).toBe(true);
     expect(config?.autoRecall).toBe(true);
+    expect(config?.summaryViewName).toBe("openclaw_user_summary");
+    expect(config?.summaryTimeWindowDays).toBe(30);
+  });
+
+  test("config schema parses summary view options", async () => {
+    const { default: memoryPlugin } = await import("./index.js");
+
+    const config = memoryPlugin.configSchema?.parse?.({
+      serverUrl: "http://localhost:8000",
+      summaryViewName: "custom_summary",
+      summaryTimeWindowDays: 7,
+    });
+
+    expect(config?.summaryViewName).toBe("custom_summary");
+    expect(config?.summaryTimeWindowDays).toBe(7);
   });
 
   test("shouldCapture filters correctly", async () => {
@@ -293,6 +308,53 @@ describeLive("memory-redis plugin live tests", () => {
     // Check that connection was logged
     const connectedLog = logs.find((l) => l.includes("connected to server"));
     expect(connectedLog).toBeDefined();
+  }, 30000);
+
+  test("summary view is initialized on service start", async () => {
+    const { default: memoryPlugin } = await import("./index.js");
+    const testNamespace = `test-summary-${randomUUID().slice(0, 8)}`;
+    const testViewName = `test_view_${randomUUID().slice(0, 8)}`;
+
+    const registeredServices: any[] = [];
+    const logs: string[] = [];
+
+    const mockApi = {
+      id: "memory-redis",
+      name: "Memory (Redis)",
+      source: "test",
+      config: {},
+      pluginConfig: {
+        serverUrl: MEMORY_SERVER_URL,
+        namespace: testNamespace,
+        summaryViewName: testViewName,
+        summaryTimeWindowDays: 7,
+      },
+      runtime: {},
+      logger: {
+        info: (msg: string) => logs.push(`[info] ${msg}`),
+        warn: (msg: string) => logs.push(`[warn] ${msg}`),
+        error: (msg: string) => logs.push(`[error] ${msg}`),
+        debug: (msg: string) => logs.push(`[debug] ${msg}`),
+      },
+      registerTool: () => {},
+      registerCli: () => {},
+      registerService: (service: any) => {
+        registeredServices.push(service);
+      },
+      on: () => {},
+      resolvePath: (p: string) => p,
+    };
+
+    await memoryPlugin.register(mockApi as any);
+
+    // Start the service to trigger summary view initialization
+    await registeredServices[0].start();
+
+    // Check that summary view was created or found
+    const summaryLog = logs.find(
+      (l) => l.includes("summary view") && l.includes(testViewName),
+    );
+    expect(summaryLog).toBeDefined();
   }, 30000);
 });
 

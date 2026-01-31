@@ -37,7 +37,7 @@
 
 import { Type } from "@sinclair/typebox";
 import { MemoryAPIClient } from "agent-memory-client";
-import type { MemoryMessage } from "agent-memory-client";
+import type { MemoryMessage, SummaryView } from "agent-memory-client";
 import { randomUUID } from "node:crypto";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { stringEnum } from "openclaw/plugin-sdk";
@@ -504,65 +504,251 @@ const memoryPlugin = {
               console.error(`List sessions failed: ${String(err)}`);
             }
           });
+
+        // Summary view commands
+        const summary = memory
+          .command("summary")
+          .description("Summary view commands");
+
+        summary
+          .command("list")
+          .description("List all summary views")
+          .action(async () => {
+            try {
+              const views = await client.listSummaryViews();
+              if (views.length === 0) {
+                console.log("No summary views found.");
+                return;
+              }
+              console.log(`Found ${views.length} summary view(s):\n`);
+              for (const view of views) {
+                console.log(`  ${view.name} (id: ${view.id})`);
+                console.log(`    Source: ${view.source}`);
+                console.log(`    Time window: ${view.time_window_days ?? "all"} days`);
+                console.log(`    Continuous: ${view.continuous ? "yes" : "no"}`);
+                console.log();
+              }
+            } catch (err) {
+              console.error(`List views failed: ${String(err)}`);
+            }
+          });
+
+        summary
+          .command("show")
+          .description("Show cached summary for a view")
+          .argument("[name]", "View name", cfg.summaryViewName)
+          .action(async (name) => {
+            try {
+              const viewName = name || cfg.summaryViewName;
+              const views = await client.listSummaryViews();
+              const view = views.find((v) => v.name === viewName);
+              if (!view) {
+                console.error(`View "${viewName}" not found.`);
+                return;
+              }
+
+              const partitions = await client.listSummaryViewPartitions(view.id, {
+                namespace: cfg.namespace,
+              });
+
+              if (partitions.length === 0) {
+                console.log(`No cached summary for view "${viewName}".`);
+                console.log("Run 'redis-memory summary refresh' to generate one.");
+                return;
+              }
+
+              for (const partition of partitions) {
+                console.log(`\n=== Summary (${partition.memory_count} memories) ===`);
+                console.log(`Computed: ${partition.computed_at ?? "unknown"}`);
+                if (Object.keys(partition.group).length > 0) {
+                  console.log(`Group: ${JSON.stringify(partition.group)}`);
+                }
+                console.log(`\n${partition.summary || "(empty)"}\n`);
+              }
+            } catch (err) {
+              console.error(`Show summary failed: ${String(err)}`);
+            }
+          });
+
+        summary
+          .command("refresh")
+          .description("Trigger async refresh of a summary view")
+          .argument("[name]", "View name", cfg.summaryViewName)
+          .option("--wait", "Wait for refresh to complete", false)
+          .option("--force", "Force full refresh even if cache is fresh", false)
+          .action(async (name, opts) => {
+            try {
+              const viewName = name || cfg.summaryViewName;
+              const views = await client.listSummaryViews();
+              const view = views.find((v) => v.name === viewName);
+              if (!view) {
+                console.error(`View "${viewName}" not found.`);
+                return;
+              }
+
+              console.log(`Triggering refresh for view "${viewName}"...`);
+              const task = await client.runSummaryView(view.id, { force: opts.force });
+              console.log(`Task started: ${task.id} (status: ${task.status})`);
+
+              if (opts.wait) {
+                console.log("Waiting for completion...");
+                let status = await client.getTask(task.id);
+                while (status?.status === "pending" || status?.status === "running") {
+                  await new Promise((r) => setTimeout(r, 1000));
+                  status = await client.getTask(task.id);
+                  process.stdout.write(".");
+                }
+                console.log();
+                console.log(`Task ${task.id}: ${status?.status ?? "unknown"}`);
+                if (status?.status === "completed") {
+                  console.log("Summary refreshed successfully.");
+                } else if (status?.status === "failed") {
+                  console.error(`Refresh failed: ${status.error ?? "unknown error"}`);
+                }
+              } else {
+                console.log("Refresh running in background.");
+              }
+            } catch (err) {
+              console.error(`Refresh failed: ${String(err)}`);
+            }
+          });
       },
       { commands: ["redis-memory"] },
     );
 
     // ========================================================================
+    // Summary View Management
+    // ========================================================================
+
+    // Track the summary view ID once initialized (set in service start)
+    let summaryViewId: string | null = null;
+
+    /**
+     * Ensure the default summary view exists, creating it if necessary.
+     * Returns the view ID or null if initialization fails.
+     */
+    async function ensureSummaryView(): Promise<string | null> {
+      try {
+        // Check if view already exists by listing and finding by name
+        const views = await client.listSummaryViews();
+        const existing = views.find((v) => v.name === cfg.summaryViewName);
+
+        if (existing) {
+          api.logger.info(
+            `memory-redis: using existing summary view "${cfg.summaryViewName}" (id: ${existing.id})`,
+          );
+          return existing.id;
+        }
+
+        // Create the default summary view
+        const newView = await client.createSummaryView({
+          name: cfg.summaryViewName,
+          source: "long_term",
+          group_by: cfg.namespace ? ["namespace"] : [],
+          filters: cfg.namespace ? { namespace: cfg.namespace } : {},
+          time_window_days: cfg.summaryTimeWindowDays,
+          continuous: false, // We'll trigger refreshes manually after each turn
+          prompt:
+            "Summarize key facts, preferences, decisions, and important context about the user. " +
+            "Focus on information that would be useful for future conversations. " +
+            "Be concise but comprehensive.",
+        });
+
+        api.logger.info(
+          `memory-redis: created summary view "${cfg.summaryViewName}" (id: ${newView.id}, window: ${cfg.summaryTimeWindowDays} days)`,
+        );
+        return newView.id;
+      } catch (err) {
+        api.logger.warn(`memory-redis: failed to initialize summary view: ${String(err)}`);
+        return null;
+      }
+    }
+
+    // ========================================================================
     // Lifecycle Hooks
     // ========================================================================
 
-    // Auto-recall: inject relevant long-term memories before agent starts
-    // Uses searchLongTermMemory for semantic search (OpenClaw handles conversation history)
+    // Auto-recall: inject rolling summary + query-specific memories before agent starts
+    // The summary provides stable context; semantic search adds query-relevant details
+    // Memory tools (memory_recall, memory_store, memory_forget) remain available for on-demand use
     if (cfg.autoRecall) {
       api.on("before_agent_start", async (event, _ctx) => {
         if (!event.prompt || event.prompt.length < 5) return;
 
-        try {
-          // Strip envelope metadata (message_id, channel headers) for cleaner search
-          const searchQuery = stripEnvelopeForSearch(event.prompt);
-          if (!searchQuery || searchQuery.length < 5) return;
+        const contextParts: string[] = [];
 
-          // Convert minScore to distance_threshold (distance = 1 - similarity)
-          const distanceThreshold =
-            cfg.minScore !== undefined ? 1 - cfg.minScore : undefined;
+        // 1. Try to get the cached summary from the summary view
+        if (summaryViewId) {
+          try {
+            const group = cfg.namespace ? { namespace: cfg.namespace } : {};
+            const partitions = await client.listSummaryViewPartitions(summaryViewId, {
+              namespace: cfg.namespace,
+            });
 
-          const results = await client.searchLongTermMemory({
-            text: searchQuery,
-            limit: cfg.recallLimit,
-            namespace: cfg.namespace ? { eq: cfg.namespace } : undefined,
-            distance_threshold: distanceThreshold,
-          });
+            // Find the partition matching our group (or the first one if no namespace)
+            const partition = cfg.namespace
+              ? partitions.find((p) => p.group.namespace === cfg.namespace)
+              : partitions[0];
 
-          if (results.memories.length === 0) return;
-
-          // Convert distance to similarity score and filter by minScore
-          const filtered = results.memories
-            .map((m) => ({
-              id: m.id,
-              text: m.text,
-              score: Math.max(0, 1 - (m.dist ?? 0)),
-              topics: m.topics ?? undefined,
-              entities: m.entities ?? undefined,
-            }))
-            .filter((r) => r.score >= (cfg.minScore ?? 0.3));
-
-          if (filtered.length === 0) return;
-
-          const memoryContext = filtered
-            .map((r) => `- ${r.text}`)
-            .join("\n");
-
-          api.logger.info?.(
-            `memory-redis: injecting ${filtered.length} long-term memories`,
-          );
-
-          return {
-            prependContext: `<relevant-memories>\n${memoryContext}\n</relevant-memories>`,
-          };
-        } catch (err) {
-          api.logger.warn(`memory-redis: recall failed: ${String(err)}`);
+            if (partition && partition.summary && partition.memory_count > 0) {
+              contextParts.push(
+                `<user-summary computed="${partition.computed_at ?? "unknown"}" memories="${partition.memory_count}">\n${partition.summary}\n</user-summary>`,
+              );
+              api.logger.info?.(
+                `memory-redis: injecting summary (${partition.memory_count} memories, computed: ${partition.computed_at ?? "unknown"})`,
+              );
+            }
+          } catch (err) {
+            api.logger.debug?.(`memory-redis: summary view fetch failed: ${String(err)}`);
+            // Continue to semantic search fallback
+          }
         }
+
+        // 2. Semantic search for query-specific memories
+        try {
+          const searchQuery = stripEnvelopeForSearch(event.prompt);
+          if (searchQuery && searchQuery.length >= 5) {
+            const distanceThreshold =
+              cfg.minScore !== undefined ? 1 - cfg.minScore : undefined;
+
+            const results = await client.searchLongTermMemory({
+              text: searchQuery,
+              limit: cfg.recallLimit,
+              namespace: cfg.namespace ? { eq: cfg.namespace } : undefined,
+              distance_threshold: distanceThreshold,
+            });
+
+            if (results.memories.length > 0) {
+              const filtered = results.memories
+                .map((m) => ({
+                  id: m.id,
+                  text: m.text,
+                  score: Math.max(0, 1 - (m.dist ?? 0)),
+                  topics: m.topics ?? undefined,
+                  entities: m.entities ?? undefined,
+                }))
+                .filter((r) => r.score >= (cfg.minScore ?? 0.3));
+
+              if (filtered.length > 0) {
+                const memoryList = filtered.map((r) => `- ${r.text}`).join("\n");
+                contextParts.push(
+                  `<relevant-memories query-specific="true">\n${memoryList}\n</relevant-memories>`,
+                );
+                api.logger.info?.(
+                  `memory-redis: injecting ${filtered.length} query-specific memories`,
+                );
+              }
+            }
+          }
+        } catch (err) {
+          api.logger.warn(`memory-redis: semantic search failed: ${String(err)}`);
+        }
+
+        if (contextParts.length === 0) return;
+
+        return {
+          prependContext: contextParts.join("\n\n"),
+        };
       });
     }
 
@@ -608,6 +794,22 @@ const memoryPlugin = {
           api.logger.info?.(
             `memory-redis: saved ${memoryMessages.length} messages to working memory (session: ${sessionId}, strategy: ${cfg.extractionStrategy ?? "discrete"})`,
           );
+
+          // Trigger async summary view refresh (non-blocking)
+          // This keeps the summary up-to-date after each conversation
+          if (summaryViewId) {
+            try {
+              const task = await client.runSummaryView(summaryViewId);
+              api.logger.debug?.(
+                `memory-redis: triggered summary refresh (task: ${task.id}, status: ${task.status})`,
+              );
+            } catch (refreshErr) {
+              // Non-critical - summary will be refreshed on next opportunity
+              api.logger.debug?.(
+                `memory-redis: summary refresh trigger failed: ${String(refreshErr)}`,
+              );
+            }
+          }
         } catch (err) {
           api.logger.warn(`memory-redis: capture failed: ${String(err)}`);
         }
@@ -626,6 +828,9 @@ const memoryPlugin = {
           api.logger.info(
             `memory-redis: connected to server (${cfg.serverUrl}, namespace: ${cfg.namespace ?? "default"})`,
           );
+
+          // Initialize summary view
+          summaryViewId = await ensureSummaryView();
         } catch (err) {
           api.logger.warn(
             `memory-redis: server not reachable at ${cfg.serverUrl}: ${String(err)}`,

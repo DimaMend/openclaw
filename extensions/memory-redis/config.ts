@@ -45,12 +45,27 @@ export type MemoryConfig = {
    * Example: "Extract action items and decisions from this conversation."
    */
   customPrompt?: string;
+  /**
+   * Name for the summary view (default: "openclaw_user_summary").
+   *
+   * Summary views provide a rolling, LLM-generated summary of long-term memories.
+   * The summary is injected into context alongside on-demand memory tools.
+   */
+  summaryViewName?: string;
+  /**
+   * Rolling time window in days for the summary view (default: 30).
+   *
+   * Only memories from the last N days are included in the summary.
+   */
+  summaryTimeWindowDays?: number;
 };
 
 const DEFAULT_SERVER_URL = "http://localhost:8000";
 const DEFAULT_TIMEOUT = 30000;
 const DEFAULT_MIN_SCORE = 0.3;
 const DEFAULT_RECALL_LIMIT = 3;
+const DEFAULT_SUMMARY_VIEW_NAME = "openclaw_user_summary";
+const DEFAULT_SUMMARY_TIME_WINDOW_DAYS = 30;
 
 function assertAllowedKeys(
   value: Record<string, unknown>,
@@ -92,6 +107,8 @@ export const memoryConfigSchema = {
         "recallLimit",
         "extractionStrategy",
         "customPrompt",
+        "summaryViewName",
+        "summaryTimeWindowDays",
       ],
       "memory config",
     );
@@ -142,6 +159,15 @@ export const memoryConfigSchema = {
           : DEFAULT_RECALL_LIMIT,
       extractionStrategy,
       customPrompt,
+      summaryViewName:
+        typeof cfg.summaryViewName === "string"
+          ? cfg.summaryViewName
+          : DEFAULT_SUMMARY_VIEW_NAME,
+      summaryTimeWindowDays:
+        typeof cfg.summaryTimeWindowDays === "number" &&
+        Number.isFinite(cfg.summaryTimeWindowDays)
+          ? Math.max(1, Math.floor(cfg.summaryTimeWindowDays))
+          : DEFAULT_SUMMARY_TIME_WINDOW_DAYS,
     };
   },
   uiHints: {
@@ -209,6 +235,18 @@ export const memoryConfigSchema = {
       placeholder: "Extract action items and decisions from this conversation.",
       help: "Custom prompt for memory extraction (only used with 'custom' strategy)",
       multiline: true,
+      advanced: true,
+    },
+    summaryViewName: {
+      label: "Summary View Name",
+      placeholder: DEFAULT_SUMMARY_VIEW_NAME,
+      help: "Name for the rolling summary view of long-term memories",
+      advanced: true,
+    },
+    summaryTimeWindowDays: {
+      label: "Summary Time Window (days)",
+      placeholder: String(DEFAULT_SUMMARY_TIME_WINDOW_DAYS),
+      help: "Rolling window in days for the summary view (only recent memories included)",
       advanced: true,
     },
   },
