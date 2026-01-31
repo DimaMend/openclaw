@@ -1,27 +1,44 @@
-# KakaoMolt - LawCall 법률 상담 카카오톡 챗봇
+# KakaoMolt - AI 통합 카카오톡 챗봇
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-카카오톡 채널을 통해 AI 법률 상담 서비스를 제공하는 Moltbot 플러그인입니다. 사용자의 법률 질문을 분석하여 적절한 전문 분야(민사, 형사, 이혼, 세무, 행정, 헌법)로 안내하고, LawCall 웹앱과 연동하여 전문 변호사 상담을 연결합니다.
+카카오톡 채널을 통해 다양한 AI 서비스를 제공하는 Moltbot 플러그인입니다. 법률 상담, 날씨/일정 조회, AI 이미지/음악 생성 등 풍부한 기능을 제공합니다.
 
 ## 주요 기능
 
-### 1. AI 법률 상담
+### 1. AI 법률 상담 (LawCall 연동)
 - Claude/GPT 기반의 지능형 법률 상담
-- 자연어 질문 인식 및 법률 카테고리 자동 분류
+- 법령/판례 RAG 검색 (국가법령정보센터 연동)
 - 6개 전문 분야별 맞춤 상담 연결 (민사, 형사, 이혼, 세무, 행정, 헌법)
 
-### 2. 크레딧 기반 과금 시스템
+### 2. 일상 정보 조회 도구
+- **날씨 조회**: 기상청 API 연동, 시간별/주간 예보
+- **일정 조회**: Google Calendar + 카카오 톡캘린더 통합
+- **스포츠 일정**: KBO, K리그, NBA, EPL 등 경기 일정/결과
+- **공공 데이터**: 공휴일, 대기질(미세먼지) 정보
+
+### 3. AI 웹 검색 (RAG)
+- **Perplexity AI**: 실시간 웹 검색 기반 답변
+- **Google AI Search**: Gemini Grounding 검색
+- 뉴스, 시세, 최신 정보 실시간 검색
+
+### 4. 창작 AI
+- **이미지 생성**: DALL-E 3, Stable Diffusion
+- **이모티콘/스티커**: 귀여운 캐릭터 생성
+- **음악 생성**: Suno AI, Mubert 배경음악
+- **QR 코드**: URL/텍스트 QR 코드 생성
+
+### 5. 크레딧 기반 과금 시스템
 - **무료 이용**: 사용자가 자신의 API 키를 등록하면 무료로 이용
 - **크레딧 이용**: API 키가 없는 경우 크레딧으로 이용 (API 비용의 2배)
 - **신규 사용자 혜택**: 1,000 크레딧 무료 제공
 
-### 3. 토스페이먼츠 결제 연동
+### 6. 토스페이먼츠 결제 연동
 - 4가지 크레딧 패키지 (5,000원 ~ 50,000원)
 - 대용량 패키지 보너스 크레딧 제공
 - 안전한 결제 처리 및 환불 지원
 
-### 4. 보안
+### 7. 보안
 - AES-256 암호화로 API 키 안전 저장
 - SHA-256 해시로 사용자 ID 프라이버시 보호
 - Supabase Row Level Security 적용
@@ -123,7 +140,44 @@ LAWCALL_USER_SALT=your-random-salt-here
 
 ## 사용 방법
 
-### 사용자 명령어
+### 일상 정보 조회
+
+| 예시 | 기능 |
+|------|------|
+| `서울 날씨 알려줘` | 날씨 조회 |
+| `내일 미세먼지 어때?` | 대기질 조회 |
+| `오늘 일정 뭐 있어?` | Google + 톡캘린더 조회 |
+| `이번 주 공휴일` | 공휴일 조회 |
+| `오늘 KBO 야구 경기` | 스포츠 일정 조회 |
+| `두산 경기 언제야?` | 팀별 경기 조회 |
+
+### AI 웹 검색
+
+| 예시 | 기능 |
+|------|------|
+| `오늘 주요 뉴스` | 최신 뉴스 검색 |
+| `비트코인 시세` | 실시간 시세 검색 |
+| `2026년 대선 후보` | 최신 정보 검색 |
+
+### 창작 AI
+
+| 예시 | 기능 |
+|------|------|
+| `귀여운 고양이 그림 그려줘` | 이미지 생성 |
+| `연인에게 보낼 하트 이미지 만들어줘` | 하트 이미지 생성 |
+| `슬픈 표정 이모티콘 만들어줘` | 이모티콘 생성 |
+| `잔잔한 배경음악 만들어줘` | 음악 생성 |
+| `https://lawcall.com QR 만들어줘` | QR 코드 생성 |
+
+### 법률 정보/상담
+
+| 예시 | 기능 |
+|------|------|
+| `손해배상 관련 법률 알려줘` | 법령 RAG 검색 |
+| `명예훼손 판례 찾아줘` | 판례 검색 |
+| `이혼 상담 받고 싶어요` | 전문 상담 연결 (LawCall) |
+
+### 크레딧 관리
 
 | 명령어 | 설명 |
 |--------|------|
@@ -141,12 +195,6 @@ LAWCALL_USER_SALT=your-random-salt-here
 API키 등록 sk-ant-api03-xxxxxxxxx
 ```
 
-또는
-
-```
-API키 등록 sk-xxxxxxxxx
-```
-
 ### 법률 상담 예시
 
 ```
@@ -154,6 +202,7 @@ API키 등록 sk-xxxxxxxxx
 
 봇: [법률 상담 응답]
     ...
+    📚 관련 법령: 민법 제217조 (생활방해금지), 제750조 (불법행위)
 
     📋 전문 변호사와 상담하시겠어요?
     [🔗 민사 상담 신청하기] ← 버튼
@@ -182,21 +231,33 @@ API키 등록 sk-xxxxxxxxx
 
 ```
 kakaomolt/
-├── index.ts              # 메인 엔트리포인트
+├── index.ts                    # 메인 엔트리포인트
 ├── src/
-│   ├── api-client.ts     # Kakao API 클라이언트
-│   ├── webhook.ts        # 웹훅 핸들러
-│   ├── billing.ts        # 크레딧 관리 (Supabase)
-│   ├── billing-handler.ts # 과금 명령어 처리
-│   ├── payment.ts        # 토스페이먼츠 연동
-│   ├── lawcall-router.ts # 법률 카테고리 라우팅
-│   └── supabase.ts       # Supabase 클라이언트
-├── supabase-schema.sql   # 데이터베이스 스키마
-├── Dockerfile            # 컨테이너 설정
-├── docker-compose.yml    # 로컬 개발 환경
-├── railway.json          # Railway 배포 설정
-├── fly.toml              # Fly.io 배포 설정
-└── .env.example          # 환경 변수 예시
+│   ├── api-client.ts           # Kakao API 클라이언트
+│   ├── webhook.ts              # 웹훅 핸들러
+│   ├── intent-classifier.ts    # 의도 분류기
+│   ├── tool-dispatcher.ts      # 도구 디스패처
+│   ├── billing.ts              # 크레딧 관리 (Supabase)
+│   ├── billing-handler.ts      # 과금 명령어 처리
+│   ├── payment.ts              # 토스페이먼츠 연동
+│   ├── lawcall-router.ts       # 법률 카테고리 라우팅
+│   ├── supabase.ts             # Supabase 클라이언트
+│   ├── tools/                  # 도구 모음
+│   │   ├── index.ts            # 도구 레지스트리
+│   │   ├── weather.ts          # 날씨 조회 (기상청 API)
+│   │   ├── calendar.ts         # 캘린더 (Google + 카카오)
+│   │   ├── sports.ts           # 스포츠 일정 (ESPN)
+│   │   ├── public-data.ts      # 공공데이터 (공휴일, 대기질)
+│   │   ├── search.ts           # AI 검색 (Perplexity, Google)
+│   │   └── creative.ts         # 창작 AI (이미지, 음악, QR)
+│   └── rag/
+│       └── legal-rag.ts        # 법률 RAG (법령, 판례)
+├── supabase-schema.sql         # 데이터베이스 스키마
+├── Dockerfile                  # 컨테이너 설정
+├── docker-compose.yml          # 로컬 개발 환경
+├── railway.json                # Railway 배포 설정
+├── fly.toml                    # Fly.io 배포 설정
+└── .env.example                # 환경 변수 예시
 ```
 
 ## 개발
