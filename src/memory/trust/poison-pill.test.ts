@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 
-import { validateContent, validateTrustLevel, checkContradictions } from "./validator.js";
+import { validateContent, validateTrustLevel } from "./validator.js";
 import {
   ensureProvenanceSchema,
   recordProvenance,

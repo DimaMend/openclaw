@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import { ensureKGSchema, generateId } from "./kg/schema.js";
 import { ensureProvenanceSchema } from "./trust/provenance.js";
-import { extractWithPatterns, persistEntities, persistRelations } from "./kg/extractor.js";
+import { extractWithPatterns, persistEntities } from "./kg/extractor.js";
 import { findEntity, findNeighbors, searchEntities, getEntityChunks } from "./kg/index.js";
 import { validateContent, validateTrustLevel } from "./trust/validator.js";
 import { classifyQuery } from "./router/classifier.js";
@@ -36,14 +36,6 @@ describe("memory/benchmarks", () => {
   function measure(name: string, fn: () => void): number {
     const start = performance.now();
     fn();
-    const elapsed = performance.now() - start;
-    recordTiming(name, elapsed);
-    return elapsed;
-  }
-
-  async function measureAsync(name: string, fn: () => Promise<void>): Promise<number> {
-    const start = performance.now();
-    await fn();
     const elapsed = performance.now() - start;
     recordTiming(name, elapsed);
     return elapsed;
