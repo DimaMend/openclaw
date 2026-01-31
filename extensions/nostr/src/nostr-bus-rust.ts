@@ -374,38 +374,17 @@ export async function startRustNostrBus(
     const profileEvent = EventBuilder.metadata(metadata);
 
     // Publish to all relays and collect results
+    // Note: rust-nostr's sendEventBuilder broadcasts to ALL connected relays at once
     const successes: string[] = [];
     const failures: Array<{ relay: string; error: string }> = [];
     let eventId = "";
 
-    // Publish to each relay with timeout
-    const publishPromises = relays.map(async (relay) => {
-      try {
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error("timeout")), RELAY_PUBLISH_TIMEOUT_MS);
-        });
-
-        // rust-nostr client publishes to all connected relays
-        // We need to track per-relay results
-        await Promise.race([client.sendEventBuilder(profileEvent), timeoutPromise]);
-
-        successes.push(relay);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        failures.push({ relay, error: errorMessage });
-      }
-    });
-
-    // For rust-nostr, sendEventBuilder publishes to all relays at once
-    // We publish once and mark all relays as success/failure based on that
     try {
       const output = await client.sendEventBuilder(profileEvent);
       eventId = output.id.toHex();
       // All connected relays receive it
       for (const relay of relays) {
-        if (!failures.some((f) => f.relay === relay)) {
-          successes.push(relay);
-        }
+        successes.push(relay);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
