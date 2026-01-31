@@ -51,7 +51,7 @@ function coerceSchedule(schedule: UnknownRecord) {
   if ("at" in next) {
     delete next.at;
   }
-  if (kind === "at" && "tz" in next) {
+  if (next.kind === "at" && "tz" in next) {
     delete next.tz;
   }
 
