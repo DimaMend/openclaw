@@ -167,16 +167,211 @@ export function validateTrustLevel(
 /**
  * Checks if content appears to contradict existing high-trust memories.
  * Returns warnings if contradictions are detected.
+ *
+ * Uses pattern-based detection for common contradictions:
+ * - Negation patterns ("X does not use Y" vs "X uses Y")
+ * - Preference conflicts ("X prefers Y" vs "X prefers Z")
+ * - Factual conflicts (different values for same attribute)
  */
 export function checkContradictions(
-  _db: DatabaseSync,
-  _content: string,
-  _options: ValidatorOptions,
+  db: DatabaseSync,
+  content: string,
+  options: ValidatorOptions,
 ): ValidationWarning[] {
-  // TODO (Agent 2): Implement contradiction detection
-  // 1. Extract key claims from content
-  // 2. Search for related high-trust chunks
-  // 3. Use LLM to detect contradictions
-  // 4. Return warnings for conflicts
-  return [];
+  const warnings: ValidationWarning[] = [];
+  const minTrustThreshold = 0.7; // Only compare against high-trust content
+
+  // Extract potential claims from content
+  const claims = extractClaims(content);
+  if (claims.length === 0) {
+    return warnings;
+  }
+
+  // Find related high-trust chunks
+  const relatedChunks = findRelatedHighTrustChunks(db, claims, minTrustThreshold);
+
+  // Check for contradictions
+  for (const claim of claims) {
+    for (const chunk of relatedChunks) {
+      const contradiction = detectContradiction(claim, chunk.text);
+      if (contradiction) {
+        warnings.push({
+          type: "trust_mismatch",
+          message: `Potential contradiction with high-trust memory: "${contradiction.reason}"`,
+          severity: options.strictMode ? "high" : "medium",
+          chunkId: chunk.id,
+        });
+      }
+    }
+  }
+
+  return warnings;
+}
+
+interface Claim {
+  subject: string;
+  predicate: string;
+  object: string;
+  negated: boolean;
+  raw: string;
+}
+
+interface ChunkWithText {
+  id: string;
+  text: string;
+  trust_score: number;
+}
+
+/**
+ * Extracts simple subject-predicate-object claims from text.
+ */
+function extractClaims(content: string): Claim[] {
+  const claims: Claim[] = [];
+
+  // Pattern: "X uses/prefers/works_on/knows Y"
+  const claimPatterns = [
+    { pattern: /(\w+(?:\s+\w+)?)\s+(does\s+not\s+|doesn't\s+)?(use|prefer|know|work\s+on|own|like)\s+(\w+(?:\s+\w+)?)/gi, negatedGroup: 2 },
+    { pattern: /(\w+(?:\s+\w+)?)\s+(is\s+not\s+|isn't\s+)?(a|an|the)?\s*(\w+)/gi, negatedGroup: 2 },
+  ];
+
+  for (const { pattern, negatedGroup } of claimPatterns) {
+    let match: RegExpExecArray | null;
+    const regex = new RegExp(pattern.source, pattern.flags);
+
+    while ((match = regex.exec(content)) !== null) {
+      const subject = match[1]?.trim();
+      const negation = match[negatedGroup];
+      const predicate = match[3]?.trim().toLowerCase().replace(/\s+/g, "_");
+      const object = match[4]?.trim();
+
+      if (subject && predicate && object && subject.length > 1 && object.length > 1) {
+        claims.push({
+          subject,
+          predicate,
+          object,
+          negated: !!negation,
+          raw: match[0],
+        });
+      }
+    }
+  }
+
+  return claims;
+}
+
+/**
+ * Finds high-trust chunks that mention similar entities.
+ */
+function findRelatedHighTrustChunks(
+  db: DatabaseSync,
+  claims: Claim[],
+  minTrust: number,
+): ChunkWithText[] {
+  // Collect unique subjects and objects from claims
+  const entities = new Set<string>();
+  for (const claim of claims) {
+    entities.add(claim.subject.toLowerCase());
+    entities.add(claim.object.toLowerCase());
+  }
+
+  if (entities.size === 0) {
+    return [];
+  }
+
+  // Search for chunks that mention these entities and have high trust
+  // Use entity_mentions table to find relevant chunks
+  const entityList = Array.from(entities);
+  const placeholders = entityList.map(() => "?").join(",");
+
+  try {
+    const rows = db
+      .prepare(
+        `SELECT DISTINCT c.id, c.text, cp.trust_score
+         FROM chunks c
+         JOIN entity_mentions em ON c.id = em.chunk_id
+         JOIN entities e ON em.entity_id = e.id
+         JOIN chunk_provenance cp ON c.id = cp.chunk_id
+         WHERE LOWER(e.name) IN (${placeholders})
+           AND cp.trust_score >= ?
+         LIMIT 20`,
+      )
+      .all(...entityList, minTrust) as unknown as ChunkWithText[];
+
+    return rows;
+  } catch {
+    // Tables might not exist yet, return empty
+    return [];
+  }
+}
+
+interface ContradictionResult {
+  reason: string;
+  claim1: string;
+  claim2: string;
+}
+
+/**
+ * Detects if a claim contradicts content in an existing chunk.
+ */
+function detectContradiction(claim: Claim, existingText: string): ContradictionResult | null {
+  const lowerText = existingText.toLowerCase();
+  const subject = claim.subject.toLowerCase();
+  const object = claim.object.toLowerCase();
+
+  // Check for direct negation contradiction
+  // e.g., "X uses Y" (new) vs "X does not use Y" (existing) or vice versa
+  const negationPatterns = [
+    new RegExp(`${escapeRegex(subject)}\\s+(does\\s+not|doesn't)\\s+${escapeRegex(claim.predicate.replace("_", "\\s*"))}\\s+${escapeRegex(object)}`, "i"),
+    new RegExp(`${escapeRegex(subject)}\\s+${escapeRegex(claim.predicate.replace("_", "\\s*"))}\\s+${escapeRegex(object)}`, "i"),
+  ];
+
+  const hasNegatedForm = negationPatterns[0].test(lowerText);
+  const hasPositiveForm = negationPatterns[1].test(lowerText) && !hasNegatedForm;
+
+  // Contradiction: new claim is positive but existing is negated, or vice versa
+  if (claim.negated && hasPositiveForm) {
+    return {
+      reason: `New content says "${claim.subject} does not ${claim.predicate} ${claim.object}" but existing memory says it does`,
+      claim1: claim.raw,
+      claim2: `${claim.subject} ${claim.predicate} ${claim.object}`,
+    };
+  }
+
+  if (!claim.negated && hasNegatedForm) {
+    return {
+      reason: `New content says "${claim.subject} ${claim.predicate} ${claim.object}" but existing memory says it doesn't`,
+      claim1: claim.raw,
+      claim2: `${claim.subject} does not ${claim.predicate} ${claim.object}`,
+    };
+  }
+
+  // Check for preference/attribute conflicts
+  // e.g., "X prefers Y" vs "X prefers Z" (where Y != Z)
+  if (["prefer", "use", "like"].includes(claim.predicate)) {
+    const conflictPattern = new RegExp(
+      `${escapeRegex(subject)}\\s+${escapeRegex(claim.predicate)}s?\\s+(\\w+(?:\\s+\\w+)?)`,
+      "gi",
+    );
+
+    let match: RegExpExecArray | null;
+    while ((match = conflictPattern.exec(existingText)) !== null) {
+      const existingObject = match[1]?.toLowerCase();
+      if (existingObject && existingObject !== object && existingObject.length > 2) {
+        return {
+          reason: `New content says "${claim.subject} ${claim.predicate}s ${claim.object}" but existing memory says "${claim.subject} ${claim.predicate}s ${existingObject}"`,
+          claim1: claim.raw,
+          claim2: `${claim.subject} ${claim.predicate}s ${existingObject}`,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Escapes special regex characters in a string.
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

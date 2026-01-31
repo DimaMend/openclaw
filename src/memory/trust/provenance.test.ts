@@ -7,6 +7,8 @@ import {
   getProvenance,
   verifyChunk,
   getDefaultTrustScore,
+  recordContradiction,
+  getContradictionCount,
 } from "./provenance.js";
 
 describe("trust/provenance", () => {
@@ -227,6 +229,71 @@ describe("trust/provenance", () => {
     it("inferred content has moderate trust", () => {
       const score = getDefaultTrustScore("inferred");
       expect(score).toBe(0.5);
+    });
+  });
+
+  describe("recordContradiction", () => {
+    it("increments contradiction count", () => {
+      recordProvenance(db, "chunk1", "user_stated", undefined, 0.8);
+
+      recordContradiction(db, "chunk1");
+      const result = getProvenance(db, "chunk1");
+
+      expect(result?.contradiction_count).toBe(1);
+    });
+
+    it("applies trust penalty", () => {
+      recordProvenance(db, "chunk1", "user_stated", undefined, 0.8);
+
+      recordContradiction(db, "chunk1", 0.1);
+      const result = getProvenance(db, "chunk1");
+
+      expect(result?.trust_score).toBeCloseTo(0.7); // 0.8 - 0.1
+    });
+
+    it("accumulates multiple contradictions", () => {
+      recordProvenance(db, "chunk1", "user_stated", undefined, 0.8);
+
+      recordContradiction(db, "chunk1", 0.1);
+      recordContradiction(db, "chunk1", 0.1);
+      recordContradiction(db, "chunk1", 0.1);
+
+      const result = getProvenance(db, "chunk1");
+      expect(result?.contradiction_count).toBe(3);
+      expect(result?.trust_score).toBeCloseTo(0.5); // 0.8 - 0.3
+    });
+
+    it("floors trust score at 0.1", () => {
+      recordProvenance(db, "chunk1", "external_doc", undefined, 0.3);
+
+      recordContradiction(db, "chunk1", 0.5);
+      const result = getProvenance(db, "chunk1");
+
+      expect(result?.trust_score).toBe(0.1);
+    });
+
+    it("returns false for non-existent chunk", () => {
+      const success = recordContradiction(db, "nonexistent");
+      expect(success).toBe(false);
+    });
+  });
+
+  describe("getContradictionCount", () => {
+    it("returns 0 for new chunks", () => {
+      recordProvenance(db, "chunk1", "user_stated");
+      expect(getContradictionCount(db, "chunk1")).toBe(0);
+    });
+
+    it("returns correct count after contradictions", () => {
+      recordProvenance(db, "chunk1", "user_stated");
+      recordContradiction(db, "chunk1");
+      recordContradiction(db, "chunk1");
+
+      expect(getContradictionCount(db, "chunk1")).toBe(2);
+    });
+
+    it("returns 0 for non-existent chunk", () => {
+      expect(getContradictionCount(db, "nonexistent")).toBe(0);
     });
   });
 });

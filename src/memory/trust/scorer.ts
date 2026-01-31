@@ -72,7 +72,7 @@ export function getEffectiveTrustScore(db: DatabaseSync, chunkId: string): numbe
     sourceType: provenance.source_type,
     isVerified: provenance.verified_by_user,
     hasHighTrustEvidence: false, // TODO: Check for corroborating evidence
-    contradictionCount: 0, // TODO: Count contradictions
+    contradictionCount: provenance.contradiction_count ?? 0,
     ageInDays,
   };
 

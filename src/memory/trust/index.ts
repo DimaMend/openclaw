@@ -19,6 +19,8 @@ export {
   getProvenance,
   verifyChunk,
   getDefaultTrustScore,
+  recordContradiction,
+  getContradictionCount,
   type ChunkProvenance,
 } from "./provenance.js";
 

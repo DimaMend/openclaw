@@ -19,6 +19,7 @@ export interface ChunkProvenance {
   created_at: number;
   verified_by_user: boolean;
   verification_timestamp: number | null;
+  contradiction_count: number;
 }
 
 /**
@@ -35,6 +36,7 @@ export function ensureProvenanceSchema(db: DatabaseSync): void {
       created_at INTEGER NOT NULL,
       verified_by_user INTEGER DEFAULT 0,
       verification_timestamp INTEGER,
+      contradiction_count INTEGER DEFAULT 0,
       FOREIGN KEY (chunk_id) REFERENCES chunks(id) ON DELETE CASCADE
     );
   `);
@@ -43,6 +45,13 @@ export function ensureProvenanceSchema(db: DatabaseSync): void {
     `CREATE INDEX IF NOT EXISTS idx_provenance_source_type ON chunk_provenance(source_type);`,
   );
   db.exec(`CREATE INDEX IF NOT EXISTS idx_provenance_trust ON chunk_provenance(trust_score);`);
+
+  // Add contradiction_count column if it doesn't exist (migration for existing DBs)
+  try {
+    db.exec(`ALTER TABLE chunk_provenance ADD COLUMN contradiction_count INTEGER DEFAULT 0;`);
+  } catch {
+    // Column already exists, ignore
+  }
 }
 
 /**
@@ -73,6 +82,7 @@ export function recordProvenance(
     created_at: now,
     verified_by_user: false,
     verification_timestamp: null,
+    contradiction_count: 0,
   };
 }
 
@@ -133,4 +143,38 @@ export function getDefaultTrustScore(sourceType: SourceType): number {
     default:
       return 0.5;
   }
+}
+
+/**
+ * Records a contradiction found for a chunk.
+ * Increments the contradiction count and optionally reduces trust score.
+ */
+export function recordContradiction(
+  db: DatabaseSync,
+  chunkId: string,
+  trustPenalty: number = 0.1,
+): boolean {
+  const existing = getProvenance(db, chunkId);
+  if (!existing) {
+    return false;
+  }
+
+  const newScore = Math.max(0.1, existing.trust_score - trustPenalty);
+  const newCount = existing.contradiction_count + 1;
+
+  db.prepare(
+    `UPDATE chunk_provenance
+     SET contradiction_count = ?, trust_score = ?
+     WHERE chunk_id = ?`,
+  ).run(newCount, newScore, chunkId);
+
+  return true;
+}
+
+/**
+ * Gets the contradiction count for a chunk.
+ */
+export function getContradictionCount(db: DatabaseSync, chunkId: string): number {
+  const provenance = getProvenance(db, chunkId);
+  return provenance?.contradiction_count ?? 0;
 }
