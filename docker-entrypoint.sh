@@ -21,9 +21,7 @@ if [ ! -f "$OPENCLAW_CONFIG_PATH" ]; then
 {
   "gateway": {
     "mode": "local",
-    "host": "0.0.0.0",
-    "bind": "0.0.0.0",
-    "listenHost": "0.0.0.0"
+    "bind": "lan"
   }
 }
 JSON
@@ -38,17 +36,12 @@ if [ -n "${PORT:-}" ] && [ -z "${OPENCLAW_GATEWAY_PORT:-}" ] && [ -z "${CLAWDBOT
   export OPENCLAW_GATEWAY_PORT="$PORT"
 fi
 
-# Force bind to 0.0.0.0 for Railway (service must be reachable from Railway proxy)
-# Set both env vars and CLI flags for redundancy
-export OPENCLAW_GATEWAY_HOST="0.0.0.0"
-export OPENCLAW_GATEWAY_BIND="0.0.0.0"
-export HOST="0.0.0.0"
-
 # Default to 8080 if no port is set
 : "${OPENCLAW_GATEWAY_PORT:=8080}"
 
 # Ensure gateway process receives config path explicitly
 export OPENCLAW_CONFIG_PATH
 
-# Run the gateway server as node user with HOME=/data for Railway deployments
-exec su node -c "HOME=$HOME node openclaw.mjs gateway run --bind 0.0.0.0 --port $OPENCLAW_GATEWAY_PORT --allow-unconfigured"
+# Run the gateway server in lan mode for Railway deployments
+# "lan" mode binds to 0.0.0.0 making the service reachable from Railway proxy
+exec su node -c "HOME=$HOME node openclaw.mjs gateway run --bind lan --port $OPENCLAW_GATEWAY_PORT --allow-unconfigured"
