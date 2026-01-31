@@ -17,7 +17,10 @@ if [ ! -f "$OPENCLAW_CONFIG_PATH" ]; then
   cat > "$OPENCLAW_CONFIG_PATH" <<'JSON'
 {
   "gateway": {
-    "mode": "local"
+    "mode": "local",
+    "host": "0.0.0.0",
+    "bind": "0.0.0.0",
+    "listenHost": "0.0.0.0"
   }
 }
 JSON
@@ -40,6 +43,9 @@ export HOST="0.0.0.0"
 
 # Default to 8080 if no port is set
 : "${OPENCLAW_GATEWAY_PORT:=8080}"
+
+# Ensure gateway process receives config path explicitly
+export OPENCLAW_CONFIG_PATH
 
 # Run the gateway server with --allow-unconfigured for Railway deployments
 exec node openclaw.mjs gateway run --bind 0.0.0.0 --port "$OPENCLAW_GATEWAY_PORT" --allow-unconfigured
