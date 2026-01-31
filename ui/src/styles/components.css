@@ -10,20 +10,11 @@
   border-radius: var(--radius-lg);
   padding: 20px;
   animation: rise 0.35s var(--ease-out) backwards;
-  transition:
-    border-color var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out),
-    transform var(--duration-normal) var(--ease-out);
-  box-shadow:
-    var(--shadow-sm),
-    inset 0 1px 0 var(--card-highlight);
+  transition: border-color var(--duration-normal) var(--ease-out);
 }
 
 .card:hover {
-  border-color: var(--border-strong);
-  box-shadow:
-    var(--shadow-md),
-    inset 0 1px 0 var(--card-highlight);
+  border-color: var(--border-hover);
 }
 
 .card-title {
@@ -49,19 +40,13 @@
   border-radius: var(--radius-md);
   padding: 14px 16px;
   border: 1px solid var(--border);
-  transition:
-    border-color var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out);
-  box-shadow: inset 0 1px 0 var(--card-highlight);
+  transition: border-color var(--duration-normal) var(--ease-out);
   min-width: 0;
   overflow: hidden;
 }
 
 .stat:hover {
-  border-color: var(--border-strong);
-  box-shadow:
-    var(--shadow-sm),
-    inset 0 1px 0 var(--card-highlight);
+  border-color: var(--border-hover);
 }
 
 .stat-label {
@@ -81,6 +66,7 @@
   margin-top: 6px;
   letter-spacing: -0.03em;
   line-height: 1.1;
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -350,22 +336,18 @@
   cursor: pointer;
   transition:
     border-color var(--duration-fast) var(--ease-out),
-    background var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
+    background var(--duration-fast) var(--ease-out);
 }
 
 .btn:hover {
   background: var(--bg-hover);
   border-color: var(--border-strong);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  color: var(--text-strong);
 }
 
 .btn:active {
   background: var(--secondary);
-  transform: translateY(0) scale(0.98);
-  box-shadow: none;
+  border-color: var(--border-hover);
 }
 
 .btn svg {
@@ -383,15 +365,16 @@
   border-color: var(--accent);
   background: var(--accent);
   color: var(--primary-foreground);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .btn.primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
-  box-shadow:
-    var(--shadow-md),
-    0 0 20px var(--accent-glow);
+}
+
+.btn.primary:active {
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 /* Keyboard shortcut badge (shadcn style) */
@@ -589,6 +572,11 @@
 :root[data-theme="light"] .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+:root[data-theme="light"] .btn.primary:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
 }
 
 /* ===========================================
@@ -869,20 +857,12 @@ kbd + kbd {
 }
 
 /* Light theme cards - subtle shadow for elevation */
-:root[data-theme="light"] .card {
-  box-shadow: var(--shadow-sm);
-}
-
 :root[data-theme="light"] .card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-:root[data-theme="light"] .stat {
-  box-shadow: var(--shadow-sm);
+  border-color: var(--border-hover);
 }
 
 :root[data-theme="light"] .stat:hover {
-  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
 }
 
 /* ===========================================
@@ -985,13 +965,11 @@ kbd + kbd {
   background: var(--secondary);
   transition:
     border-color var(--duration-fast) var(--ease-out),
-    background var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
+    background var(--duration-fast) var(--ease-out);
 }
 
 .chip:hover {
   border-color: var(--border-strong);
-  transform: translateY(-1px);
 }
 
 .chip input {
@@ -1683,6 +1661,7 @@ kbd + kbd {
   inset: 0;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(4px);
+  overscroll-behavior: contain;
   display: flex;
   align-items: center;
   justify-content: center;
