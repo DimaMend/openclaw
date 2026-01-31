@@ -1,0 +1,32 @@
+{
+  "id": "zenmux-llm-provider",
+  "providers": [
+    "zenmux"
+  ],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "defaultBaseUrl": {
+        "type": "string",
+        "description": "Default base URL for Zenmux API"
+      },
+      "defaultModel": {
+        "type": "string",
+        "description": "Default model to use"
+      }
+    }
+  },
+  "uiHints": {
+    "defaultBaseUrl": {
+      "label": "Default Base URL",
+      "placeholder": "https://api.zenmux.com/v1",
+      "advanced": true
+    },
+    "defaultModel": {
+      "label": "Default Model",
+      "placeholder": "zenmux/chat-model",
+      "advanced": true
+    }
+  }
+}

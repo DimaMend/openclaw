@@ -1,0 +1,24 @@
+{
+  "name": "@openclaw/zenmux-llm-provider",
+  "version": "1.0.0",
+  "description": "Zenmux LLM provider plugin for OpenClaw",
+  "type": "module",
+  "main": "index.ts",
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "llm",
+    "zenmux",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

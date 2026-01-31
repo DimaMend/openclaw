@@ -32,5 +32,13 @@ const PREFERRED_PROVIDER_BY_AUTH_CHOICE: Partial<Record<AuthChoice, string>> = {
 };
 
 export function resolvePreferredProviderForAuthChoice(choice: AuthChoice): string | undefined {
-  return PREFERRED_PROVIDER_BY_AUTH_CHOICE[choice];
+  // First check the hardcoded mapping
+  const mapped = PREFERRED_PROVIDER_BY_AUTH_CHOICE[choice];
+  if (mapped) {
+    return mapped;
+  }
+
+  // Fallback: assume authChoice is a plugin provider ID
+  // This allows plugin providers to work without hardcoding
+  return choice !== "skip" ? choice : undefined;
 }

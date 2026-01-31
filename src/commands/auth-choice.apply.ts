@@ -11,7 +11,10 @@ import { applyAuthChoiceMiniMax } from "./auth-choice.apply.minimax.js";
 import { applyAuthChoiceOAuth } from "./auth-choice.apply.oauth.js";
 import { applyAuthChoiceOpenAI } from "./auth-choice.apply.openai.js";
 import { applyAuthChoiceQwenPortal } from "./auth-choice.apply.qwen-portal.js";
+import { applyAuthChoicePluginProvider } from "./auth-choice.apply.plugin-provider.js";
 import type { AuthChoice } from "./onboard-types.js";
+import { resolvePluginProviders } from "../plugins/providers.js";
+import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
 
 export type ApplyAuthChoiceParams = {
   authChoice: AuthChoice;
@@ -52,6 +55,28 @@ export async function applyAuthChoice(
     const result = await handler(params);
     if (result) {
       return result;
+    }
+  }
+
+  // Fallback: check if authChoice matches any plugin provider
+  const workspaceDir = resolveDefaultAgentWorkspaceDir();
+  const pluginProviders = resolvePluginProviders({ config: params.config, workspaceDir });
+
+  const matchingProvider = pluginProviders.find((provider) => provider.id === params.authChoice);
+  if (matchingProvider) {
+    // Find the plugin that registered this provider
+    const { listPlugins } = await import("../plugins/registry.js");
+    const allPlugins = listPlugins({ config: params.config, workspaceDir });
+    const pluginEntry = allPlugins.find((p) => p.providerIds?.includes(matchingProvider.id));
+
+    if (pluginEntry) {
+      return await applyAuthChoicePluginProvider(params, {
+        authChoice: params.authChoice,
+        pluginId: pluginEntry.id,
+        providerId: matchingProvider.id,
+        methodId: matchingProvider.auth[0]?.id,
+        label: matchingProvider.label,
+      });
     }
   }
 

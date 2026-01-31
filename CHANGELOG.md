@@ -5,6 +5,9 @@ Docs: https://docs.openclaw.ai
 ## 2026.1.29
 Status: stable.
 
+### Plugin System
+- Plugins: make provider auth fully pluggable – onboard wizard now auto-discovers plugin providers without core code changes. Plugin providers are dynamically added to auth selection menu, eliminating the need for hardcoded handler files and type additions for each new provider plugin.
+
 ### Changes
 - Rebrand: rename the npm package/CLI to `openclaw`, add a `openclaw` compatibility shim, and move extensions to the `@openclaw/*` scope.
 - Onboarding: strengthen security warning copy for beta + access control expectations.

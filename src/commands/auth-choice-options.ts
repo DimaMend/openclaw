@@ -1,4 +1,7 @@
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
+import { loadConfig } from "../config/io.js";
+import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
+import { resolvePluginProviders } from "../plugins/providers.js";
 import type { AuthChoice } from "./onboard-types.js";
 
 export type AuthChoiceOption = {
@@ -21,7 +24,8 @@ export type AuthChoiceGroupId =
   | "minimax"
   | "synthetic"
   | "venice"
-  | "qwen";
+  | "qwen"
+  | string; // Allow dynamic plugin provider IDs
 
 export type AuthChoiceGroup = {
   value: AuthChoiceGroupId;
@@ -219,6 +223,36 @@ export function buildAuthChoiceGroups(params: { store: AuthProfileStore; include
       .map((choice) => optionByValue.get(choice))
       .filter((opt): opt is AuthChoiceOption => Boolean(opt)),
   }));
+
+  // Dynamically discover plugin providers
+  const config = loadConfig();
+  const workspaceDir = resolveDefaultAgentWorkspaceDir();
+  const pluginProviders = resolvePluginProviders({ config, workspaceDir });
+
+  for (const provider of pluginProviders) {
+    // Skip if already in hardcoded groups
+    if (AUTH_CHOICE_GROUP_DEFS.some((g) => g.choices.includes(provider.id as AuthChoice))) {
+      continue;
+    }
+
+    // Create a group for each plugin provider
+    const providerOptions: AuthChoiceOption[] = provider.auth.map((method) => ({
+      value: provider.id as AuthChoice,
+      label: `${provider.label} ${method.label}`,
+      hint: method.hint,
+    }));
+
+    if (providerOptions.length > 0) {
+      // Build the group with all required properties
+      const group: AuthChoiceGroup = {
+        value: provider.id as AuthChoiceGroupId,
+        label: provider.label,
+        hint: provider.auth[0]?.hint,
+        options: providerOptions,
+      };
+      groups.push(group);
+    }
+  }
 
   const skipOption = params.includeSkip
     ? ({ value: "skip", label: "Skip for now" } satisfies AuthChoiceOption)
