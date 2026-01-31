@@ -471,7 +471,7 @@ const FIELD_HELP: Record<string, string> = {
   "channels.slack.thread.inheritParent":
     "If true, Slack thread sessions inherit the parent channel transcript (default: false).",
   "channels.slack.thread.requireMention":
-    "If false, skip mention gating for thread replies (allows replies without @mention in threads). Default: true (inherit parent channel's requireMention).",
+    "Controls mention gating in threads. true (default): inherit parent channel's requireMention setting. false: always skip mention gating in threads (replies never require @mention).",
   "channels.mattermost.botToken":
     "Bot token from Mattermost System Console -> Integrations -> Bot Accounts.",
   "channels.mattermost.baseUrl":

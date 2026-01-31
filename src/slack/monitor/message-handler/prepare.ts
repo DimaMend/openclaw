@@ -292,9 +292,7 @@ export async function prepareSlackMessage(params: {
 
   // Resolve base requireMention from channel config or default
   const baseRequireMention = channelConfig?.requireMention ?? ctx.defaultRequireMention;
-  // In threads, use thread.requireMention setting:
-  // - true (default): inherit parent channel's requireMention
-  // - false: skip mention gating in threads (allow replies without @mention)
+  // thread.requireMention: true (default) = inherit channel setting, false = skip gating in threads
   const shouldRequireMention = isRoom
     ? isThreadReply && !ctx.threadRequireMention
       ? false
