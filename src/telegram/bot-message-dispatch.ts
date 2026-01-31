@@ -306,6 +306,11 @@ export const dispatchTelegramMessage = async ({
       onModelSelected: (ctx) => {
         prefixContext.onModelSelected(ctx);
       },
+      onToolStart: placeholderConfig.enabled
+        ? async (toolName, args) => {
+            await placeholder.onTool(toolName, args);
+          }
+        : undefined,
     },
   });
   draftStream?.stop();
