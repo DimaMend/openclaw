@@ -9,6 +9,8 @@ import { chunkDiscordTextWithMode } from "../chunk.js";
 import { sendMessageDiscord } from "../send.js";
 import { cacheBotMessage } from "./listeners.js";
 
+const UNKNOWN_MESSAGE_ID = "unknown";
+
 export async function deliverDiscordReply(params: {
   replies: ReplyPayload[];
   target: string;
@@ -56,7 +58,7 @@ export async function deliverDiscordReply(params: {
           replyTo: isFirstChunk ? replyTo : undefined,
         });
         // Cache bot message for reaction trigger feature
-        if (result.messageId && result.messageId !== "unknown") {
+        if (result.messageId && result.messageId !== UNKNOWN_MESSAGE_ID) {
           cacheBotMessage({
             channelId: result.channelId,
             messageId: result.messageId,
@@ -80,7 +82,7 @@ export async function deliverDiscordReply(params: {
       replyTo,
     });
     // Cache bot message for reaction trigger feature
-    if (mediaResult.messageId && mediaResult.messageId !== "unknown" && text) {
+    if (mediaResult.messageId && mediaResult.messageId !== UNKNOWN_MESSAGE_ID && text) {
       cacheBotMessage({
         channelId: mediaResult.channelId,
         messageId: mediaResult.messageId,

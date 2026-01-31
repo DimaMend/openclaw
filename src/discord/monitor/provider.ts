@@ -35,6 +35,7 @@ import {
   DiscordReactionRemoveListener,
   registerDiscordListener,
 } from "./listeners.js";
+import { deliverDiscordReply } from "./reply-delivery.js";
 import { createDiscordMessageHandler } from "./message-handler.js";
 import {
   createDiscordCommandArgFallbackButton,
@@ -564,16 +565,17 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
       sentiment,
       userId,
       userName,
+      guildId,
       client: triggerClient,
     } = params;
-    const sentimentLabel = sentiment === "positive" ? "YES/확인" : "NO/거부";
-    const triggerMessage = `[리액션 응답: ${sentimentLabel}] ${userName}님이 ${emoji} 리액션으로 응답했습니다. 원본 메시지: "${originalContent.slice(0, 150)}${originalContent.length > 150 ? "..." : ""}"`;
+    const sentimentLabel = sentiment === "positive" ? "POSITIVE" : "NEGATIVE";
+    const triggerMessage = `[Reaction Trigger: ${sentimentLabel}] ${userName} responded with reaction ${emoji}. Original message: "${originalContent.slice(0, 150)}${originalContent.length > 150 ? "..." : ""}"`;
 
     const route = resolveAgentRoute({
       cfg,
       channel: "discord",
       accountId: account.accountId,
-      guildId: undefined, // Will be resolved from channel
+      guildId,
       peer: { kind: "channel", id: channelId },
     });
 
@@ -595,13 +597,23 @@ export async function monitorDiscordProvider(opts: MonitorDiscordOpts = {}) {
       cfg,
       dispatcherOptions: {
         deliver: async (reply) => {
-          // Send reply to Discord channel
-          if (!reply.text) return;
+          // Use shared delivery logic (chunking, media, etc)
+          if (!reply.text && (!reply.mediaUrls || reply.mediaUrls.length === 0)) return;
           try {
-            const channel = await triggerClient.fetchChannel(channelId);
-            if (channel && "send" in channel) {
-              await channel.send({ content: reply.text });
-            }
+            await deliverDiscordReply({
+              replies: [reply],
+              target: channelId,
+              token,
+              accountId: account.accountId,
+              // rest client is available on client.rest
+              rest: client.rest,
+              runtime,
+              textLimit,
+              maxLinesPerMessage: discordCfg.maxLinesPerMessage,
+              replyToId: undefined, // Triggers don't necessarily reply to the reacted message as a discord-reply
+              tableMode: discordCfg.markdown?.tables,
+              chunkMode: discordCfg.chunkMode,
+            });
           } catch (err) {
             logger.error(danger(`reaction trigger reply failed: ${String(err)}`));
           }

@@ -1154,7 +1154,7 @@ Multi-account support lives under `channels.discord.accounts` (see the multi-acc
             // optional: turn reactions on bot messages into session triggers
             enabled: true,
             windowSeconds: 60,
-            positiveEmojis: ["👍", "✅", "👌"],
+            positiveEmojis: ["👍", "✅", "👌"], // Custom emojis like "<:name:id>" are also supported
             negativeEmojis: ["👎", "❌"],
           },
           users: ["987654321098765432"], // optional per-guild user allowlist

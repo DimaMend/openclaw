@@ -22,6 +22,11 @@ import {
 } from "./allow-list.js";
 import { formatDiscordReactionEmoji, formatDiscordUserTag } from "./format.js";
 import { resolveDiscordChannelInfo } from "./message-utils.js";
+import { resolveDiscordUserAllowed } from "./allow-list.js";
+
+const UNKNOWN_MESSAGE_ID = "unknown";
+const TRIGGER_DEBOUNCE_MS = 3000;
+const triggerDebounce = new Map<string, number>();
 
 // ============================================================================
 // Reaction Trigger Support
@@ -52,7 +57,8 @@ export function cacheBotMessage(params: { channelId: string; messageId: string; 
   });
 
   // Cleanup old entries
-  if (botMessageCache.size > BOT_MESSAGE_CACHE_MAX_SIZE) {
+  // Cleanup old entries (probabilistic to avoid check on every call)
+  if (Math.random() < 0.1 && botMessageCache.size > BOT_MESSAGE_CACHE_MAX_SIZE) {
     const now = Date.now();
     for (const [k, v] of botMessageCache) {
       if (now - v.timestamp > BOT_MESSAGE_CACHE_TTL_MS) {
@@ -76,7 +82,7 @@ function getBotMessageFromCache(channelId: string, messageId: string): BotMessag
 
 type ReactionSentiment = "positive" | "negative" | "neutral";
 
-function classifyReactionEmoji(
+export function classifyReactionEmoji(
   emoji: string,
   config?: DiscordReactionTriggerResolved,
 ): ReactionSentiment {
@@ -88,7 +94,7 @@ function classifyReactionEmoji(
   return "neutral";
 }
 
-function shouldTriggerOnReaction(params: {
+export function shouldTriggerOnReaction(params: {
   botUserId?: string;
   messageAuthorId?: string;
   messageTimestamp: number;
@@ -196,6 +202,7 @@ export type ReactionTriggerCallback = (params: {
   sentiment: ReactionSentiment;
   userId: string;
   userName: string;
+  guildId?: string;
   client: Client;
 }) => Promise<void>;
 
@@ -405,6 +412,25 @@ async function handleDiscordReactionEvent(params: {
       });
 
       if (shouldTrigger) {
+        // Enforce allowlist if configured
+        const isAllowed = resolveDiscordUserAllowed({
+          allowList: guildInfo?.users,
+          userId: user.id,
+          userName: user.username,
+          userTag: formatDiscordUserTag(user),
+        });
+        if (!isAllowed) {
+          return;
+        }
+
+        // Check debounce
+        const debounceKey = `${user.id}:${data.message_id}`;
+        const lastTrigger = triggerDebounce.get(debounceKey) ?? 0;
+        if (Date.now() - lastTrigger < TRIGGER_DEBOUNCE_MS) {
+          return;
+        }
+        triggerDebounce.set(debounceKey, Date.now());
+
         // Build enhanced system event text for reaction trigger
         const sentimentLabel = emojiSentiment === "positive" ? "POSITIVE" : "NEGATIVE";
         const triggerText = `[Reaction Trigger] ${sentimentLabel} response (${emojiLabel}) from ${actorLabel} to bot message: "${messageContent.slice(0, 200)}${messageContent.length > 200 ? "..." : ""}"`;
@@ -423,6 +449,7 @@ async function handleDiscordReactionEvent(params: {
           sentiment: emojiSentiment,
           userId: user.id,
           userName: user.username || actorLabel || user.id,
+          guildId: data.guild_id,
           client,
         });
 
