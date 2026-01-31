@@ -1,12 +1,12 @@
 #!/bin/bash
-# Sync clawd workspace: pull upstream + push changes + notify
+# Sync clawd workspace: pull upstream + push changes + notify + validate config
 
-cd /Users/dbhurley/clawd
+cd /Users/steve/clawd
 
 UPSTREAM_CHANGES=0
 LOCAL_CHANGES=0
 
-# 1. Pull latest from upstream clawdbot
+# 1. Pull latest from upstream
 echo "Fetching upstream..."
 git fetch upstream 2>/dev/null
 
@@ -14,12 +14,25 @@ UPSTREAM_COUNT=$(git log HEAD..upstream/main --oneline 2>/dev/null | wc -l | tr 
 if [ "$UPSTREAM_COUNT" -gt 0 ]; then
     echo "Merging $UPSTREAM_COUNT upstream changes..."
     UPSTREAM_CHANGES=1
-    git merge upstream/main -m "Auto-merge upstream clawdbot" --no-edit || {
-        git checkout --ours .gitignore AGENTS.md SOUL.md USER.md IDENTITY.md TOOLS.md memory.md 2>/dev/null
-        git checkout --ours skills/ memory/ 2>/dev/null
+    git merge upstream/main -m "Auto-merge upstream ($(date '+%Y-%m-%d'))" --no-edit || {
+        # Keep our workspace files on conflicts
+        git checkout --ours .gitignore AGENTS.md SOUL.md USER.md IDENTITY.md TOOLS.md memory.md HEARTBEAT.md 2>/dev/null
+        git checkout --ours skills/ memory/ agents/ 2>/dev/null
+        # Take upstream for docs and source
+        git checkout --theirs docs/ src/ 2>/dev/null
         git add -A
-        git commit -m "Auto-merge upstream (kept workspace versions for conflicts)" --no-edit
+        git commit -m "Auto-merge upstream (kept workspace files, took upstream skills/docs)" --no-edit
     }
+    
+    # Rebuild dist after upstream merge
+    echo "Rebuilding dist..."
+    pnpm build 2>&1 | head -20
+fi
+
+# 2. Validate critical config settings (restore if lost)
+if [[ -x "./scripts/validate-config.sh" ]]; then
+    echo "Validating config..."
+    ./scripts/validate-config.sh
 fi
 
 # 2. Commit any local changes
