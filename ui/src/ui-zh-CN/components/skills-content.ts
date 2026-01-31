@@ -1,10 +1,9 @@
 /**
- * 技能管理内容组件
- * Skills management content component
- *
- * 管理技能白名单、启用/禁用、API Key 配置等
+ * Skills Management Content Component
+ * Manage skill allowlist, enable/disable, API Key configuration
  */
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 import type {
   SkillsContentProps,
   SkillStatusEntry,
@@ -43,21 +42,21 @@ function groupSkillsBySource(skills: SkillStatusEntry[]): SkillGroup[] {
   if (groups["openclaw-bundled"].length > 0) {
     result.push({
       id: "bundled",
-      label: `内置技能 (${groups["openclaw-bundled"].length})`,
+      label: t('skills.group.bundled', { count: groups["openclaw-bundled"].length }),
       skills: groups["openclaw-bundled"],
     });
   }
   if (groups["openclaw-managed"].length > 0) {
     result.push({
       id: "managed",
-      label: `本地技能 (${groups["openclaw-managed"].length})`,
+      label: t('skills.group.managed', { count: groups["openclaw-managed"].length }),
       skills: groups["openclaw-managed"],
     });
   }
   if (groups["openclaw-workspace"].length > 0) {
     result.push({
       id: "workspace",
-      label: `工作区技能 (${groups["openclaw-workspace"].length})`,
+      label: t('skills.group.workspace', { count: groups["openclaw-workspace"].length }),
       skills: groups["openclaw-workspace"],
     });
   }
@@ -243,7 +242,7 @@ export function renderSkillsContent(props: SkillsContentProps) {
             ?disabled=${props.loading}
             @click=${props.onRefresh}
           >
-            ${props.loading ? "加载中..." : "刷新"}
+            ${props.loading ? t('label.loading') : t('action.refresh')}
           </button>
           ${props.hasChanges
             ? html`
@@ -252,7 +251,7 @@ export function renderSkillsContent(props: SkillsContentProps) {
                   ?disabled=${props.saving}
                   @click=${props.onSave}
                 >
-                  ${props.saving ? "保存中..." : "保存配置"}
+                  ${props.saving ? t('status.saving') : t('skills.saveConfig')}
                 </button>
               `
             : nothing}
@@ -481,7 +480,7 @@ function renderFilterBar(props: SkillsContentProps, total: number, shown: number
         <input
           type="text"
           class="skills-filter__input"
-          placeholder="搜索技能..."
+          placeholder=t('skills.search')
           .value=${props.filter}
           @input=${(e: Event) =>
             props.onFilterChange((e.target as HTMLInputElement).value)}
@@ -574,8 +573,8 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
 
   // 状态原因
   const reasons: string[] = [];
-  if (skill.disabled) reasons.push("已禁用");
-  if (skill.blockedByAllowlist) reasons.push("被白名单阻止");
+  if (skill.disabled) reasons.push(t('label.disabled'));
+  if (skill.blockedByAllowlist) reasons.push(t('skills.blockedByAllowlist'));
 
   // 检查是否有额外环境变量需要配置
   const hasExtraEnv = (skill.requirements?.env ?? []).filter(e => e !== skill.primaryEnv).length > 0;
@@ -591,7 +590,7 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
           </span>
           ${isBundled && props.allowlistMode === "whitelist"
             ? html`
-                <label class="skills-allowlist-toggle" title="加入白名单">
+                <label class="skills-allowlist-toggle" title=t('skills.addToAllowlist')>
                   <input
                     type="checkbox"
                     .checked=${inAllowlist}
@@ -609,7 +608,7 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
           <!-- 展开/折叠按钮 -->
           <button
             class="mc-icon-btn skills-item__expand-btn"
-            title="${isSelected ? "收起详情" : "展开详情"}"
+            title="${isSelected ? t('skills.collapseDetails') : t('skills.expandDetails')}"
             @click=${() => props.onSkillSelect(isSelected ? null : skill.skillKey)}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -621,7 +620,7 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
         <div class="skills-item__chips">
           <span class="skills-chip">${skill.source}</span>
           <span class="skills-chip ${skill.eligible ? "skills-chip--ok" : "skills-chip--warn"}">
-            ${skill.eligible ? "可用" : "受阻"}
+            ${skill.eligible ? t('skills.status.available') : t('skills.status.blocked')}
           </span>
           ${skill.disabled
             ? html`<span class="skills-chip skills-chip--warn">已禁用</span>`
@@ -650,7 +649,7 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
           ?disabled=${isBusy}
           @click=${() => props.onSkillToggle(skill.skillKey, skill.disabled)}
         >
-          ${skill.disabled ? "启用" : "禁用"}
+          ${skill.disabled ? t('action.enable') : t('action.disable')}
         </button>
 
         <!-- 安装按钮 -->
@@ -662,7 +661,7 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
                 @click=${() =>
                   props.onInstall(skill.skillKey, skill.name, skill.install[0].id)}
               >
-                ${isBusy ? "安装中..." : skill.install[0].label}
+                ${isBusy ? t('skills.installing') : skill.install[0].label}
               </button>
             `
           : nothing}
@@ -792,7 +791,7 @@ function renderSkillDocsLink(filePath: string) {
     <div class="skills-detail-row">
       <span class="skills-detail-label">文档:</span>
       <span class="skills-detail-value">
-        <a class="skills-docs-preview__link" href="file://${skillMdPath}" target="_blank" rel="noreferrer" title="查看 SKILL.md">
+        <a class="skills-docs-preview__link" href="file://${skillMdPath}" target="_blank" rel="noreferrer" title=t('skills.viewSkillMd')>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
@@ -824,7 +823,7 @@ function renderApiKeyInput(
         <input
           type="password"
           class="skills-apikey__input"
-          placeholder="输入 API Key"
+          placeholder=t('skills.enterApiKey')
           .value=${apiKey}
           @input=${(e: Event) =>
             props.onSkillApiKeyChange(
@@ -888,7 +887,7 @@ function renderEnvEditor(
                 <input
                   type="password"
                   class="skills-env-row__input"
-                  placeholder="输入值..."
+                  placeholder=t('skills.enterValue')
                   .value=${value}
                   @input=${(e: Event) =>
                     props.onSkillEnvChange(
@@ -901,7 +900,7 @@ function renderEnvEditor(
                   ? html`
                       <button
                         class="mc-icon-btn mc-icon-btn--danger"
-                        title="移除"
+                        title=t('action.delete')
                         @click=${() => props.onSkillEnvRemove(skill.skillKey, envKey)}
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1040,7 +1039,7 @@ function renderEditorModal(props: SkillsContentProps) {
             ?disabled=${editorState.saving || !hasChanges}
             @click=${props.onEditorSave}
           >
-            ${editorState.saving ? "保存中..." : "保存更改"}
+            ${editorState.saving ? t('status.saving') : t('action.save')}
           </button>
         </div>
       </div>
@@ -1241,7 +1240,7 @@ function renderCreateModal(props: SkillsContentProps) {
             ?disabled=${createState.creating || !!createState.nameError || !createState.name.trim()}
             @click=${props.onCreateConfirm}
           >
-            ${createState.creating ? "创建中..." : "创建技能"}
+            ${createState.creating ? t('skills.creating') : t('skills.createSkill')}
           </button>
         </div>
       </div>
@@ -1315,7 +1314,7 @@ function renderDeleteModal(props: SkillsContentProps) {
             ?disabled=${deleteState.deleting}
             @click=${props.onDeleteConfirm}
           >
-            ${deleteState.deleting ? "删除中..." : "确认删除"}
+            ${deleteState.deleting ? t('skills.deleting') : t('skills.confirmDelete')}
           </button>
         </div>
       </div>

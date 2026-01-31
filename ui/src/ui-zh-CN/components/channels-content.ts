@@ -1,8 +1,9 @@
 /**
- * 通道配置内容组件
- * 右侧面板 - 消息通道详细配置
+ * Channel Configuration Content Component
+ * Right panel - Messaging channel detailed configuration
  */
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 import type {
   ChannelMeta,
   ChannelConfigField,
@@ -36,19 +37,68 @@ const icons = {
   externalLink: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`,
 };
 
-// DM/Group 策略选项
-const DM_POLICY_OPTIONS = [
-  { value: "pairing", label: "配对模式" },
-  { value: "allowlist", label: "白名单" },
-  { value: "open", label: "开放" },
-  { value: "disabled", label: "禁用" },
-];
+// DM/Group policy options - getter functions for i18n
+function getDmPolicyOptions() {
+  return [
+    { value: "pairing", label: t('channels.policy.pairing') },
+    { value: "allowlist", label: t('channels.policy.allowlist') },
+    { value: "open", label: t('channels.policy.open') },
+    { value: "disabled", label: t('channels.policy.disabled') },
+  ];
+}
 
-const GROUP_POLICY_OPTIONS = [
-  { value: "open", label: "开放" },
-  { value: "allowlist", label: "白名单" },
-  { value: "disabled", label: "禁用" },
-];
+function getGroupPolicyOptions() {
+  return [
+    { value: "open", label: t('channels.policy.open') },
+    { value: "allowlist", label: t('channels.policy.allowlist') },
+    { value: "disabled", label: t('channels.policy.disabled') },
+  ];
+}
+
+// Common field labels helper
+function getFieldLabel(key: string): string {
+  const labelMap: Record<string, string> = {
+    enabled: t('channels.enabled'),
+    botToken: t('channels.botToken'),
+    token: t('channels.botToken'),
+    tokenFile: t('channels.tokenFile'),
+    dmPolicy: t('channels.dmPolicy'),
+    groupPolicy: t('channels.groupPolicy'),
+    streamMode: t('channels.streamMode'),
+    textChunkLimit: t('channels.textChunkLimit'),
+    historyLimit: t('channels.historyLimit'),
+    dmHistoryLimit: t('channels.dmHistoryLimit'),
+    linkPreview: t('channels.linkPreview'),
+    reactionLevel: t('channels.reactionLevel'),
+    allowBots: t('channels.allowBots'),
+    requireMention: t('channels.requireMention'),
+    sendReadReceipts: t('channels.sendReadReceipts'),
+    mediaMaxMb: t('channels.mediaMaxMb'),
+    debounceMs: t('channels.debounceMs'),
+    typingIndicator: t('channels.typingIndicator'),
+    includeAttachments: t('channels.includeAttachments'),
+  };
+  return labelMap[key] || key;
+}
+
+// Stream mode options
+function getStreamModeOptions() {
+  return [
+    { value: "off", label: t('channels.streamMode.off') },
+    { value: "partial", label: t('channels.streamMode.partial') },
+    { value: "block", label: t('channels.streamMode.block') },
+  ];
+}
+
+// Reaction level options
+function getReactionLevelOptions() {
+  return [
+    { value: "off", label: t('channels.reactionLevel.off') },
+    { value: "ack", label: t('channels.reactionLevel.ack') },
+    { value: "minimal", label: t('channels.reactionLevel.minimal') },
+    { value: "extensive", label: t('channels.reactionLevel.extensive') },
+  ];
+}
 
 // 通道元数据定义 - 基于实际代码库
 export const CHANNEL_METADATA: ChannelMeta[] = [
@@ -60,25 +110,25 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Telegram Bot 消息通道",
     docsUrl: "https://docs.molt.bot/channels/telegram",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
       { key: "botToken", label: "Bot Token", type: "password", placeholder: "123456:ABC-DEF...", required: true, section: "auth" },
-      { key: "tokenFile", label: "Token 文件路径", type: "text", placeholder: "/path/to/token", section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "群组策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "streamMode", label: "流式模式", type: "select", options: [
-        { value: "off", label: "关闭" },
-        { value: "partial", label: "部分" },
-        { value: "block", label: "块" },
+      { key: "tokenFile", label: t('channels.tokenFile'), type: "text", placeholder: "/path/to/token", section: "auth" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "streamMode", label: t('channels.streamMode'), type: "select", options: [
+        { value: "off", label: t('channels.streamMode.off') },
+        { value: "partial", label: t('channels.streamMode.partial') },
+        { value: "block", label: t('channels.streamMode.block') },
       ], section: "messaging" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "historyLimit", label: "群组历史记录限制", type: "number", placeholder: "50", section: "history" },
-      { key: "dmHistoryLimit", label: "DM 历史记录限制", type: "number", placeholder: "50", section: "history" },
-      { key: "linkPreview", label: "显示链接预览", type: "toggle", section: "messaging" },
-      { key: "reactionLevel", label: "表情回应级别", type: "select", options: [
-        { value: "off", label: "关闭" },
-        { value: "ack", label: "确认" },
-        { value: "minimal", label: "最小" },
-        { value: "extensive", label: "详细" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
+      { key: "dmHistoryLimit", label: t('channels.dmHistoryLimit'), type: "number", placeholder: "50", section: "history" },
+      { key: "linkPreview", label: t('channels.linkPreview'), type: "toggle", section: "messaging" },
+      { key: "reactionLevel", label: t('channels.reactionLevel'), type: "select", options: [
+        { value: "off", label: t('channels.streamMode.off') },
+        { value: "ack", label: t('channels.reactionLevel.ack') },
+        { value: "minimal", label: t('channels.reactionLevel.minimal') },
+        { value: "extensive", label: t('channels.reactionLevel.extensive') },
       ], section: "messaging" },
     ],
   },
@@ -89,15 +139,15 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Discord Bot 消息通道",
     docsUrl: "https://docs.molt.bot/channels/discord",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
       { key: "token", label: "Bot Token", type: "password", placeholder: "MTIzNDU2Nzg5...", required: true, section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "服务器策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "allowBots", label: "允许机器人消息", type: "toggle", section: "access" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "2000", section: "messaging" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
-      { key: "dmHistoryLimit", label: "DM 历史记录限制", type: "number", placeholder: "50", section: "history" },
-      { key: "maxLinesPerMessage", label: "每条消息最大行数", type: "number", placeholder: "17", section: "messaging" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "allowBots", label: t('channels.allowBots'), type: "toggle", section: "access" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "2000", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
+      { key: "dmHistoryLimit", label: t('channels.dmHistoryLimit'), type: "number", placeholder: "50", section: "history" },
+      { key: "maxLinesPerMessage", label: t('channels.maxLinesPerMessage'), type: "number", placeholder: "17", section: "messaging" },
     ],
   },
   {
@@ -107,20 +157,20 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Slack App 消息通道",
     docsUrl: "https://docs.molt.bot/channels/slack",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "mode", label: "连接模式", type: "select", options: [
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "mode", label: t('channels.connectionMode'), type: "select", options: [
         { value: "socket", label: "Socket Mode" },
         { value: "http", label: "HTTP Mode" },
       ], section: "basic" },
       { key: "botToken", label: "Bot Token", type: "password", placeholder: "xoxb-...", required: true, section: "auth" },
       { key: "appToken", label: "App Token", type: "password", placeholder: "xapp-...", section: "auth" },
       { key: "userToken", label: "User Token", type: "password", placeholder: "xoxp-...", section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "频道策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "requireMention", label: "需要 @提及", type: "toggle", section: "access" },
-      { key: "allowBots", label: "允许机器人消息", type: "toggle", section: "access" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "requireMention", label: t('channels.requireMention'), type: "toggle", section: "access" },
+      { key: "allowBots", label: t('channels.allowBots'), type: "toggle", section: "access" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
     ],
   },
   {
@@ -130,20 +180,20 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "WhatsApp Web 消息通道",
     docsUrl: "https://docs.molt.bot/channels/whatsapp",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "authDir", label: "认证目录", type: "text", placeholder: "~/.clawdbot/whatsapp-auth", section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "群组策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "sendReadReceipts", label: "发送已读回执", type: "toggle", section: "messaging" },
-      { key: "selfChatMode", label: "自聊模式", type: "select", options: [
-        { value: "off", label: "关闭" },
-        { value: "forward", label: "转发" },
-        { value: "local", label: "本地" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "authDir", label: t('channels.authDir'), type: "text", placeholder: "~/.clawdbot/whatsapp-auth", section: "auth" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "sendReadReceipts", label: t('channels.sendReadReceipts'), type: "toggle", section: "messaging" },
+      { key: "selfChatMode", label: t('channels.selfChatMode'), type: "select", options: [
+        { value: "off", label: t('channels.streamMode.off') },
+        { value: "forward", label: t('channels.selfChatMode.forward') },
+        { value: "local", label: t('channels.selfChatMode.local') },
       ], section: "messaging" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "mediaMaxMb", label: "最大媒体大小 (MB)", type: "number", placeholder: "50", section: "messaging" },
-      { key: "debounceMs", label: "防抖延迟 (ms)", type: "number", placeholder: "1000", section: "advanced" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "mediaMaxMb", label: t('channels.mediaMaxMb'), type: "number", placeholder: "50", section: "messaging" },
+      { key: "debounceMs", label: t('channels.debounceMs'), type: "number", placeholder: "1000", section: "advanced" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
     ],
   },
   {
@@ -153,18 +203,18 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Signal 消息通道",
     docsUrl: "https://docs.molt.bot/channels/signal",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "account", label: "账号 (E.164)", type: "text", placeholder: "+1234567890", required: true, section: "auth" },
-      { key: "httpUrl", label: "HTTP URL", type: "text", placeholder: "http://localhost:8080", section: "daemon" },
-      { key: "httpHost", label: "HTTP Host", type: "text", placeholder: "127.0.0.1", section: "daemon" },
-      { key: "httpPort", label: "HTTP Port", type: "number", placeholder: "8080", section: "daemon" },
-      { key: "cliPath", label: "CLI 路径", type: "text", placeholder: "signal-cli", section: "daemon" },
-      { key: "autoStart", label: "自动启动守护进程", type: "toggle", section: "daemon" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "群组策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "sendReadReceipts", label: "发送已读回执", type: "toggle", section: "messaging" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "account", label: t('channels.account'), type: "text", placeholder: "+1234567890", required: true, section: "auth" },
+      { key: "httpUrl", label: t('channels.httpUrl'), type: "text", placeholder: "http://localhost:8080", section: "daemon" },
+      { key: "httpHost", label: t('channels.httpHost'), type: "text", placeholder: "127.0.0.1", section: "daemon" },
+      { key: "httpPort", label: t('channels.httpPort'), type: "number", placeholder: "8080", section: "daemon" },
+      { key: "cliPath", label: t('channels.cliPath'), type: "text", placeholder: "signal-cli", section: "daemon" },
+      { key: "autoStart", label: t('channels.autoStart'), type: "toggle", section: "daemon" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "sendReadReceipts", label: t('channels.sendReadReceipts'), type: "toggle", section: "messaging" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
     ],
   },
   {
@@ -174,20 +224,20 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Google Chat 消息通道",
     docsUrl: "https://docs.molt.bot/channels/googlechat",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "serviceAccountFile", label: "服务账号文件", type: "text", placeholder: "/path/to/service-account.json", section: "auth" },
-      { key: "webhookPath", label: "Webhook 路径", type: "text", placeholder: "/googlechat", section: "webhook" },
-      { key: "webhookUrl", label: "Webhook URL", type: "text", placeholder: "https://your-domain.com/googlechat", section: "webhook" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "Space 策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "requireMention", label: "需要 @提及", type: "toggle", section: "access" },
-      { key: "typingIndicator", label: "输入指示器", type: "select", options: [
-        { value: "none", label: "无" },
-        { value: "message", label: "消息" },
-        { value: "reaction", label: "表情" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "serviceAccountFile", label: t('channels.serviceAccountFile'), type: "text", placeholder: "/path/to/service-account.json", section: "auth" },
+      { key: "webhookPath", label: t('channels.webhookPath'), type: "text", placeholder: "/googlechat", section: "webhook" },
+      { key: "webhookUrl", label: t('channels.webhookUrl'), type: "text", placeholder: "https://your-domain.com/googlechat", section: "webhook" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "requireMention", label: t('channels.requireMention'), type: "toggle", section: "access" },
+      { key: "typingIndicator", label: t('channels.typingIndicator'), type: "select", options: [
+        { value: "none", label: t('channels.typingIndicator.none') },
+        { value: "message", label: t('channels.typingIndicator.message') },
+        { value: "reaction", label: t('channels.typingIndicator.reaction') },
       ], section: "messaging" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
     ],
   },
   {
@@ -197,21 +247,21 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "iMessage 消息通道 (仅 macOS)",
     docsUrl: "https://docs.molt.bot/channels/imessage",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "cliPath", label: "CLI 路径", type: "text", placeholder: "imsg", section: "cli" },
-      { key: "dbPath", label: "数据库路径", type: "text", placeholder: "~/Library/Messages/chat.db", section: "cli" },
-      { key: "remoteHost", label: "远程主机", type: "text", placeholder: "user@192.168.64.3", section: "cli" },
-      { key: "service", label: "服务类型", type: "select", options: [
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "cliPath", label: t('channels.cliPath'), type: "text", placeholder: "imsg", section: "cli" },
+      { key: "dbPath", label: t('channels.dbPath'), type: "text", placeholder: "~/Library/Messages/chat.db", section: "cli" },
+      { key: "remoteHost", label: t('channels.remoteHost'), type: "text", placeholder: "user@192.168.64.3", section: "cli" },
+      { key: "service", label: t('channels.serviceType'), type: "select", options: [
         { value: "imessage", label: "iMessage" },
         { value: "sms", label: "SMS" },
-        { value: "auto", label: "自动" },
+        { value: "auto", label: t('channels.serviceType.auto') },
       ], section: "basic" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "群组策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "includeAttachments", label: "包含附件", type: "toggle", section: "messaging" },
-      { key: "mediaMaxMb", label: "最大媒体大小 (MB)", type: "number", placeholder: "25", section: "messaging" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "includeAttachments", label: t('channels.includeAttachments'), type: "toggle", section: "messaging" },
+      { key: "mediaMaxMb", label: t('channels.mediaMaxMb'), type: "number", placeholder: "25", section: "messaging" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
     ],
   },
   {
@@ -221,20 +271,20 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Microsoft Teams 消息通道",
     docsUrl: "https://docs.molt.bot/channels/msteams",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
       { key: "appId", label: "App ID", type: "text", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", required: true, section: "auth" },
       { key: "appPassword", label: "App Password", type: "password", placeholder: "...", required: true, section: "auth" },
       { key: "tenantId", label: "Tenant ID", type: "text", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "团队策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "requireMention", label: "需要 @提及", type: "toggle", section: "access" },
-      { key: "replyStyle", label: "回复样式", type: "select", options: [
-        { value: "thread", label: "线程回复" },
-        { value: "top-level", label: "顶层回复" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "requireMention", label: t('channels.requireMention'), type: "toggle", section: "access" },
+      { key: "replyStyle", label: t('channels.replyStyle'), type: "select", options: [
+        { value: "thread", label: t('channels.replyStyle.thread') },
+        { value: "top-level", label: t('channels.replyStyle.top') },
       ], section: "messaging" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "mediaMaxMb", label: "最大媒体大小 (MB)", type: "number", placeholder: "100", section: "messaging" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "mediaMaxMb", label: t('channels.mediaMaxMb'), type: "number", placeholder: "100", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
     ],
   },
 
@@ -246,21 +296,21 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "微信消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/wechat",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "name", label: "账户名称", type: "text", placeholder: "我的微信", section: "basic" },
-      { key: "baseUrl", label: "API 地址", type: "text", placeholder: "https://wechat-robot.example.com", required: true, section: "api" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "name", label: t('channels.accountName'), type: "text", placeholder: "我的微信", section: "basic" },
+      { key: "baseUrl", label: t('channels.apiUrl'), type: "text", placeholder: "https://wechat-robot.example.com", required: true, section: "api" },
       { key: "apiToken", label: "API Token", type: "password", placeholder: "ae3d7737-6eeb-48d0-...", section: "api" },
-      { key: "tokenFile", label: "Token 文件路径", type: "text", placeholder: "/path/to/token", section: "api" },
-      { key: "robotId", label: "机器人 ID", type: "number", placeholder: "5", required: true, section: "api" },
-      { key: "defaultAccount", label: "默认账户", type: "text", placeholder: "account-id", section: "basic" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "requireMention", label: "需要 @提及", type: "toggle", section: "access" },
-      { key: "allowFrom", label: "允许的用户 (wxid)", type: "array", placeholder: "wxid_xxx", description: "每行一个微信 ID", section: "access" },
-      { key: "mediaMaxMb", label: "最大媒体大小 (MB)", type: "number", placeholder: "25", section: "messaging" },
-      { key: "polling.pollingIntervalMs", label: "轮询间隔 (ms)", type: "number", placeholder: "3000", section: "polling" },
-      { key: "polling.pollContactIds", label: "轮询联系人 ID", type: "array", placeholder: "wxid_xxx 或 123@chatroom", description: "每行一个联系人/群聊 ID", section: "polling" },
-      { key: "polling.pollAllContacts", label: "轮询所有联系人", type: "toggle", section: "polling" },
-      { key: "polling.maxPollContacts", label: "最大轮询联系人数", type: "number", placeholder: "100", section: "polling" },
+      { key: "tokenFile", label: t('channels.tokenFile'), type: "text", placeholder: "/path/to/token", section: "api" },
+      { key: "robotId", label: t('channels.robotId'), type: "number", placeholder: "5", required: true, section: "api" },
+      { key: "defaultAccount", label: t('channels.defaultAccount'), type: "text", placeholder: "account-id", section: "basic" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "requireMention", label: t('channels.requireMention'), type: "toggle", section: "access" },
+      { key: "allowFrom", label: t('channels.allowedUsers'), type: "array", placeholder: "wxid_xxx", description: "每行一个微信 ID", section: "access" },
+      { key: "mediaMaxMb", label: t('channels.mediaMaxMb'), type: "number", placeholder: "25", section: "messaging" },
+      { key: "polling.pollingIntervalMs", label: t('channels.pollInterval'), type: "number", placeholder: "3000", section: "polling" },
+      { key: "polling.pollContactIds", label: t('channels.pollContactIds'), type: "array", placeholder: "wxid_xxx 或 123@chatroom", description: "每行一个联系人/群聊 ID", section: "polling" },
+      { key: "polling.pollAllContacts", label: t('channels.pollAllContacts'), type: "toggle", section: "polling" },
+      { key: "polling.maxPollContacts", label: t('channels.maxPollContacts'), type: "number", placeholder: "100", section: "polling" },
     ],
   },
   {
@@ -270,21 +320,21 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Matrix 消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/matrix",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
       { key: "homeserver", label: "Homeserver URL", type: "text", placeholder: "https://matrix.org", required: true, section: "auth" },
-      { key: "userId", label: "用户 ID", type: "text", placeholder: "@bot:matrix.org", required: true, section: "auth" },
+      { key: "userId", label: t('channels.userId'), type: "text", placeholder: "@bot:matrix.org", required: true, section: "auth" },
       { key: "accessToken", label: "Access Token", type: "password", placeholder: "...", section: "auth" },
-      { key: "password", label: "密码", type: "password", placeholder: "...", section: "auth" },
-      { key: "encryption", label: "启用加密", type: "toggle", section: "basic" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "房间策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "autoJoin", label: "自动加入", type: "select", options: [
-        { value: "always", label: "总是" },
-        { value: "allowlist", label: "白名单" },
-        { value: "off", label: "关闭" },
+      { key: "password", label: t('channels.password'), type: "password", placeholder: "...", section: "auth" },
+      { key: "encryption", label: t('channels.enableEncryption'), type: "toggle", section: "basic" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "autoJoin", label: t('channels.autoJoin'), type: "select", options: [
+        { value: "always", label: t('channels.replyStyle.always') },
+        { value: "allowlist", label: t('channels.policy.allowlist') },
+        { value: "off", label: t('channels.streamMode.off') },
       ], section: "access" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "mediaMaxMb", label: "最大媒体大小 (MB)", type: "number", placeholder: "25", section: "messaging" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "mediaMaxMb", label: t('channels.mediaMaxMb'), type: "number", placeholder: "25", section: "messaging" },
     ],
   },
   {
@@ -294,13 +344,13 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Mattermost 消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/mattermost",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "baseUrl", label: "服务器地址", type: "text", placeholder: "https://mattermost.example.com", required: true, section: "auth" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "baseUrl", label: t('channels.serverAddress'), type: "text", placeholder: "https://mattermost.example.com", required: true, section: "auth" },
       { key: "botToken", label: "Bot Token", type: "password", placeholder: "...", required: true, section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "频道策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "requireMention", label: "需要 @提及", type: "toggle", section: "access" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "requireMention", label: t('channels.requireMention'), type: "toggle", section: "access" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
     ],
   },
   {
@@ -310,9 +360,9 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Nostr 消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/nostr",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "privateKey", label: "私钥 (hex/nsec)", type: "password", placeholder: "nsec1...", required: true, section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "privateKey", label: t('channels.privateKey'), type: "password", placeholder: "nsec1...", required: true, section: "auth" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
     ],
   },
   {
@@ -322,11 +372,11 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "LINE 消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/line",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
       { key: "channelAccessToken", label: "Channel Access Token", type: "password", placeholder: "...", required: true, section: "auth" },
       { key: "channelSecret", label: "Channel Secret", type: "password", placeholder: "...", required: true, section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "群组策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
     ],
   },
   {
@@ -336,12 +386,12 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Twitch 消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/twitch",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "username", label: "用户名", type: "text", placeholder: "bot_username", required: true, section: "auth" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "username", label: t('channels.username'), type: "text", placeholder: "bot_username", required: true, section: "auth" },
       { key: "accessToken", label: "OAuth Access Token", type: "password", placeholder: "...", required: true, section: "auth" },
       { key: "clientId", label: "Client ID", type: "text", placeholder: "...", section: "auth" },
-      { key: "channel", label: "频道名称", type: "text", placeholder: "channel_name", required: true, section: "basic" },
-      { key: "requireMention", label: "需要 @提及", type: "toggle", section: "access" },
+      { key: "channel", label: t('channels.channelName'), type: "text", placeholder: "channel_name", required: true, section: "basic" },
+      { key: "requireMention", label: t('channels.requireMention'), type: "toggle", section: "access" },
     ],
   },
   {
@@ -351,15 +401,15 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "BlueBubbles iMessage 通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/bluebubbles",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "serverUrl", label: "服务器 URL", type: "text", placeholder: "http://localhost:1234", required: true, section: "auth" },
-      { key: "password", label: "服务器密码", type: "password", placeholder: "...", required: true, section: "auth" },
-      { key: "webhookPath", label: "Webhook 路径", type: "text", placeholder: "/bluebubbles", section: "webhook" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "群组策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "sendReadReceipts", label: "发送已读回执", type: "toggle", section: "messaging" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "serverUrl", label: t('channels.serverUrl'), type: "text", placeholder: "http://localhost:1234", required: true, section: "auth" },
+      { key: "password", label: t('channels.serverPassword'), type: "password", placeholder: "...", required: true, section: "auth" },
+      { key: "webhookPath", label: t('channels.webhookPath'), type: "text", placeholder: "/bluebubbles", section: "webhook" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "sendReadReceipts", label: t('channels.sendReadReceipts'), type: "toggle", section: "messaging" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
     ],
   },
   {
@@ -369,13 +419,13 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Zalo OA 消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/zalo",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
       { key: "botToken", label: "Bot Token", type: "password", placeholder: "...", required: true, section: "auth" },
-      { key: "tokenFile", label: "Token 文件路径", type: "text", placeholder: "/path/to/token", section: "auth" },
-      { key: "webhookUrl", label: "Webhook URL", type: "text", placeholder: "https://...", section: "webhook" },
+      { key: "tokenFile", label: t('channels.tokenFile'), type: "text", placeholder: "/path/to/token", section: "auth" },
+      { key: "webhookUrl", label: t('channels.webhookUrl'), type: "text", placeholder: "https://...", section: "webhook" },
       { key: "webhookSecret", label: "Webhook Secret", type: "password", placeholder: "...", section: "webhook" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "mediaMaxMb", label: "最大媒体大小 (MB)", type: "number", placeholder: "25", section: "messaging" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "mediaMaxMb", label: t('channels.mediaMaxMb'), type: "number", placeholder: "25", section: "messaging" },
     ],
   },
   {
@@ -385,15 +435,15 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Nextcloud Talk 消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/nextcloud-talk",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
       { key: "baseUrl", label: "Nextcloud URL", type: "text", placeholder: "https://nextcloud.example.com", required: true, section: "auth" },
       { key: "botSecret", label: "Bot Secret", type: "password", placeholder: "...", section: "auth" },
-      { key: "apiUser", label: "API 用户", type: "text", placeholder: "bot_user", section: "auth" },
-      { key: "apiPassword", label: "API 密码", type: "password", placeholder: "...", section: "auth" },
-      { key: "dmPolicy", label: "DM 策略", type: "select", options: DM_POLICY_OPTIONS, section: "access" },
-      { key: "groupPolicy", label: "房间策略", type: "select", options: GROUP_POLICY_OPTIONS, section: "access" },
-      { key: "textChunkLimit", label: "文本块限制", type: "number", placeholder: "4000", section: "messaging" },
-      { key: "historyLimit", label: "历史记录限制", type: "number", placeholder: "50", section: "history" },
+      { key: "apiUser", label: t('channels.apiUser'), type: "text", placeholder: "bot_user", section: "auth" },
+      { key: "apiPassword", label: t('channels.apiPassword'), type: "password", placeholder: "...", section: "auth" },
+      { key: "dmPolicy", label: t('channels.dmPolicy'), type: "select", options: getDmPolicyOptions(), section: "access" },
+      { key: "groupPolicy", label: t('channels.groupPolicy'), type: "select", options: getGroupPolicyOptions(), section: "access" },
+      { key: "textChunkLimit", label: t('channels.textChunkLimit'), type: "number", placeholder: "4000", section: "messaging" },
+      { key: "historyLimit", label: t('channels.historyLimit'), type: "number", placeholder: "50", section: "history" },
     ],
   },
   {
@@ -403,28 +453,28 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     description: "Tlon/Urbit 消息通道 (扩展)",
     docsUrl: "https://docs.molt.bot/channels/tlon",
     configFields: [
-      { key: "enabled", label: "启用", type: "toggle", section: "basic" },
-      { key: "ship", label: "Ship 名称", type: "text", placeholder: "~sampel-palnet", required: true, section: "auth" },
+      { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
+      { key: "ship", label: t('channels.shipName'), type: "text", placeholder: "~sampel-palnet", required: true, section: "auth" },
       { key: "url", label: "Ship URL", type: "text", placeholder: "http://localhost:8080", required: true, section: "auth" },
-      { key: "code", label: "认证码", type: "password", placeholder: "...", required: true, section: "auth" },
-      { key: "autoDiscoverChannels", label: "自动发现频道", type: "toggle", section: "basic" },
+      { key: "code", label: t('channels.authCode'), type: "password", placeholder: "...", required: true, section: "auth" },
+      { key: "autoDiscoverChannels", label: t('channels.autoDiscover'), type: "toggle", section: "basic" },
     ],
   },
 ];
 
 // 配置区块分组
 const CONFIG_SECTIONS = [
-  { id: "basic", label: "基本设置" },
-  { id: "auth", label: "认证配置" },
-  { id: "api", label: "API 配置" },
-  { id: "webhook", label: "Webhook 配置" },
-  { id: "daemon", label: "守护进程" },
-  { id: "cli", label: "CLI 配置" },
-  { id: "polling", label: "轮询配置" },
-  { id: "access", label: "访问控制" },
-  { id: "messaging", label: "消息设置" },
-  { id: "history", label: "历史记录" },
-  { id: "advanced", label: "高级设置" },
+  { id: "basic", label: t('channels.section.basic') },
+  { id: "auth", label: t('channels.section.auth') },
+  { id: "api", label: t('channels.section.api') },
+  { id: "webhook", label: t('channels.section.webhook') },
+  { id: "daemon", label: t('channels.section.daemon') },
+  { id: "cli", label: t('channels.section.cli') },
+  { id: "polling", label: t('channels.section.polling') },
+  { id: "access", label: t('channels.section.access') },
+  { id: "messaging", label: t('channels.section.messaging') },
+  { id: "history", label: t('channels.section.history') },
+  { id: "advanced", label: t('channels.section.advanced') },
 ];
 
 function getChannelIcon(iconName: string) {

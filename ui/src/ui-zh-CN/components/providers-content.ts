@@ -1,11 +1,12 @@
 /**
- * 模型供应商配置内容组件
- * 右侧面板 - 供应商管理
+ * Model Provider Configuration Content Component
+ * Right panel - Provider management
  */
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 import type { ProviderConfig, ModelConfig, ModelApi, AuthMode } from "../views/model-config";
 
-// SVG 图标
+// SVG icons
 const icons = {
   provider: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`,
   add: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
@@ -16,74 +17,27 @@ const icons = {
   close: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
 };
 
-// API 协议配置
-const API_PROTOCOLS: Array<{ value: ModelApi; label: string; hint: string }> = [
-  { value: "openai-completions", label: "OpenAI Completions", hint: "OpenAI 兼容 API（大多数供应商）" },
-  { value: "openai-responses", label: "OpenAI Responses", hint: "OpenAI 新版 Responses API" },
-  { value: "anthropic-messages", label: "Anthropic Messages", hint: "Anthropic Claude API" },
-  { value: "google-generative-ai", label: "Google Generative AI", hint: "Google Gemini API" },
-  { value: "github-copilot", label: "GitHub Copilot", hint: "GitHub Copilot 模型" },
-  { value: "bedrock-converse-stream", label: "AWS Bedrock", hint: "AWS Bedrock Converse API" },
-];
+// API protocol options - function to get localized labels
+function getApiProtocols(): Array<{ value: ModelApi; label: string; hint: string }> {
+  return [
+    { value: "openai-completions", label: "OpenAI Completions", hint: t('providers.protocol.openaiCompletions') },
+    { value: "openai-responses", label: "OpenAI Responses", hint: t('providers.protocol.openaiResponses') },
+    { value: "anthropic-messages", label: "Anthropic Messages", hint: t('providers.protocol.anthropic') },
+    { value: "google-generative-ai", label: "Google Generative AI", hint: t('providers.protocol.google') },
+    { value: "github-copilot", label: "GitHub Copilot", hint: t('providers.protocol.githubCopilot') },
+    { value: "bedrock-converse-stream", label: "AWS Bedrock", hint: t('providers.protocol.bedrock') },
+  ];
+}
 
-// 认证模式配置
-const AUTH_MODES: Array<{ value: AuthMode; label: string; hint: string }> = [
-  { value: "api-key", label: "API Key", hint: "标准 API 密钥认证" },
-  { value: "aws-sdk", label: "AWS SDK", hint: "使用 AWS 凭证（IAM / 环境变量）" },
-  { value: "oauth", label: "OAuth", hint: "OAuth 令牌认证" },
-  { value: "token", label: "Bearer Token", hint: "Bearer Token 认证" },
-];
-
-// 中文标签
-const LABELS = {
-  providersTitle: "模型供应商",
-  providersDesc: "配置 LLM 模型供应商，支持 OpenAI、Anthropic、Google、AWS Bedrock 等",
-  addProvider: "添加供应商",
-  providerName: "供应商名称",
-  providerNamePlaceholder: "输入供应商名称，如: openai、my-ollama",
-  providerBaseUrl: "API 地址",
-  providerBaseUrlPlaceholder: "https://api.example.com/v1",
-  providerApiKey: "API 密钥",
-  providerApiKeyPlaceholder: "sk-... 或 ${ENV_VAR}",
-  providerProtocol: "API 协议",
-  providerAuth: "认证方式",
-  providerHeaders: "自定义 Headers",
-  headersHint: "可选：添加额外的请求头",
-  addHeader: "添加 Header",
-  headerKey: "Header 名称",
-  headerValue: "Header 值",
-  noProviders: "尚未配置任何模型供应商",
-  modelId: "模型 ID",
-  modelName: "显示名称",
-  modelReasoning: "推理模型",
-  modelContext: "上下文",
-  modelMaxTokens: "最大输出",
-  modelInput: "输入类型",
-  inputText: "文本",
-  inputImage: "图片",
-  addModel: "添加模型",
-  modelCount: "个模型",
-  advancedConfig: "高级配置",
-  showAdvanced: "显示高级选项",
-  hideAdvanced: "隐藏高级选项",
-  modelCost: "成本配置",
-  costInput: "输入",
-  costOutput: "输出",
-  costCacheRead: "缓存读",
-  costCacheWrite: "缓存写",
-  costUnit: "$/M tokens",
-  modelCompat: "兼容性配置",
-  compatStore: "Store",
-  compatDeveloper: "Developer Role",
-  compatReasoning: "Reasoning Effort",
-  compatMaxTokens: "max_tokens 字段",
-  maxTokensField: "max_tokens",
-  maxCompletionTokensField: "max_completion_tokens",
-  // 弹窗相关
-  createProvider: "创建供应商",
-  cancel: "取消",
-  confirm: "确认创建",
-};
+// Auth mode options - function to get localized labels
+function getAuthModes(): Array<{ value: AuthMode; label: string; hint: string }> {
+  return [
+    { value: "api-key", label: "API Key", hint: t('providers.auth.apiKey') },
+    { value: "aws-sdk", label: "AWS SDK", hint: t('providers.auth.awsSdk') },
+    { value: "oauth", label: "OAuth", hint: t('providers.auth.oauth') },
+    { value: "token", label: "Bearer Token", hint: t('providers.auth.token') },
+  ];
+}
 
 // 新建供应商表单状态
 export type ProviderFormState = {
@@ -154,7 +108,7 @@ function renderModelRow(
       <div class="mc-model-row__main">
         <div class="mc-model-row__field mc-model-row__field--id">
           <label class="mc-field mc-field--sm">
-            <span class="mc-field__label">${LABELS.modelId}</span>
+            <span class="mc-field__label">${t('providers.modelId')}</span>
             <input
               type="text"
               class="mc-input mc-input--sm"
@@ -166,7 +120,7 @@ function renderModelRow(
         </div>
         <div class="mc-model-row__field mc-model-row__field--name">
           <label class="mc-field mc-field--sm">
-            <span class="mc-field__label">${LABELS.modelName}</span>
+            <span class="mc-field__label">${t('providers.modelName')}</span>
             <input
               type="text"
               class="mc-input mc-input--sm"
@@ -178,7 +132,7 @@ function renderModelRow(
         </div>
         <div class="mc-model-row__field mc-model-row__field--context">
           <label class="mc-field mc-field--sm">
-            <span class="mc-field__label">${LABELS.modelContext}</span>
+            <span class="mc-field__label">${t('providers.contextWindow')}</span>
             <input
               type="number"
               class="mc-input mc-input--sm"
@@ -195,7 +149,7 @@ function renderModelRow(
         </div>
         <div class="mc-model-row__field mc-model-row__field--tokens">
           <label class="mc-field mc-field--sm">
-            <span class="mc-field__label">${LABELS.modelMaxTokens}</span>
+            <span class="mc-field__label">${t('providers.maxTokens')}</span>
             <input
               type="number"
               class="mc-input mc-input--sm"
@@ -212,7 +166,7 @@ function renderModelRow(
         </div>
         <div class="mc-model-row__field mc-model-row__field--input">
           <div class="mc-field mc-field--sm">
-            <span class="mc-field__label">${LABELS.modelInput}</span>
+            <span class="mc-field__label">${t('providers.modelInput')}</span>
             <div class="mc-checkbox-group">
               <label class="mc-checkbox">
                 <input
@@ -220,7 +174,7 @@ function renderModelRow(
                   .checked=${hasText}
                   @change=${(e: Event) => handleInputChange("text", (e.target as HTMLInputElement).checked)}
                 />
-                <span>${LABELS.inputText}</span>
+                <span>${t('providers.inputText')}</span>
               </label>
               <label class="mc-checkbox">
                 <input
@@ -228,14 +182,14 @@ function renderModelRow(
                   .checked=${hasImage}
                   @change=${(e: Event) => handleInputChange("image", (e.target as HTMLInputElement).checked)}
                 />
-                <span>${LABELS.inputImage}</span>
+                <span>${t('providers.inputImage')}</span>
               </label>
             </div>
           </div>
         </div>
         <div class="mc-model-row__field mc-model-row__field--reasoning">
           <label class="mc-toggle-field">
-            <span class="mc-toggle-field__label">${LABELS.modelReasoning}</span>
+            <span class="mc-toggle-field__label">${t('providers.modelReasoning')}</span>
             <div class="mc-toggle">
               <input
                 type="checkbox"
@@ -282,15 +236,15 @@ function renderModelAdvanced(
       <details class="mc-model-advanced__details">
         <summary class="mc-model-advanced__summary">
           ${icons.settings}
-          <span>${LABELS.advancedConfig}</span>
+          <span>${t('providers.advancedConfig')}</span>
         </summary>
         <div class="mc-model-advanced__content">
           <!-- 成本配置 -->
           <div class="mc-model-advanced__section">
-            <div class="mc-model-advanced__section-title">${LABELS.modelCost}</div>
+            <div class="mc-model-advanced__section-title">${t('providers.modelCost')}</div>
             <div class="mc-model-advanced__grid">
               <label class="mc-field mc-field--sm">
-                <span class="mc-field__label">${LABELS.costInput}</span>
+                <span class="mc-field__label">${t('providers.costInput')}</span>
                 <div class="mc-input-with-unit">
                   <input
                     type="number"
@@ -303,11 +257,11 @@ function renderModelAdvanced(
                         input: Number((e.target as HTMLInputElement).value),
                       })}
                   />
-                  <span class="mc-input-unit">${LABELS.costUnit}</span>
+                  <span class="mc-input-unit">${t('providers.costUnit')}</span>
                 </div>
               </label>
               <label class="mc-field mc-field--sm">
-                <span class="mc-field__label">${LABELS.costOutput}</span>
+                <span class="mc-field__label">${t('providers.costOutput')}</span>
                 <div class="mc-input-with-unit">
                   <input
                     type="number"
@@ -320,11 +274,11 @@ function renderModelAdvanced(
                         output: Number((e.target as HTMLInputElement).value),
                       })}
                   />
-                  <span class="mc-input-unit">${LABELS.costUnit}</span>
+                  <span class="mc-input-unit">${t('providers.costUnit')}</span>
                 </div>
               </label>
               <label class="mc-field mc-field--sm">
-                <span class="mc-field__label">${LABELS.costCacheRead}</span>
+                <span class="mc-field__label">${t('providers.costCacheRead')}</span>
                 <div class="mc-input-with-unit">
                   <input
                     type="number"
@@ -337,11 +291,11 @@ function renderModelAdvanced(
                         cacheRead: Number((e.target as HTMLInputElement).value),
                       })}
                   />
-                  <span class="mc-input-unit">${LABELS.costUnit}</span>
+                  <span class="mc-input-unit">${t('providers.costUnit')}</span>
                 </div>
               </label>
               <label class="mc-field mc-field--sm">
-                <span class="mc-field__label">${LABELS.costCacheWrite}</span>
+                <span class="mc-field__label">${t('providers.costCacheWrite')}</span>
                 <div class="mc-input-with-unit">
                   <input
                     type="number"
@@ -354,7 +308,7 @@ function renderModelAdvanced(
                         cacheWrite: Number((e.target as HTMLInputElement).value),
                       })}
                   />
-                  <span class="mc-input-unit">${LABELS.costUnit}</span>
+                  <span class="mc-input-unit">${t('providers.costUnit')}</span>
                 </div>
               </label>
             </div>
@@ -362,7 +316,7 @@ function renderModelAdvanced(
 
           <!-- 兼容性配置 -->
           <div class="mc-model-advanced__section">
-            <div class="mc-model-advanced__section-title">${LABELS.modelCompat}</div>
+            <div class="mc-model-advanced__section-title">${t('providers.modelCompat')}</div>
             <div class="mc-model-advanced__compat">
               <label class="mc-checkbox">
                 <input
@@ -374,7 +328,7 @@ function renderModelAdvanced(
                       supportsStore: (e.target as HTMLInputElement).checked,
                     })}
                 />
-                <span>${LABELS.compatStore}</span>
+                <span>${t('providers.compatStore')}</span>
               </label>
               <label class="mc-checkbox">
                 <input
@@ -386,7 +340,7 @@ function renderModelAdvanced(
                       supportsDeveloperRole: (e.target as HTMLInputElement).checked,
                     })}
                 />
-                <span>${LABELS.compatDeveloper}</span>
+                <span>${t('providers.compatDeveloper')}</span>
               </label>
               <label class="mc-checkbox">
                 <input
@@ -398,10 +352,10 @@ function renderModelAdvanced(
                       supportsReasoningEffort: (e.target as HTMLInputElement).checked,
                     })}
                 />
-                <span>${LABELS.compatReasoning}</span>
+                <span>${t('providers.compatReasoning')}</span>
               </label>
               <div class="mc-compat-select">
-                <span class="mc-compat-select__label">${LABELS.compatMaxTokens}:</span>
+                <span class="mc-compat-select__label">${t('providers.compatMaxTokens')}:</span>
                 <select
                   class="mc-select mc-select--sm"
                   @change=${(e: Event) =>
@@ -410,8 +364,8 @@ function renderModelAdvanced(
                       maxTokensField: (e.target as HTMLSelectElement).value as "max_tokens" | "max_completion_tokens",
                     })}
                 >
-                  <option value="max_tokens" .selected=${(compat.maxTokensField ?? "max_tokens") === "max_tokens"}>${LABELS.maxTokensField}</option>
-                  <option value="max_completion_tokens" .selected=${compat.maxTokensField === "max_completion_tokens"}>${LABELS.maxCompletionTokensField}</option>
+                  <option value="max_tokens" .selected=${(compat.maxTokensField ?? "max_tokens") === "max_tokens"}>${t('providers.maxTokensField')}</option>
+                  <option value="max_completion_tokens" .selected=${compat.maxTokensField === "max_completion_tokens"}>${t('providers.maxCompletionTokensField')}</option>
                 </select>
               </div>
             </div>
@@ -458,13 +412,13 @@ function renderHeadersEditor(
   return html`
     <div class="mc-headers-section">
       <div class="mc-headers-section__header">
-        <span class="mc-headers-section__title">${LABELS.providerHeaders}</span>
+        <span class="mc-headers-section__title">${t('providers.headers')}</span>
         <button class="mc-btn mc-btn--sm" @click=${handleAddHeader}>
-          ${icons.add} ${LABELS.addHeader}
+          ${icons.add} ${t('providers.addHeader')}
         </button>
       </div>
       ${entries.length === 0
-        ? html`<div class="mc-headers-section__hint">${LABELS.headersHint}</div>`
+        ? html`<div class="mc-headers-section__hint">${t('providers.headersHint')}</div>`
         : html`
             <div class="mc-headers-list">
               ${entries.map(
@@ -473,7 +427,7 @@ function renderHeadersEditor(
                     <input
                       type="text"
                       class="mc-input mc-input--sm"
-                      placeholder=${LABELS.headerKey}
+                      placeholder=${t('providers.headerKey')}
                       .value=${key}
                       @input=${(e: Event) =>
                         handleHeaderChange(key, (e.target as HTMLInputElement).value, value)}
@@ -481,7 +435,7 @@ function renderHeadersEditor(
                     <input
                       type="text"
                       class="mc-input mc-input--sm"
-                      placeholder=${LABELS.headerValue}
+                      placeholder=${t('providers.headerValue')}
                       .value=${value}
                       @input=${(e: Event) =>
                         handleHeaderChange(key, key, (e.target as HTMLInputElement).value)}
@@ -505,7 +459,7 @@ function renderHeadersEditor(
  * 获取协议标签
  */
 function getProtocolLabel(api: ModelApi): string {
-  const protocol = API_PROTOCOLS.find((p) => p.value === api);
+  const protocol = getApiProtocols().find((p) => p.value === api);
   return protocol?.label ?? api;
 }
 
@@ -534,7 +488,7 @@ function renderProviderCard(
             <div class="mc-provider-card__name">${key}</div>
             <div class="mc-provider-card__meta">
               <span class="mc-provider-card__protocol">${protocolLabel}</span>
-              <span class="mc-provider-card__count">${provider.models.length} ${LABELS.modelCount}</span>
+              <span class="mc-provider-card__count">${provider.models.length} ${t('providers.modelCount')}</span>
             </div>
           </div>
         </div>
@@ -561,7 +515,7 @@ function renderProviderCard(
               <div class="mc-form-section">
                 <div class="mc-form-row">
                   <label class="mc-field">
-                    <span class="mc-field__label">${LABELS.providerName}</span>
+                    <span class="mc-field__label">${t('providers.name')}</span>
                     <input
                       type="text"
                       class="mc-input"
@@ -582,7 +536,7 @@ function renderProviderCard(
                 </div>
                 <div class="mc-form-row">
                   <label class="mc-field">
-                    <span class="mc-field__label">${LABELS.providerBaseUrl}</span>
+                    <span class="mc-field__label">${t('providers.baseUrl')}</span>
                     <input
                       type="text"
                       class="mc-input"
@@ -595,25 +549,25 @@ function renderProviderCard(
                 </div>
                 <div class="mc-form-row mc-form-row--2col">
                   <label class="mc-field">
-                    <span class="mc-field__label">${LABELS.providerProtocol}</span>
+                    <span class="mc-field__label">${t('providers.apiProtocol')}</span>
                     <select
                       class="mc-select"
                       @change=${(e: Event) =>
                         props.onProviderUpdate(key, "api", (e.target as HTMLSelectElement).value)}
                     >
-                      ${API_PROTOCOLS.map(
+                      ${getApiProtocols().map(
                         (p) => html`<option value=${p.value} title=${p.hint} .selected=${provider.api === p.value}>${p.label}</option>`,
                       )}
                     </select>
                   </label>
                   <label class="mc-field">
-                    <span class="mc-field__label">${LABELS.providerAuth}</span>
+                    <span class="mc-field__label">${t('providers.authMode')}</span>
                     <select
                       class="mc-select"
                       @change=${(e: Event) =>
                         props.onProviderUpdate(key, "auth", (e.target as HTMLSelectElement).value)}
                     >
-                      ${AUTH_MODES.map(
+                      ${getAuthModes().map(
                         (a) => html`<option value=${a.value} title=${a.hint} .selected=${(provider.auth ?? "api-key") === a.value}>${a.label}</option>`,
                       )}
                     </select>
@@ -623,7 +577,7 @@ function renderProviderCard(
                   ? html`
                       <div class="mc-form-row">
                         <label class="mc-field">
-                          <span class="mc-field__label">${LABELS.providerApiKey}</span>
+                          <span class="mc-field__label">${t('providers.apiKey')}</span>
                           <input
                             type="password"
                             class="mc-input"
@@ -647,7 +601,7 @@ function renderProviderCard(
                     @click=${() => props.onModelAdd(key)}
                   >
                     ${icons.add}
-                    <span>${LABELS.addModel}</span>
+                    <span>${t('providers.addModel')}</span>
                   </button>
                 </div>
                 <div class="mc-models-list">
@@ -689,7 +643,7 @@ function renderAddProviderModal(props: ProvidersContentProps) {
         <div class="cron-create-modal__header">
           <div class="cron-create-modal__title">
             ${icons.provider}
-            <span>${LABELS.createProvider}</span>
+            <span>${t('providers.create')}</span>
           </div>
           <button class="cron-create-modal__close" @click=${handleClose}>
             ${icons.close}
@@ -699,11 +653,11 @@ function renderAddProviderModal(props: ProvidersContentProps) {
         <div class="cron-create-modal__body">
           <!-- 供应商名称 -->
           <div class="mc-field" style="margin-bottom: 16px;">
-            <label class="mc-field__label">${LABELS.providerName}</label>
+            <label class="mc-field__label">${t('providers.name')}</label>
             <input
               type="text"
               class="mc-input"
-              placeholder=${LABELS.providerNamePlaceholder}
+              placeholder=${t('providers.namePlaceholder')}
               .value=${form.name}
               @input=${(e: Event) =>
                 onFormChange({ name: (e.target as HTMLInputElement).value })}
@@ -712,11 +666,11 @@ function renderAddProviderModal(props: ProvidersContentProps) {
 
           <!-- API 地址 -->
           <div class="mc-field" style="margin-bottom: 16px;">
-            <label class="mc-field__label">${LABELS.providerBaseUrl}</label>
+            <label class="mc-field__label">${t('providers.baseUrl')}</label>
             <input
               type="text"
               class="mc-input"
-              placeholder=${LABELS.providerBaseUrlPlaceholder}
+              placeholder=${t('providers.baseUrlPlaceholder')}
               .value=${form.baseUrl}
               @input=${(e: Event) =>
                 onFormChange({ baseUrl: (e.target as HTMLInputElement).value })}
@@ -726,25 +680,25 @@ function renderAddProviderModal(props: ProvidersContentProps) {
           <!-- API 协议和认证方式 -->
           <div class="cron-form-grid" style="margin-bottom: 16px;">
             <div class="mc-field">
-              <label class="mc-field__label">${LABELS.providerProtocol}</label>
+              <label class="mc-field__label">${t('providers.apiProtocol')}</label>
               <select
                 class="mc-select"
                 @change=${(e: Event) =>
                   onFormChange({ api: (e.target as HTMLSelectElement).value as ModelApi })}
               >
-                ${API_PROTOCOLS.map(
+                ${getApiProtocols().map(
                   (p) => html`<option value=${p.value} title=${p.hint} .selected=${form.api === p.value}>${p.label}</option>`,
                 )}
               </select>
             </div>
             <div class="mc-field">
-              <label class="mc-field__label">${LABELS.providerAuth}</label>
+              <label class="mc-field__label">${t('providers.authMode')}</label>
               <select
                 class="mc-select"
                 @change=${(e: Event) =>
                   onFormChange({ auth: (e.target as HTMLSelectElement).value as AuthMode })}
               >
-                ${AUTH_MODES.map(
+                ${getAuthModes().map(
                   (a) => html`<option value=${a.value} title=${a.hint} .selected=${form.auth === a.value}>${a.label}</option>`,
                 )}
               </select>
@@ -755,11 +709,11 @@ function renderAddProviderModal(props: ProvidersContentProps) {
           ${showApiKey
             ? html`
                 <div class="mc-field" style="margin-bottom: 16px;">
-                  <label class="mc-field__label">${LABELS.providerApiKey}</label>
+                  <label class="mc-field__label">${t('providers.apiKey')}</label>
                   <input
                     type="password"
                     class="mc-input"
-                    placeholder=${LABELS.providerApiKeyPlaceholder}
+                    placeholder=${t('providers.apiKeyPlaceholder')}
                     .value=${form.apiKey}
                     @input=${(e: Event) =>
                       onFormChange({ apiKey: (e.target as HTMLInputElement).value })}
@@ -781,14 +735,14 @@ function renderAddProviderModal(props: ProvidersContentProps) {
 
         <div class="cron-create-modal__footer">
           <button class="mc-btn" @click=${handleClose}>
-            ${LABELS.cancel}
+            ${t('action.cancel')}
           </button>
           <button
             class="mc-btn mc-btn--primary"
             ?disabled=${!form.name.trim()}
             @click=${handleSubmit}
           >
-            ${LABELS.confirm}
+            ${t('providers.confirmCreate')}
           </button>
         </div>
       </div>
@@ -817,12 +771,12 @@ export function renderProvidersContent(props: ProvidersContentProps) {
       <div class="config-content__header">
         <div class="config-content__icon">${icons.provider}</div>
         <div class="config-content__titles">
-          <h2 class="config-content__title">${LABELS.providersTitle}</h2>
-          <p class="config-content__desc">${LABELS.providersDesc}</p>
+          <h2 class="config-content__title">${t('providers.title')}</h2>
+          <p class="config-content__desc">${t('providers.desc')}</p>
         </div>
         <button class="mc-btn mc-btn--primary" @click=${handleAddClick}>
           ${icons.add}
-          <span>${LABELS.addProvider}</span>
+          <span>${t('providers.add')}</span>
         </button>
       </div>
 
@@ -901,7 +855,7 @@ export function renderProvidersContent(props: ProvidersContentProps) {
 
       <div class="config-content__body">
         ${providerKeys.length === 0
-          ? html`<div class="mc-empty">${LABELS.noProviders}</div>`
+          ? html`<div class="mc-empty">${t('providers.noProviders')}</div>`
           : html`
               <div class="mc-providers-grid">
                 ${providerKeys.map((key) =>

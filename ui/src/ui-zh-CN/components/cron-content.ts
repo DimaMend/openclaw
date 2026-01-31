@@ -1,8 +1,8 @@
 /**
- * Cron 定时任务内容组件
- * Cron scheduled task content component
+ * Cron Scheduled Task Content Component
  */
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 import type { CronJob } from "../../ui/types";
 import type { CronFormState } from "../../ui/ui-types";
 import type { CronContentProps } from "../types/cron-config";
@@ -14,120 +14,7 @@ import {
   formatNextRun,
 } from "../../ui/presenter";
 
-// 中文标签 / Chinese labels
-const LABELS = {
-  // 页面标题
-  title: "定时任务",
-  desc: "配置和管理 Gateway 定时任务调度",
-
-  // 状态卡片
-  schedulerStatus: "调度器状态",
-  enabled: "已启用",
-  disabled: "已禁用",
-  jobCount: "任务数量",
-  nextWake: "下次唤醒",
-  nJobs: (n: number) => `${n} 个任务`,
-
-  // 操作按钮
-  refresh: "刷新",
-  refreshing: "刷新中...",
-
-  // 表单
-  newJob: "新建任务",
-  name: "任务名称",
-  namePlaceholder: "输入任务名称",
-  description: "任务描述",
-  descriptionPlaceholder: "可选：描述任务用途",
-  agentId: "Agent ID",
-  agentIdPlaceholder: "留空使用默认 Agent",
-  enabledLabel: "启用任务",
-
-  // 调度类型
-  schedule: "调度方式",
-  scheduleAt: "指定时间",
-  scheduleEvery: "循环间隔",
-  scheduleCron: "Cron 表达式",
-  runAt: "运行时间",
-  every: "每隔",
-  everyUnit: "时间单位",
-  minutes: "分钟",
-  hours: "小时",
-  days: "天",
-  cronExpr: "Cron 表达式",
-  cronExprPlaceholder: "0 7 * * *",
-  cronTz: "时区",
-  cronTzPlaceholder: "如: Asia/Shanghai",
-
-  // 会话和唤醒
-  sessionTarget: "会话类型",
-  sessionMain: "主会话",
-  sessionIsolated: "隔离会话",
-  wakeMode: "唤醒方式",
-  wakeModeNextHeartbeat: "下次心跳",
-  wakeModeNow: "立即执行",
-
-  // 负载类型
-  payloadKind: "任务类型",
-  payloadSystemEvent: "系统事件",
-  payloadAgentTurn: "Agent 执行",
-  payloadText: "消息内容",
-  payloadTextPlaceholder: "输入要执行的消息或命令",
-
-  // Agent 执行选项
-  deliver: "投递消息",
-  channel: "投递通道",
-  channelLast: "上次活跃通道",
-  to: "接收者",
-  toPlaceholder: "+1555... 或 chat id",
-  timeoutSeconds: "超时时间（秒）",
-  postToMainPrefix: "回写前缀",
-  postToMainPrefixPlaceholder: "隔离会话结果回写到主会话的前缀",
-
-  // 提交
-  addJob: "添加任务",
-  adding: "添加中...",
-  editJob: "编辑任务",
-  updateJob: "保存修改",
-  updating: "保存中...",
-
-  // 任务列表
-  jobsList: "任务列表",
-  noJobs: "暂无定时任务",
-  noJobsHint: "点击右上方「新建任务」按钮创建第一个定时任务",
-
-  // 任务卡片
-  enableJob: "启用",
-  disableJob: "禁用",
-  runNow: "立即运行",
-  viewRuns: "运行记录",
-  deleteJob: "删除",
-
-  // 任务详情
-  lastStatus: "上次状态",
-  nextRun: "下次运行",
-  lastRun: "上次运行",
-  statusOk: "成功",
-  statusError: "失败",
-  statusSkipped: "跳过",
-  statusNA: "无",
-
-  // 运行历史
-  runHistory: "运行历史",
-  selectJobToViewRuns: "选择任务查看运行历史",
-  noRuns: "暂无运行记录",
-  duration: "耗时",
-
-  // 删除确认
-  deleteConfirmTitle: "确认删除",
-  deleteConfirmDesc: (name: string) => `确定要删除任务 "${name}" 吗？此操作不可撤销。`,
-  cancel: "取消",
-  confirm: "确认删除",
-
-  // 错误
-  error: "错误",
-};
-
-// 图标
+// Icons
 const icons = {
   clock: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
   plus: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
@@ -212,7 +99,7 @@ function buildChannelOptions(props: CronContentProps): string[] {
  * 解析通道显示标签
  */
 function resolveChannelLabel(props: CronContentProps, channel: string): string {
-  if (channel === "last") return LABELS.channelLast;
+  if (channel === "last") return t('cron.channelLast');
   const meta = props.channelMeta?.find((entry) => entry.id === channel);
   if (meta?.label) return meta.label;
   return props.channelLabels?.[channel] ?? channel;
@@ -226,19 +113,19 @@ function renderStatusCard(props: CronContentProps) {
   return html`
     <div class="cron-status-card">
       <div class="cron-status-card__item">
-        <div class="cron-status-card__label">${LABELS.schedulerStatus}</div>
+        <div class="cron-status-card__label">${t('cron.status')}</div>
         <div class="cron-status-card__value ${status?.enabled ? "cron-status-card__value--ok" : ""}">
-          ${status ? (status.enabled ? LABELS.enabled : LABELS.disabled) : "—"}
+          ${status ? (status.enabled ? t('cron.statusEnabled') : t('cron.statusDisabled')) : "—"}
         </div>
       </div>
       <div class="cron-status-card__item">
-        <div class="cron-status-card__label">${LABELS.jobCount}</div>
+        <div class="cron-status-card__label">${t('cron.jobCount')}</div>
         <div class="cron-status-card__value">
-          ${status ? LABELS.nJobs(status.jobs ?? 0) : "—"}
+          ${status ? t('cron.nJobs', { count: status.jobs ?? 0 }) : "—"}
         </div>
       </div>
       <div class="cron-status-card__item">
-        <div class="cron-status-card__label">${LABELS.nextWake}</div>
+        <div class="cron-status-card__label">${t('cron.nextWake')}</div>
         <div class="cron-status-card__value" style="font-size: 14px;">
           ${formatNextRun(status?.nextWakeAtMs ?? null)}
         </div>
@@ -261,19 +148,19 @@ function renderScheduleFields(props: CronContentProps) {
         class="cron-schedule-tab ${form.scheduleKind === "every" ? "cron-schedule-tab--active" : ""}"
         @click=${() => onFormChange({ scheduleKind: "every" })}
       >
-        ${LABELS.scheduleEvery}
+        ${t('cron.schedule.every')}
       </button>
       <button
         class="cron-schedule-tab ${form.scheduleKind === "at" ? "cron-schedule-tab--active" : ""}"
         @click=${() => onFormChange({ scheduleKind: "at" })}
       >
-        ${LABELS.scheduleAt}
+        ${t('cron.schedule.at')}
       </button>
       <button
         class="cron-schedule-tab ${form.scheduleKind === "cron" ? "cron-schedule-tab--active" : ""}"
         @click=${() => onFormChange({ scheduleKind: "cron" })}
       >
-        ${LABELS.scheduleCron}
+        ${t('cron.schedule.cron')}
       </button>
     </div>
 
@@ -281,7 +168,7 @@ function renderScheduleFields(props: CronContentProps) {
     ${form.scheduleKind === "at"
       ? html`
           <div class="mc-field">
-            <label class="mc-field__label">${LABELS.runAt}</label>
+            <label class="mc-field__label">${t('cron.runAt')}</label>
             <input
               type="datetime-local"
               class="mc-input"
@@ -295,7 +182,7 @@ function renderScheduleFields(props: CronContentProps) {
         ? html`
             <div class="cron-form-grid">
               <div class="mc-field">
-                <label class="mc-field__label">${LABELS.every}</label>
+                <label class="mc-field__label">${t('cron.every')}</label>
                 <input
                   type="number"
                   class="mc-input"
@@ -306,7 +193,7 @@ function renderScheduleFields(props: CronContentProps) {
                 />
               </div>
               <div class="mc-field">
-                <label class="mc-field__label">${LABELS.everyUnit}</label>
+                <label class="mc-field__label">${t('cron.everyUnit')}</label>
                 <select
                   class="mc-select"
                   .value=${form.everyUnit}
@@ -315,9 +202,9 @@ function renderScheduleFields(props: CronContentProps) {
                       everyUnit: (e.target as HTMLSelectElement).value as CronFormState["everyUnit"],
                     })}
                 >
-                  <option value="minutes">${LABELS.minutes}</option>
-                  <option value="hours">${LABELS.hours}</option>
-                  <option value="days">${LABELS.days}</option>
+                  <option value="minutes">${t('cron.minutes')}</option>
+                  <option value="hours">${t('cron.hours')}</option>
+                  <option value="days">${t('cron.days')}</option>
                 </select>
               </div>
             </div>
@@ -325,22 +212,22 @@ function renderScheduleFields(props: CronContentProps) {
         : html`
             <div class="cron-form-grid">
               <div class="mc-field">
-                <label class="mc-field__label">${LABELS.cronExpr}</label>
+                <label class="mc-field__label">${t('cron.cronExpr')}</label>
                 <input
                   type="text"
                   class="mc-input"
-                  placeholder=${LABELS.cronExprPlaceholder}
+                  placeholder=${t('cron.cronExprPlaceholder')}
                   .value=${form.cronExpr}
                   @input=${(e: Event) =>
                     onFormChange({ cronExpr: (e.target as HTMLInputElement).value })}
                 />
               </div>
               <div class="mc-field">
-                <label class="mc-field__label">${LABELS.cronTz}</label>
+                <label class="mc-field__label">${t('cron.cronTz')}</label>
                 <input
                   type="text"
                   class="mc-input"
-                  placeholder=${LABELS.cronTzPlaceholder}
+                  placeholder=${t('cron.cronTzPlaceholder')}
                   .value=${form.cronTz}
                   @input=${(e: Event) =>
                     onFormChange({ cronTz: (e.target as HTMLInputElement).value })}
@@ -378,10 +265,10 @@ function renderCreateModal(props: CronContentProps) {
     }
   };
 
-  const modalTitle = isEditMode ? LABELS.editJob : LABELS.newJob;
+  const modalTitle = isEditMode ? t('cron.editJob') : t('cron.newJob');
   const submitLabel = isEditMode
-    ? (props.busy ? LABELS.updating : LABELS.updateJob)
-    : (props.busy ? LABELS.adding : LABELS.addJob);
+    ? (props.busy ? t('cron.updating') : t('cron.updateJob'))
+    : (props.busy ? t('cron.adding') : t('cron.addJob'));
 
   return html`
     <div class="cron-confirm-modal" @click=${handleClose}>
@@ -400,22 +287,22 @@ function renderCreateModal(props: CronContentProps) {
           <!-- 基本信息 -->
           <div class="cron-form-grid" style="margin-bottom: 16px;">
             <div class="mc-field">
-              <label class="mc-field__label">${LABELS.name}</label>
+              <label class="mc-field__label">${t('cron.jobName')}</label>
               <input
                 type="text"
                 class="mc-input"
-                placeholder=${LABELS.namePlaceholder}
+                placeholder=${t('cron.jobNamePlaceholder')}
                 .value=${form.name}
                 @input=${(e: Event) =>
                   onFormChange({ name: (e.target as HTMLInputElement).value })}
               />
             </div>
             <div class="mc-field">
-              <label class="mc-field__label">${LABELS.description}</label>
+              <label class="mc-field__label">${t('cron.description')}</label>
               <input
                 type="text"
                 class="mc-input"
-                placeholder=${LABELS.descriptionPlaceholder}
+                placeholder=${t('cron.descriptionPlaceholder')}
                 .value=${form.description}
                 @input=${(e: Event) =>
                   onFormChange({ description: (e.target as HTMLInputElement).value })}
@@ -425,14 +312,14 @@ function renderCreateModal(props: CronContentProps) {
 
           <div class="cron-form-grid" style="margin-bottom: 16px;">
             <div class="mc-field">
-              <label class="mc-field__label">${LABELS.agentId}</label>
+              <label class="mc-field__label">${t('cron.agentId')}</label>
               <select
                 class="mc-select"
                 .value=${form.agentId || props.defaultAgentId || ""}
                 @change=${(e: Event) =>
                   onFormChange({ agentId: (e.target as HTMLSelectElement).value })}
               >
-                <option value="">${LABELS.agentIdPlaceholder}</option>
+                <option value="">${t('cron.agentIdPlaceholder')}</option>
                 ${(props.agents ?? []).map(
                   (agent) =>
                     html`<option value=${agent.id}>
@@ -443,7 +330,7 @@ function renderCreateModal(props: CronContentProps) {
             </div>
             <div class="mc-field" style="justify-content: center;">
               <label class="mc-toggle-field">
-                <span class="mc-toggle-field__label">${LABELS.enabledLabel}</span>
+                <span class="mc-toggle-field__label">${t('cron.jobEnabled')}</span>
                 <div class="mc-toggle">
                   <input
                     type="checkbox"
@@ -463,7 +350,7 @@ function renderCreateModal(props: CronContentProps) {
           <!-- 会话和唤醒方式 -->
           <div class="cron-form-grid" style="margin-top: 16px; margin-bottom: 16px;">
             <div class="mc-field">
-              <label class="mc-field__label">${LABELS.sessionTarget}</label>
+              <label class="mc-field__label">${t('cron.sessionTarget')}</label>
               <select
                 class="mc-select"
                 .value=${form.sessionTarget}
@@ -480,12 +367,12 @@ function renderCreateModal(props: CronContentProps) {
                   }
                 }}
               >
-                <option value="main">${LABELS.sessionMain}</option>
-                <option value="isolated">${LABELS.sessionIsolated}</option>
+                <option value="main">${t('cron.sessionTarget.main')}</option>
+                <option value="isolated">${t('cron.sessionTarget.isolated')}</option>
               </select>
             </div>
             <div class="mc-field">
-              <label class="mc-field__label">${LABELS.wakeMode}</label>
+              <label class="mc-field__label">${t('cron.wakeMode')}</label>
               <select
                 class="mc-select"
                 .value=${form.wakeMode}
@@ -494,15 +381,15 @@ function renderCreateModal(props: CronContentProps) {
                     wakeMode: (e.target as HTMLSelectElement).value as CronFormState["wakeMode"],
                   })}
               >
-                <option value="next-heartbeat">${LABELS.wakeModeNextHeartbeat}</option>
-                <option value="now">${LABELS.wakeModeNow}</option>
+                <option value="next-heartbeat">${t('cron.wakeMode.nextHeartbeat')}</option>
+                <option value="now">${t('cron.wakeMode.now')}</option>
               </select>
             </div>
           </div>
 
           <!-- 任务类型 -->
           <div class="mc-field" style="margin-bottom: 16px;">
-            <label class="mc-field__label">${LABELS.payloadKind}</label>
+            <label class="mc-field__label">${t('cron.payloadKind')}</label>
             <select
               class="mc-select"
               .value=${form.payloadKind}
@@ -511,20 +398,20 @@ function renderCreateModal(props: CronContentProps) {
                   payloadKind: (e.target as HTMLSelectElement).value as CronFormState["payloadKind"],
                 })}
             >
-              <option value="systemEvent">${LABELS.payloadSystemEvent}</option>
+              <option value="systemEvent">${t('cron.payload.systemEvent')}</option>
               <option value="agentTurn" ?disabled=${form.sessionTarget === "main"}>
-                ${LABELS.payloadAgentTurn}${form.sessionTarget === "main" ? " (仅限隔离会话)" : ""}
+                ${t('cron.payload.agentTurn')}${form.sessionTarget === "main" ? " (仅限隔离会话)" : ""}
               </option>
             </select>
           </div>
 
           <!-- 消息内容 -->
           <div class="mc-field" style="margin-bottom: 16px;">
-            <label class="mc-field__label">${LABELS.payloadText}</label>
+            <label class="mc-field__label">${t('cron.payloadText')}</label>
             <textarea
               class="mc-textarea"
               rows="3"
-              placeholder=${LABELS.payloadTextPlaceholder}
+              placeholder=${t('cron.payloadTextPlaceholder')}
               .value=${form.payloadText}
               @input=${(e: Event) =>
                 onFormChange({ payloadText: (e.target as HTMLTextAreaElement).value })}
@@ -537,7 +424,7 @@ function renderCreateModal(props: CronContentProps) {
                 <div class="cron-form-grid" style="margin-bottom: 16px;">
                   <div class="mc-field" style="justify-content: center;">
                     <label class="mc-toggle-field">
-                      <span class="mc-toggle-field__label">${LABELS.deliver}</span>
+                      <span class="mc-toggle-field__label">${t('cron.deliver')}</span>
                       <div class="mc-toggle">
                         <input
                           type="checkbox"
@@ -550,7 +437,7 @@ function renderCreateModal(props: CronContentProps) {
                     </label>
                   </div>
                   <div class="mc-field">
-                    <label class="mc-field__label">${LABELS.channel}</label>
+                    <label class="mc-field__label">${t('cron.channel')}</label>
                     <select
                       class="mc-select"
                       .value=${form.channel || "last"}
@@ -569,18 +456,18 @@ function renderCreateModal(props: CronContentProps) {
 
                 <div class="cron-form-grid" style="margin-bottom: 16px;">
                   <div class="mc-field">
-                    <label class="mc-field__label">${LABELS.to}</label>
+                    <label class="mc-field__label">${t('cron.to')}</label>
                     <input
                       type="text"
                       class="mc-input"
-                      placeholder=${LABELS.toPlaceholder}
+                      placeholder=${t('cron.toPlaceholder')}
                       .value=${form.to}
                       @input=${(e: Event) =>
                         onFormChange({ to: (e.target as HTMLInputElement).value })}
                     />
                   </div>
                   <div class="mc-field">
-                    <label class="mc-field__label">${LABELS.timeoutSeconds}</label>
+                    <label class="mc-field__label">${t('cron.timeoutSeconds')}</label>
                     <input
                       type="number"
                       class="mc-input"
@@ -595,11 +482,11 @@ function renderCreateModal(props: CronContentProps) {
                 ${form.sessionTarget === "isolated"
                   ? html`
                       <div class="mc-field" style="margin-bottom: 16px;">
-                        <label class="mc-field__label">${LABELS.postToMainPrefix}</label>
+                        <label class="mc-field__label">${t('cron.postToMainPrefix')}</label>
                         <input
                           type="text"
                           class="mc-input"
-                          placeholder=${LABELS.postToMainPrefixPlaceholder}
+                          placeholder=${t('cron.postToMainPrefixPlaceholder')}
                           .value=${form.postToMainPrefix}
                           @input=${(e: Event) =>
                             onFormChange({ postToMainPrefix: (e.target as HTMLInputElement).value })}
@@ -623,7 +510,7 @@ function renderCreateModal(props: CronContentProps) {
 
         <div class="cron-create-modal__footer">
           <button class="mc-btn" @click=${handleClose}>
-            ${LABELS.cancel}
+            ${t('action.cancel')}
           </button>
           <button
             class="mc-btn mc-btn--primary"
@@ -646,9 +533,9 @@ function renderJobBadge(job: CronJob) {
     return html`<span class="cron-job-card__badge cron-job-card__badge--running">运行中</span>`;
   }
   if (job.enabled) {
-    return html`<span class="cron-job-card__badge cron-job-card__badge--enabled">${LABELS.enabled}</span>`;
+    return html`<span class="cron-job-card__badge cron-job-card__badge--enabled">${t('cron.statusEnabled')}</span>`;
   }
-  return html`<span class="cron-job-card__badge cron-job-card__badge--disabled">${LABELS.disabled}</span>`;
+  return html`<span class="cron-job-card__badge cron-job-card__badge--disabled">${t('cron.statusDisabled')}</span>`;
 }
 
 /**
@@ -658,35 +545,35 @@ function renderJobDetails(job: CronJob, props: CronContentProps) {
   const state = job.state;
   const lastStatusText =
     state?.lastStatus === "ok"
-      ? LABELS.statusOk
+      ? t('cron.statusOk')
       : state?.lastStatus === "error"
-        ? LABELS.statusError
+        ? t('cron.statusError')
         : state?.lastStatus === "skipped"
-          ? LABELS.statusSkipped
-          : LABELS.statusNA;
+          ? t('cron.statusSkipped')
+          : t('cron.statusNA');
   const { onToggle, onRun, onLoadRuns, onDeleteConfirm, onEdit } = getSafeCallbacks(props);
 
   return html`
     <div class="cron-job-card__details">
       <div class="cron-job-card__meta">
         <div class="cron-job-card__meta-item">
-          <span class="cron-job-card__meta-label">${LABELS.sessionTarget}</span>
+          <span class="cron-job-card__meta-label">${t('cron.sessionTarget')}</span>
           <span class="cron-job-card__meta-value">
-            ${job.sessionTarget === "main" ? LABELS.sessionMain : LABELS.sessionIsolated}
+            ${job.sessionTarget === "main" ? t('cron.sessionTarget.main') : t('cron.sessionTarget.isolated')}
           </span>
         </div>
         <div class="cron-job-card__meta-item">
-          <span class="cron-job-card__meta-label">${LABELS.wakeMode}</span>
+          <span class="cron-job-card__meta-label">${t('cron.wakeMode')}</span>
           <span class="cron-job-card__meta-value">
-            ${job.wakeMode === "now" ? LABELS.wakeModeNow : LABELS.wakeModeNextHeartbeat}
+            ${job.wakeMode === "now" ? t('cron.wakeMode.now') : t('cron.wakeMode.nextHeartbeat')}
           </span>
         </div>
         <div class="cron-job-card__meta-item">
-          <span class="cron-job-card__meta-label">${LABELS.lastStatus}</span>
+          <span class="cron-job-card__meta-label">${t('cron.lastStatus')}</span>
           <span class="cron-job-card__meta-value">${lastStatusText}</span>
         </div>
         <div class="cron-job-card__meta-item">
-          <span class="cron-job-card__meta-label">${LABELS.nextRun}</span>
+          <span class="cron-job-card__meta-label">${t('cron.nextRun')}</span>
           <span class="cron-job-card__meta-value">
             ${state?.nextRunAtMs ? formatMs(state.nextRunAtMs) : "—"}
           </span>
@@ -702,7 +589,7 @@ function renderJobDetails(job: CronJob, props: CronContentProps) {
         ${job.description
           ? html`
               <div class="cron-job-card__meta-item" style="grid-column: 1 / -1;">
-                <span class="cron-job-card__meta-label">${LABELS.description}</span>
+                <span class="cron-job-card__meta-label">${t('cron.description')}</span>
                 <span class="cron-job-card__meta-value">${job.description}</span>
               </div>
             `
@@ -719,7 +606,7 @@ function renderJobDetails(job: CronJob, props: CronContentProps) {
           }}
         >
           ${icons.edit}
-          ${LABELS.editJob}
+          ${t('cron.editJob')}
         </button>
         <button
           class="mc-btn mc-btn--sm"
@@ -729,7 +616,7 @@ function renderJobDetails(job: CronJob, props: CronContentProps) {
             onToggle(job, !job.enabled);
           }}
         >
-          ${job.enabled ? LABELS.disableJob : LABELS.enableJob}
+          ${job.enabled ? t('cron.disableJob') : t('cron.enableJob')}
         </button>
         <button
           class="mc-btn mc-btn--sm"
@@ -740,7 +627,7 @@ function renderJobDetails(job: CronJob, props: CronContentProps) {
           }}
         >
           ${icons.play}
-          ${LABELS.runNow}
+          ${t('cron.runNow')}
         </button>
         <button
           class="mc-btn mc-btn--sm"
@@ -750,7 +637,7 @@ function renderJobDetails(job: CronJob, props: CronContentProps) {
             onLoadRuns(job.id);
           }}
         >
-          ${LABELS.viewRuns}
+          ${t('cron.viewRuns')}
         </button>
         <button
           class="mc-btn mc-btn--sm mc-btn--danger"
@@ -761,7 +648,7 @@ function renderJobDetails(job: CronJob, props: CronContentProps) {
           }}
         >
           ${icons.trash}
-          ${LABELS.deleteJob}
+          ${t('cron.deleteJob')}
         </button>
       </div>
     </div>
@@ -812,8 +699,8 @@ function renderJobsList(props: CronContentProps) {
     return html`
       <div class="cron-empty">
         <div class="cron-empty__icon">${icons.clock}</div>
-        <div class="cron-empty__text">${LABELS.noJobs}</div>
-        <div style="font-size: 13px;">${LABELS.noJobsHint}</div>
+        <div class="cron-empty__text">${t('cron.noJobs')}</div>
+        <div style="font-size: 13px;">${t('cron.noJobsHint')}</div>
       </div>
     `;
   }
@@ -833,10 +720,10 @@ function renderRunHistory(props: CronContentProps) {
     return html`
       <div class="cron-form-section">
         <div class="cron-form-section__title">
-          <span>${LABELS.runHistory}</span>
+          <span>${t('cron.runHistory')}</span>
         </div>
         <div class="cron-empty" style="padding: 24px;">
-          <div style="font-size: 13px; color: var(--muted);">${LABELS.selectJobToViewRuns}</div>
+          <div style="font-size: 13px; color: var(--muted);">${t('cron.selectJobToViewRuns')}</div>
         </div>
       </div>
     `;
@@ -850,12 +737,12 @@ function renderRunHistory(props: CronContentProps) {
   return html`
     <div class="cron-form-section">
       <div class="cron-form-section__title">
-        <span>${LABELS.runHistory}: ${jobName}</span>
+        <span>${t('cron.runHistory')}: ${jobName}</span>
       </div>
       ${runs.length === 0
         ? html`
             <div class="cron-empty" style="padding: 24px;">
-              <div style="font-size: 13px; color: var(--muted);">${LABELS.noRuns}</div>
+              <div style="font-size: 13px; color: var(--muted);">${t('cron.noRuns')}</div>
             </div>
           `
         : html`
@@ -894,7 +781,7 @@ function renderRunItem(entry: { ts: number; status: string; durationMs?: number;
       <div style="text-align: right;">
         <div style="font-size: 13px;">${formatMs(entry.ts)}</div>
         ${entry.durationMs != null
-          ? html`<div style="font-size: 12px; color: var(--muted);">${LABELS.duration}: ${entry.durationMs}ms</div>`
+          ? html`<div style="font-size: 12px; color: var(--muted);">${t('cron.duration')}: ${entry.durationMs}ms</div>`
           : nothing}
         ${entry.error
           ? html`<div style="font-size: 12px; color: var(--danger); margin-top: 4px;">${entry.error}</div>`
@@ -919,11 +806,11 @@ function renderDeleteConfirmModal(props: CronContentProps) {
   return html`
     <div class="cron-confirm-modal" @click=${() => onDeleteConfirm(null)}>
       <div class="cron-confirm-modal__content" @click=${(e: Event) => e.stopPropagation()}>
-        <div class="cron-confirm-modal__title">${LABELS.deleteConfirmTitle}</div>
-        <div class="cron-confirm-modal__desc">${LABELS.deleteConfirmDesc(job.name)}</div>
+        <div class="cron-confirm-modal__title">${t('cron.deleteConfirmTitle')}</div>
+        <div class="cron-confirm-modal__desc">${t('cron.deleteConfirmDesc')}</div>
         <div class="cron-confirm-modal__actions">
           <button class="mc-btn" @click=${() => onDeleteConfirm(null)}>
-            ${LABELS.cancel}
+            ${t('action.cancel')}
           </button>
           <button
             class="mc-btn mc-btn--danger"
@@ -933,7 +820,7 @@ function renderDeleteConfirmModal(props: CronContentProps) {
               onDeleteConfirm(null);
             }}
           >
-            ${LABELS.confirm}
+            ${t('action.confirm')}
           </button>
         </div>
       </div>
@@ -954,8 +841,8 @@ export function renderCronContent(props: CronContentProps) {
       <div class="config-content__header">
         <span class="config-content__icon">${icons.clock}</span>
         <div class="config-content__titles">
-          <h2 class="config-content__title">${LABELS.title}</h2>
-          <p class="config-content__desc">${LABELS.desc}</p>
+          <h2 class="config-content__title">${t('cron.title')}</h2>
+          <p class="config-content__desc">${t('cron.desc')}</p>
         </div>
         <div style="margin-left: auto; display: flex; gap: 8px;">
           <button
@@ -964,14 +851,14 @@ export function renderCronContent(props: CronContentProps) {
             @click=${onRefresh}
           >
             ${icons.refresh}
-            ${props.loading ? LABELS.refreshing : LABELS.refresh}
+            ${props.loading ? t('cron.refreshing') : t('cron.refresh')}
           </button>
           <button
             class="mc-btn mc-btn--primary"
             @click=${() => onShowCreateModal(true)}
           >
             ${icons.plus}
-            ${LABELS.newJob}
+            ${t('cron.newJob')}
           </button>
         </div>
       </div>
@@ -1015,7 +902,7 @@ export function renderCronContent(props: CronContentProps) {
       <!-- 任务列表 -->
       <div class="cron-form-section">
         <div class="cron-form-section__title">
-          <span>${LABELS.jobsList}</span>
+          <span>${t('cron.jobsList')}</span>
           <span style="margin-left: auto; font-size: 12px; font-weight: 400; color: var(--muted);">
             ${jobs.length} 个任务
           </span>

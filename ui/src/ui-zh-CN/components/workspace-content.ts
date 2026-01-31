@@ -1,11 +1,9 @@
 /**
- * 工作区文件管理内容组件
- * Workspace file management content component
- *
- * 右侧面板 - 文件列表 + 编辑器 + 预览
+ * Workspace File Management Content Component
  * Right panel - File list + Editor + Preview
  */
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 
 // ─── 类型定义 / Types ──────────────────────────────────────────────────────
 
@@ -96,32 +94,7 @@ const icons = {
   chevronDown: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
 };
 
-// ─── 中文标签 / Labels ──────────────────────────────────────────────────────
-
-const LABELS = {
-  title: "工作区文件",
-  desc: "管理 Agent 的提示词、身份和记忆文件",
-  filesTitle: "文件列表",
-  editorTitle: "文件编辑器",
-  previewTitle: "预览",
-  noFileSelected: "请从左侧选择一个文件",
-  fileNotExist: "文件不存在，保存后将创建",
-  loading: "加载中...",
-  saving: "保存中...",
-  save: "保存",
-  refresh: "刷新",
-  create: "创建",
-  editMode: "编辑",
-  previewMode: "预览",
-  splitMode: "分屏",
-  unsaved: "未保存",
-  path: "路径",
-  size: "大小",
-  modified: "修改时间",
-  workspaceDir: "工作区目录",
-};
-
-// ─── 文件描述映射 / File description map ────────────────────────────────────
+// ─── File description map ────────────────────────────────────────
 
 const FILE_DESCRIPTIONS: Record<string, string> = {
   "SOUL.md": "人格定义 - 行为准则、语气风格、道德边界",
@@ -324,7 +297,7 @@ function renderFileItem(
             ? html`<span class="ws-file-item__badge ws-file-item__badge--new">新建</span>`
             : nothing}
           ${isSelected && hasChanges
-            ? html`<span class="ws-file-item__badge ws-file-item__badge--unsaved">${LABELS.unsaved}</span>`
+            ? html`<span class="ws-file-item__badge ws-file-item__badge--unsaved">${t('workspace.unsaved')}</span>`
             : nothing}
         </span>
         <span class="ws-file-item__desc">${desc}</span>
@@ -348,7 +321,7 @@ function renderFileList(props: WorkspaceContentProps) {
   return html`
     <div class="ws-file-list">
       <div class="ws-file-list__header">
-        <div class="ws-file-list__title">${LABELS.filesTitle}</div>
+        <div class="ws-file-list__title">${t('workspace.files')}</div>
         <button
           class="mc-btn mc-btn--sm"
           ?disabled=${props.loading}
@@ -367,7 +340,7 @@ function renderFileList(props: WorkspaceContentProps) {
           class="mc-btn mc-btn--sm"
           ?disabled=${props.loading}
           @click=${props.onRefresh}
-          title=${LABELS.refresh}
+          title=${t('action.refresh')}
         >
           ${icons.refresh}
         </button>
@@ -420,7 +393,7 @@ function renderFileList(props: WorkspaceContentProps) {
       </div>
       <!-- 工作区目录显示 / Workspace dir display -->
       <div class="ws-file-list__footer">
-        <span class="ws-file-list__dir-label">${LABELS.workspaceDir}</span>
+        <span class="ws-file-list__dir-label">${t('agent.workspace')}</span>
         <span class="ws-file-list__dir-path" title=${props.workspaceDir}>${props.workspaceDir}</span>
       </div>
     </div>
@@ -437,7 +410,7 @@ function renderEditorToolbar(props: WorkspaceContentProps) {
       <div class="ws-editor__toolbar-left">
         <span class="ws-editor__filename">${props.selectedFile ?? ""}</span>
         ${hasChanges
-          ? html`<span class="ws-editor__unsaved-dot" title=${LABELS.unsaved}></span>`
+          ? html`<span class="ws-editor__unsaved-dot" title=${t('workspace.unsaved')}></span>`
           : nothing}
       </div>
       <div class="ws-editor__toolbar-right">
@@ -446,17 +419,17 @@ function renderEditorToolbar(props: WorkspaceContentProps) {
           <button
             class="ws-editor__mode-btn ${props.editorMode === "edit" ? "ws-editor__mode-btn--active" : ""}"
             @click=${() => props.onModeChange("edit")}
-            title=${LABELS.editMode}
+            title=${t('workspace.editor')}
           >${icons.edit}</button>
           <button
             class="ws-editor__mode-btn ${props.editorMode === "split" ? "ws-editor__mode-btn--active" : ""}"
             @click=${() => props.onModeChange("split")}
-            title=${LABELS.splitMode}
+            title=${t('workspace.split')}
           >${icons.split}</button>
           <button
             class="ws-editor__mode-btn ${props.editorMode === "preview" ? "ws-editor__mode-btn--active" : ""}"
             @click=${() => props.onModeChange("preview")}
-            title=${LABELS.previewMode}
+            title=${t('workspace.preview')}
           >${icons.eye}</button>
         </div>
         <!-- 保存按钮 / Save button -->
@@ -466,7 +439,7 @@ function renderEditorToolbar(props: WorkspaceContentProps) {
           @click=${props.onFileSave}
         >
           ${icons.save}
-          ${props.saving ? LABELS.saving : LABELS.save}
+          ${props.saving ? t('status.saving') : t('action.save')}
         </button>
       </div>
     </div>
@@ -480,7 +453,7 @@ function renderEditor(props: WorkspaceContentProps) {
     return html`
       <div class="ws-editor__empty">
         <div class="ws-editor__empty-icon">${icons.file}</div>
-        <div class="ws-editor__empty-text">${LABELS.noFileSelected}</div>
+        <div class="ws-editor__empty-text">${t('workspace.selectFile')}</div>
       </div>
     `;
   }
@@ -619,8 +592,8 @@ export function renderWorkspaceContent(props: WorkspaceContentProps) {
       <div class="config-content__header">
         <div class="config-content__icon">${icons.folder}</div>
         <div class="config-content__titles">
-          <h2 class="config-content__title">${LABELS.title}</h2>
-          <p class="config-content__desc">${LABELS.desc}</p>
+          <h2 class="config-content__title">${t('workspace.title')}</h2>
+          <p class="config-content__desc">${t('workspace.desc')}</p>
         </div>
         ${renderAgentSelector(props)}
       </div>
@@ -630,7 +603,7 @@ export function renderWorkspaceContent(props: WorkspaceContentProps) {
         <!-- 右侧编辑器 / Right editor -->
         <div class="ws-editor">
           ${props.loading
-            ? html`<div class="ws-editor__loading">${LABELS.loading}</div>`
+            ? html`<div class="ws-editor__loading">${t('label.loading')}</div>`
             : renderEditor(props)}
         </div>
       </div>

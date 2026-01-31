@@ -1,8 +1,9 @@
 /**
- * 权限管理内容组件
- * 管理命令执行权限和访问控制
+ * Permissions Management Content Component
+ * Command execution and access control management
  */
 import { html, nothing } from "lit";
+import { t } from "../i18n";
 import type {
   ToolProfileId,
   ToolPolicyConfig,
@@ -112,17 +113,21 @@ export type PermissionsContentProps = {
 // 常量
 const EXEC_APPROVALS_DEFAULT_SCOPE = "__defaults__";
 
-const SECURITY_OPTIONS: Array<{ value: ExecSecurity; label: string; description: string }> = [
-  { value: "deny", label: "拒绝", description: "拒绝所有命令执行" },
-  { value: "allowlist", label: "允许列表", description: "仅允许白名单中的命令" },
-  { value: "full", label: "完全允许", description: "允许所有命令执行" },
-];
+function getSecurityOptions(): Array<{ value: ExecSecurity; label: string; description: string }> {
+  return [
+    { value: "deny", label: t('permissions.security.deny'), description: t('permissions.security.denyDesc') },
+    { value: "allowlist", label: t('permissions.security.allowlist'), description: t('permissions.security.allowlistDesc') },
+    { value: "full", label: t('permissions.security.full'), description: t('permissions.security.fullDesc') },
+  ];
+}
 
-const ASK_OPTIONS: Array<{ value: ExecAsk; label: string; description: string }> = [
-  { value: "off", label: "关闭", description: "不提示用户确认" },
-  { value: "on-miss", label: "未匹配时", description: "命令不在白名单时提示" },
-  { value: "always", label: "总是", description: "每次执行都提示确认" },
-];
+function getAskOptions(): Array<{ value: ExecAsk; label: string; description: string }> {
+  return [
+    { value: "off", label: t('permissions.ask.off'), description: t('permissions.ask.offDesc') },
+    { value: "on-miss", label: t('permissions.ask.onMiss'), description: t('permissions.ask.onMissDesc') },
+    { value: "always", label: t('permissions.ask.always'), description: t('permissions.ask.alwaysDesc') },
+  ];
+}
 
 // 工具描述定义
 const TOOL_DESCRIPTIONS: Record<string, string> = {
@@ -181,12 +186,14 @@ const STANDALONE_TOOLS: Array<{ id: string; label: string }> = [
   { id: "agents_list", label: "代理列表" },
 ];
 
-const TOOL_PROFILES: Array<{ value: ToolProfileId; label: string; description: string }> = [
-  { value: "minimal", label: "最小", description: "仅 session_status" },
-  { value: "coding", label: "编程", description: "文件+运行时+会话+记忆+image" },
-  { value: "messaging", label: "消息", description: "消息+部分会话工具" },
-  { value: "full", label: "完整", description: "所有工具" },
-];
+function getToolProfiles(): Array<{ value: ToolProfileId; label: string; description: string }> {
+  return [
+    { value: "minimal", label: t('permissions.profile.minimal'), description: t('permissions.profile.minimalDesc') },
+    { value: "coding", label: t('permissions.profile.coding'), description: t('permissions.profile.codingDesc') },
+    { value: "messaging", label: t('permissions.profile.messaging'), description: t('permissions.profile.messagingDesc') },
+    { value: "full", label: t('permissions.profile.full'), description: t('permissions.profile.fullDesc') },
+  ];
+}
 
 const TOOLS_DEFAULT_SCOPE = "__global__";
 
@@ -217,10 +224,10 @@ function resolveDefaults(form: ExecApprovalsFile | null): {
 }
 
 function formatAgo(ts: number | null | undefined): string {
-  if (!ts) return "从未";
+  if (!ts) return t('time.never');
   const now = Date.now();
   const diff = now - ts;
-  if (diff < 60000) return "刚刚";
+  if (diff < 60000) return t('time.justNow');
   if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
   return `${Math.floor(diff / 86400000)} 天前`;
@@ -298,7 +305,7 @@ function renderExecTargetSection(props: PermissionsContentProps) {
                 .checked=${isGateway}
                 @change=${() => {
                   if (props.dirty) {
-                    const confirmed = confirm("有未保存的更改，切换目标将丢失这些更改。是否继续？");
+                    const confirmed = confirm(t('permissions.unsavedChanges'));
                     if (!confirmed) return;
                   }
                   props.onExecTargetChange("gateway", null);
@@ -316,7 +323,7 @@ function renderExecTargetSection(props: PermissionsContentProps) {
                 ?disabled=${!hasNodes}
                 @change=${() => {
                   if (props.dirty) {
-                    const confirmed = confirm("有未保存的更改，切换目标将丢失这些更改。是否继续？");
+                    const confirmed = confirm(t('permissions.unsavedChanges'));
                     if (!confirmed) return;
                   }
                   const firstNode = props.execTargetNodes[0]?.id ?? null;
@@ -342,7 +349,7 @@ function renderExecTargetSection(props: PermissionsContentProps) {
                     const target = event.target as HTMLSelectElement;
                     const nodeId = target.value || null;
                     if (props.dirty) {
-                      const confirmed = confirm("有未保存的更改，切换节点将丢失这些更改。是否继续？");
+                      const confirmed = confirm(t('permissions.unsavedChanges'));
                       if (!confirmed) {
                         target.value = props.execTargetNodeId ?? "";
                         return;
@@ -474,7 +481,7 @@ function renderAgentSelector(props: PermissionsContentProps, selectedScope: stri
             class="mc-btn mc-btn--sm"
             ?disabled=${props.saving}
             @click=${() => {
-              const id = prompt("请输入 Agent ID:");
+              const id = prompt(t('permissions.enterAgentId'));
               if (id?.trim()) {
                 props.onAddAgent(id.trim());
               }
@@ -614,7 +621,7 @@ function renderPolicySection(
                   使用默认 (${defaults.security})
                 </option>`
               : nothing}
-            ${SECURITY_OPTIONS.map(
+            ${getSecurityOptions().map(
               (option) =>
                 html`<option value=${option.value} ?selected=${securityValue === option.value}>
                   ${option.label} - ${option.description}
@@ -649,7 +656,7 @@ function renderPolicySection(
                   使用默认 (${defaults.ask})
                 </option>`
               : nothing}
-            ${ASK_OPTIONS.map(
+            ${getAskOptions().map(
               (option) =>
                 html`<option value=${option.value} ?selected=${askValue === option.value}>
                   ${option.label} - ${option.description}
@@ -684,7 +691,7 @@ function renderPolicySection(
                   使用默认 (${defaults.askFallback})
                 </option>`
               : nothing}
-            ${SECURITY_OPTIONS.map(
+            ${getSecurityOptions().map(
               (option) =>
                 html`<option value=${option.value} ?selected=${askFallbackValue === option.value}>
                   ${option.label}
@@ -701,8 +708,8 @@ function renderPolicySection(
               ${isDefaults
                 ? "自动允许 Gateway 注册的技能可执行文件。"
                 : autoIsDefault
-                  ? `使用默认 (${defaults.autoAllowSkills ? "开启" : "关闭"})`
-                  : `覆盖 (${autoEffective ? "开启" : "关闭"})`}
+                  ? `使用默认 (${defaults.autoAllowSkills ? t('label.enabled') : t('permissions.ask.off')})`
+                  : `覆盖 (${autoEffective ? t('label.enabled') : t('permissions.ask.off')})`}
             </span>
           </div>
           <div class="permissions-checkbox-row">
@@ -967,7 +974,7 @@ function renderToolsProfileSection(
               : html`<option value="" ?selected=${!profileValue}>
                   未设置（使用系统默认）
                 </option>`}
-            ${TOOL_PROFILES.map(
+            ${getToolProfiles().map(
               (profile) =>
                 html`<option value=${profile.value} ?selected=${profileValue === profile.value}>
                   ${profile.label} - ${profile.description}
@@ -1062,7 +1069,7 @@ function renderToolsListSection(
           class="mc-btn mc-btn--sm"
           @click=${props.onToolsToggleExpanded}
         >
-          ${props.toolsExpanded ? "收起" : "展开"}
+          ${props.toolsExpanded ? t('action.collapse') : t('action.expand')}
         </button>
       </div>
 
