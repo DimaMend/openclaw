@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { isSocksProxyUrl, parseSocksUrl } from "./socks-dispatcher.js";
+import { afterEach, describe, expect, it } from "vitest";
+import { EnvHttpProxyAgent } from "undici";
+import {
+  installSocksGlobalDispatcher,
+  isSocksProxyUrl,
+  parseSocksUrl,
+} from "./socks-dispatcher.js";
 
 describe("isSocksProxyUrl", () => {
   it("returns true for socks5h URLs", () => {
@@ -117,5 +122,82 @@ describe("parseSocksUrl", () => {
     const config = parseSocksUrl("SOCKS5H://proxy.local:1080");
     expect(config.type).toBe(5);
     expect(config.host).toBe("proxy.local");
+  });
+});
+
+describe("installSocksGlobalDispatcher", () => {
+  const ENV_KEYS = [
+    "HTTP_PROXY",
+    "http_proxy",
+    "HTTPS_PROXY",
+    "https_proxy",
+    "ALL_PROXY",
+    "all_proxy",
+  ] as const;
+
+  // Save and restore env vars around each test.
+  const saved: Record<string, string | undefined> = {};
+
+  afterEach(() => {
+    for (const key of ENV_KEYS) {
+      if (saved[key] !== undefined) {
+        process.env[key] = saved[key];
+      } else {
+        delete process.env[key];
+      }
+    }
+  });
+
+  function saveAndClearEnv(): void {
+    for (const key of ENV_KEYS) {
+      saved[key] = process.env[key];
+      delete process.env[key];
+    }
+  }
+
+  it("sanitizes SOCKS URLs from env so EnvHttpProxyAgent does not throw", () => {
+    saveAndClearEnv();
+    process.env.HTTP_PROXY = "socks5h://proxy.test:1080";
+    process.env.HTTPS_PROXY = "socks5h://proxy.test:1080";
+
+    // Before sanitization, EnvHttpProxyAgent would crash on the SOCKS URL.
+    expect(() => new EnvHttpProxyAgent()).toThrow();
+
+    installSocksGlobalDispatcher();
+
+    // After installSocksGlobalDispatcher, SOCKS env vars are removed and
+    // EnvHttpProxyAgent can construct without error.
+    expect(() => new EnvHttpProxyAgent()).not.toThrow();
+  });
+
+  it("removes all SOCKS proxy env vars", () => {
+    saveAndClearEnv();
+    process.env.HTTP_PROXY = "socks5h://proxy.test:1080";
+    process.env.HTTPS_PROXY = "socks5://proxy.test:1080";
+    process.env.ALL_PROXY = "socks4://proxy.test:1080";
+
+    installSocksGlobalDispatcher();
+
+    expect(process.env.HTTP_PROXY).toBeUndefined();
+    expect(process.env.HTTPS_PROXY).toBeUndefined();
+    expect(process.env.ALL_PROXY).toBeUndefined();
+  });
+
+  it("leaves non-SOCKS proxy env vars intact", () => {
+    saveAndClearEnv();
+    process.env.HTTP_PROXY = "http://proxy.test:8080";
+    process.env.HTTPS_PROXY = "http://proxy.test:8080";
+
+    installSocksGlobalDispatcher();
+
+    expect(process.env.HTTP_PROXY).toBe("http://proxy.test:8080");
+    expect(process.env.HTTPS_PROXY).toBe("http://proxy.test:8080");
+  });
+
+  it("is a no-op when no SOCKS proxy is configured", () => {
+    saveAndClearEnv();
+
+    // Should not throw even with no env vars set.
+    expect(() => installSocksGlobalDispatcher()).not.toThrow();
   });
 });
