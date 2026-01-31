@@ -1,50 +1,49 @@
 /**
- * Cron 定时任务配置类型
  * Cron scheduled task configuration types
  */
 import type { CronJob, CronStatus, CronRunLogEntry, ChannelUiMetaEntry, GatewayAgentRow } from "../../ui/types";
 import type { CronFormState } from "../../ui/ui-types";
 
 /**
- * Cron 内容组件 Props
+ * Cron content component Props
  */
 export type CronContentProps = {
-  // 加载状态 / Loading states
+  // Loading states
   loading: boolean;
   busy: boolean;
   error: string | null;
 
-  // 数据 / Data
+  // Data
   status: CronStatus | null;
   jobs: CronJob[];
   form: CronFormState;
 
-  // Agent 列表 / Agent list
+  // Agent list
   agents: GatewayAgentRow[];
   defaultAgentId: string;
 
-  // 通道关联 / Channel association
+  // Channel association
   channels: string[];
   channelLabels?: Record<string, string>;
   channelMeta?: ChannelUiMetaEntry[];
 
-  // 运行历史 / Run history
+  // Run history
   runsJobId: string | null;
   runs: CronRunLogEntry[];
 
-  // 展开状态 / Expansion state
+  // Expansion state
   expandedJobId: string | null;
 
-  // 删除确认 / Delete confirmation
+  // Delete confirmation
   deleteConfirmJobId: string | null;
 
-  // 新建弹窗状态 / Create modal state
+  // Create modal state
   showCreateModal: boolean;
 
-  // 编辑任务ID / Edit job ID
+  // Edit job ID
   editJobId: string | null;
 
-  // 回调函数 / Callbacks
+  // Callbacks
   onFormChange: (patch: Partial<CronFormState>) => void;
   onRefresh: () => void;
   onAdd: () => void;

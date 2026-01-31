@@ -1,14 +1,14 @@
 /**
- * 通道配置类型定义
+ * Channel configuration type definitions
  */
 
-// DM 访问策略
+// DM access policy
 export type DmPolicy = "pairing" | "allowlist" | "open" | "disabled";
 
-// 群组访问策略
+// Group access policy
 export type GroupPolicy = "open" | "disabled" | "allowlist";
 
-// 通道基础配置
+// Base channel configuration
 export type BaseChannelConfig = {
   enabled?: boolean;
   name?: string;
@@ -22,7 +22,7 @@ export type BaseChannelConfig = {
   mediaMaxMb?: number;
 };
 
-// Telegram 配置
+// Telegram config
 export type TelegramChannelConfig = BaseChannelConfig & {
   botToken?: string;
   tokenFile?: string;
@@ -31,7 +31,7 @@ export type TelegramChannelConfig = BaseChannelConfig & {
   reactionNotifications?: "off" | "own" | "all" | "allowlist";
 };
 
-// Discord 配置
+// Discord config
 export type DiscordChannelConfig = BaseChannelConfig & {
   token?: string;
   intents?: {
@@ -41,7 +41,7 @@ export type DiscordChannelConfig = BaseChannelConfig & {
   reactionNotifications?: "off" | "own" | "all" | "allowlist";
 };
 
-// Slack 配置
+// Slack config
 export type SlackChannelConfig = BaseChannelConfig & {
   mode?: "socket" | "http";
   botToken?: string;
@@ -51,7 +51,7 @@ export type SlackChannelConfig = BaseChannelConfig & {
   slashCommand?: string;
 };
 
-// WhatsApp 配置
+// WhatsApp config
 export type WhatsAppChannelConfig = BaseChannelConfig & {
   authDir?: string;
   sendReadReceipts?: boolean;
@@ -60,7 +60,7 @@ export type WhatsAppChannelConfig = BaseChannelConfig & {
   ackReaction?: string;
 };
 
-// Signal 配置
+// Signal config
 export type SignalChannelConfig = BaseChannelConfig & {
   account?: string;
   httpUrl?: string;
@@ -71,7 +71,7 @@ export type SignalChannelConfig = BaseChannelConfig & {
   sendReadReceipts?: boolean;
 };
 
-// Google Chat 配置
+// Google Chat config
 export type GoogleChatChannelConfig = BaseChannelConfig & {
   serviceAccount?: string | object;
   serviceAccountFile?: string;
@@ -80,7 +80,7 @@ export type GoogleChatChannelConfig = BaseChannelConfig & {
   typingIndicator?: "none" | "message" | "reaction";
 };
 
-// iMessage 配置
+// iMessage config
 export type IMessageChannelConfig = BaseChannelConfig & {
   cliPath?: string;
   dbPath?: string;
@@ -90,7 +90,7 @@ export type IMessageChannelConfig = BaseChannelConfig & {
   includeAttachments?: boolean;
 };
 
-// MS Teams 配置
+// MS Teams config
 export type MSTeamsChannelConfig = BaseChannelConfig & {
   appId?: string;
   appPassword?: string;
@@ -102,7 +102,7 @@ export type MSTeamsChannelConfig = BaseChannelConfig & {
   replyStyle?: "thread" | "top-level";
 };
 
-// WeChat 配置
+// WeChat config
 export type WeChatPollingConfig = {
   pollingIntervalMs?: number;
   pollContactIds?: string[];
@@ -122,7 +122,7 @@ export type WeChatChannelConfig = BaseChannelConfig & {
   accounts?: Record<string, WeChatChannelConfig>;
 };
 
-// Matrix 配置
+// Matrix config
 export type MatrixChannelConfig = BaseChannelConfig & {
   homeserver?: string;
   userId?: string;
@@ -132,25 +132,25 @@ export type MatrixChannelConfig = BaseChannelConfig & {
   autoJoin?: "always" | "allowlist" | "off";
 };
 
-// Mattermost 配置
+// Mattermost config
 export type MattermostChannelConfig = BaseChannelConfig & {
   baseUrl?: string;
   botToken?: string;
   requireMention?: boolean;
 };
 
-// Nostr 配置
+// Nostr config
 export type NostrChannelConfig = BaseChannelConfig & {
   privateKey?: string;
 };
 
-// LINE 配置
+// LINE config
 export type LineChannelConfig = BaseChannelConfig & {
   channelAccessToken?: string;
   channelSecret?: string;
 };
 
-// Twitch 配置
+// Twitch config
 export type TwitchChannelConfig = BaseChannelConfig & {
   username?: string;
   accessToken?: string;
@@ -159,7 +159,7 @@ export type TwitchChannelConfig = BaseChannelConfig & {
   requireMention?: boolean;
 };
 
-// BlueBubbles 配置
+// BlueBubbles config
 export type BlueBubblesChannelConfig = BaseChannelConfig & {
   serverUrl?: string;
   password?: string;
@@ -167,15 +167,15 @@ export type BlueBubblesChannelConfig = BaseChannelConfig & {
   sendReadReceipts?: boolean;
 };
 
-// Zalo 配置
+// Zalo config
 export type ZaloChannelConfig = BaseChannelConfig & {
   botToken?: string;
   tokenFile?: string;
-  webhookUrl?: string;
+webhookUrl?: string;
   webhookSecret?: string;
 };
 
-// Nextcloud Talk 配置
+// Nextcloud Talk config
 export type NextcloudTalkChannelConfig = BaseChannelConfig & {
   baseUrl?: string;
   botSecret?: string;
@@ -183,7 +183,7 @@ export type NextcloudTalkChannelConfig = BaseChannelConfig & {
   apiPassword?: string;
 };
 
-// Tlon (Urbit) 配置
+// Tlon (Urbit) config
 export type TlonChannelConfig = BaseChannelConfig & {
   ship?: string;
   url?: string;
@@ -191,7 +191,7 @@ export type TlonChannelConfig = BaseChannelConfig & {
   autoDiscoverChannels?: boolean;
 };
 
-// 通道元数据
+// Channel metadata
 export type ChannelMeta = {
   id: string;
   label: string;
@@ -201,7 +201,7 @@ export type ChannelMeta = {
   configFields: ChannelConfigField[];
 };
 
-// 配置字段定义
+// Config field definition
 export type ChannelConfigField = {
   key: string;
   label: string;
@@ -213,12 +213,12 @@ export type ChannelConfigField = {
   section?: string;
 };
 
-// 所有通道配置
+// All channel configs
 export type ChannelsConfigData = {
   defaults?: {
     groupPolicy?: GroupPolicy;
   };
-  // 内置通道
+  // Built-in channels
   telegram?: TelegramChannelConfig;
   discord?: DiscordChannelConfig;
   slack?: SlackChannelConfig;
@@ -227,7 +227,7 @@ export type ChannelsConfigData = {
   googlechat?: GoogleChatChannelConfig;
   imessage?: IMessageChannelConfig;
   msteams?: MSTeamsChannelConfig;
-  // 扩展通道
+  // Extended channels
   wechat?: WeChatChannelConfig;
   matrix?: MatrixChannelConfig;
   mattermost?: MattermostChannelConfig;

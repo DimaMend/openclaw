@@ -14,7 +14,7 @@ import type {
   ExecApprovalsTargetNode,
 } from "../controllers/model-config";
 
-// 类型定义
+// Type definitions
 export type ExecSecurity = "deny" | "allowlist" | "full";
 export type ExecAsk = "off" | "on-miss" | "always";
 
@@ -58,29 +58,29 @@ export type AgentOption = {
 };
 
 export type PermissionsContentProps = {
-  // 加载状态
+  // Loading states
   loading: boolean;
   saving: boolean;
   dirty: boolean;
   connected: boolean;
 
-  // 标签页状态
+  // Tab state
   activeTab: PermissionsTabId;
   onTabChange: (tab: PermissionsTabId) => void;
 
-  // Exec Approvals 目标选择
+  // Exec Approvals target selection
   execTarget: ExecApprovalsTarget;
   execTargetNodeId: string | null;
   execTargetNodes: ExecApprovalsTargetNode[];
   onExecTargetChange: (target: ExecApprovalsTarget, nodeId: string | null) => void;
 
-  // Exec Approvals 数据
+  // Exec Approvals data
   execApprovalsSnapshot: ExecApprovalsSnapshot | null;
   execApprovalsForm: ExecApprovalsFile | null;
   selectedAgent: string | null;
   agents: AgentOption[];
 
-  // 回调函数
+  // Callback functions
   onLoad: () => void;
   onSave: () => void;
   onSelectAgent: (agentId: string | null) => void;
@@ -91,14 +91,14 @@ export type PermissionsContentProps = {
   onAddAllowlistEntry: (agentId: string) => void;
   onRemoveAllowlistEntry: (agentId: string, index: number) => void;
 
-  // 工具权限数据
+  // Tools permissions data
   toolsConfig: ToolsConfig | null;
   agentToolsConfigs: AgentWithTools[];
   toolsAgents: AgentOption[];
   toolsSelectedAgent: string | null;
   toolsExpanded: boolean;
 
-  // 工具权限回调
+  // Tools permissions callbacks
   onToolsSelectAgent: (agentId: string | null) => void;
   onToolsToggleExpanded: () => void;
   onToolsUpdateGlobal: (field: keyof ToolPolicyConfig, value: unknown) => void;
@@ -110,7 +110,7 @@ export type PermissionsContentProps = {
   onToolsToggleDeny: (tool: string, denied: boolean) => void;
 };
 
-// 常量
+// Constants
 const EXEC_APPROVALS_DEFAULT_SCOPE = "__defaults__";
 
 function getSecurityOptions(): Array<{ value: ExecSecurity; label: string; description: string }> {
@@ -129,62 +129,33 @@ function getAskOptions(): Array<{ value: ExecAsk; label: string; description: st
   ];
 }
 
-// 工具描述定义
-const TOOL_DESCRIPTIONS: Record<string, string> = {
-  // 文件操作
-  read: "读取文件内容（文本或图片），支持分页读取大文件",
-  write: "创建或覆盖文件，自动创建父目录",
-  edit: "精确替换文件中的文本内容",
-  apply_patch: "应用补丁文件修改",
-  // 命令执行
-  exec: "执行 Shell 命令，支持后台运行和交互式终端",
-  process: "管理运行中的进程（列表/状态/日志/终止）",
-  // 网络访问
-  web_search: "使用 Brave 搜索 API 进行网络搜索",
-  web_fetch: "抓取 URL 内容并转换为 Markdown",
-  browser: "控制浏览器（打开/导航/截图/操作）",
-  // 设备与展示
-  nodes: "管理配对设备（通知/拍照/录制/定位）",
-  canvas: "展示内容到画布（演示/截图/执行JS）",
-  // 定时任务
-  cron: "管理定时任务（添加/修改/删除/执行）",
-  // 消息通信
-  message: "发送消息到指定目标或广播",
-  tts: "文字转语音，返回音频文件",
-  // 图像分析
-  image: "使用视觉模型分析图片内容",
-  // 系统管理
-  gateway: "系统管理（重启/配置/更新）",
-  // 会话管理
-  sessions_list: "列出所有会话",
-  sessions_history: "获取会话的消息历史",
-  sessions_send: "向其他会话发送消息",
-  sessions_spawn: "启动子代理执行任务",
-  session_status: "查看/设置会话状态",
-  agents_list: "列出可用于 spawn 的代理",
-  // 记忆系统
-  memory_search: "语义搜索记忆文件",
-  memory_get: "读取记忆文件指定行",
-};
+// Tool descriptions using i18n
+function getToolDescription(toolId: string): string {
+  return t(`permissions.tools.${toolId}.desc`);
+}
 
-// 工具分组定义
-const TOOL_GROUPS: Record<string, { label: string; desc: string; tools: string[] }> = {
-  "group:fs": { label: "文件系统", desc: "文件读写和编辑操作", tools: ["read", "write", "edit", "apply_patch"] },
-  "group:runtime": { label: "运行时", desc: "命令执行和进程管理", tools: ["exec", "process"] },
-  "group:web": { label: "网络", desc: "网络搜索和内容抓取", tools: ["web_search", "web_fetch"] },
-  "group:ui": { label: "界面", desc: "浏览器和画布控制", tools: ["browser", "canvas"] },
-  "group:sessions": { label: "会话", desc: "会话和子代理管理", tools: ["sessions_list", "sessions_history", "sessions_send", "sessions_spawn", "session_status"] },
-  "group:memory": { label: "记忆", desc: "记忆搜索和读取", tools: ["memory_search", "memory_get"] },
-  "group:automation": { label: "自动化", desc: "定时任务和系统管理", tools: ["cron", "gateway"] },
-  "group:messaging": { label: "消息", desc: "消息发送和广播", tools: ["message"] },
-  "group:nodes": { label: "设备", desc: "配对设备控制", tools: ["nodes"] },
-};
+// Tool group definitions using i18n
+function getToolGroups(): Record<string, { label: string; desc: string; tools: string[] }> {
+  return {
+    "group:fs": { label: t('permissions.toolGroups.fs'), desc: t('permissions.toolGroups.fsDesc'), tools: ["read", "write", "edit", "apply_patch"] },
+    "group:runtime": { label: t('permissions.toolGroups.runtime'), desc: t('permissions.toolGroups.runtimeDesc'), tools: ["exec", "process"] },
+    "group:web": { label: t('permissions.toolGroups.web'), desc: t('permissions.toolGroups.webDesc'), tools: ["web_search", "web_fetch"] },
+    "group:ui": { label: t('permissions.toolGroups.ui'), desc: t('permissions.toolGroups.uiDesc'), tools: ["browser", "canvas"] },
+    "group:sessions": { label: t('permissions.toolGroups.sessions'), desc: t('permissions.toolGroups.sessionsDesc'), tools: ["sessions_list", "sessions_history", "sessions_send", "sessions_spawn", "session_status"] },
+    "group:memory": { label: t('permissions.toolGroups.memory'), desc: t('permissions.toolGroups.memoryDesc'), tools: ["memory_search", "memory_get"] },
+    "group:automation": { label: t('permissions.toolGroups.automation'), desc: t('permissions.toolGroups.automationDesc'), tools: ["cron", "gateway"] },
+    "group:messaging": { label: t('permissions.toolGroups.messaging'), desc: t('permissions.toolGroups.messagingDesc'), tools: ["message"] },
+    "group:nodes": { label: t('permissions.toolGroups.nodes'), desc: t('permissions.toolGroups.nodesDesc'), tools: ["nodes"] },
+  };
+}
 
-const STANDALONE_TOOLS: Array<{ id: string; label: string }> = [
-  { id: "tts", label: "语音合成" },
-  { id: "image", label: "图像分析" },
-  { id: "agents_list", label: "代理列表" },
-];
+function getStandaloneTools(): Array<{ id: string; label: string }> {
+  return [
+    { id: "tts", label: t('permissions.standalone.tts') },
+    { id: "image", label: t('permissions.standalone.image') },
+    { id: "agents_list", label: t('permissions.standalone.agentsList') },
+  ];
+}
 
 function getToolProfiles(): Array<{ value: ToolProfileId; label: string; description: string }> {
   return [
@@ -197,7 +168,7 @@ function getToolProfiles(): Array<{ value: ToolProfileId; label: string; descrip
 
 const TOOLS_DEFAULT_SCOPE = "__global__";
 
-// 辅助函数
+// Helper functions
 function normalizeSecurity(value?: string): ExecSecurity {
   if (value === "allowlist" || value === "full" || value === "deny") return value;
   return "deny";
@@ -228,18 +199,18 @@ function formatAgo(ts: number | null | undefined): string {
   const now = Date.now();
   const diff = now - ts;
   if (diff < 60000) return t('time.justNow');
-  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
-  return `${Math.floor(diff / 86400000)} 天前`;
+  if (diff < 3600000) return t('time.minutesAgo', { count: Math.floor(diff / 60000) });
+  if (diff < 86400000) return t('time.hoursAgo', { count: Math.floor(diff / 3600000) });
+  return t('time.daysAgo', { count: Math.floor(diff / 86400000) });
 }
 
 /**
- * 渲染权限管理内容
+ * Render permissions management content
  */
 export function renderPermissionsContent(props: PermissionsContentProps) {
   return html`
     <div class="permissions-content">
-      <!-- 顶部标签切换 -->
+      <!-- Top tab navigation -->
       <div class="permissions-tabs-header">
         <button
           class="permissions-main-tab ${props.activeTab === "exec" ? "permissions-main-tab--active" : ""}"
@@ -251,7 +222,7 @@ export function renderPermissionsContent(props: PermissionsContentProps) {
               <line x1="12" y1="19" x2="20" y2="19"></line>
             </svg>
           </span>
-          <span class="permissions-main-tab__text">命令执行权限</span>
+          <span class="permissions-main-tab__text">${t('permissions.exec')}</span>
         </button>
         <button
           class="permissions-main-tab ${props.activeTab === "tools" ? "permissions-main-tab--active" : ""}"
@@ -262,11 +233,11 @@ export function renderPermissionsContent(props: PermissionsContentProps) {
               <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
             </svg>
           </span>
-          <span class="permissions-main-tab__text">工具权限</span>
+          <span class="permissions-main-tab__text">${t('permissions.tools')}</span>
         </button>
       </div>
 
-      <!-- 内容区域 -->
+      <!-- Content area -->
       ${props.activeTab === "exec"
         ? renderExecPermissionsContent(props)
         : renderToolsPermissionsSection(props)}
@@ -275,7 +246,7 @@ export function renderPermissionsContent(props: PermissionsContentProps) {
 }
 
 /**
- * 渲染执行目标选择器
+ * Render execution target selector
  */
 function renderExecTargetSection(props: PermissionsContentProps) {
   const isGateway = props.execTarget === "gateway";
@@ -285,17 +256,17 @@ function renderExecTargetSection(props: PermissionsContentProps) {
     <div class="permissions-section permissions-target-section">
       <div class="permissions-section__header">
         <div>
-          <h4 class="permissions-section__title">执行目标</h4>
+          <h4 class="permissions-section__title">${t('permissions.target')}</h4>
           <p class="permissions-section__desc">
-            选择要配置的执行目标：本地网关或远程节点。
+            ${t('permissions.targetDesc')}
           </p>
         </div>
       </div>
 
       <div class="permissions-target">
-        <!-- 目标类型选择 -->
+        <!-- Target type selection -->
         <div class="permissions-target__type">
-          <label class="permissions-target__label">目标类型</label>
+          <label class="permissions-target__label">${t('permissions.targetType')}</label>
           <div class="permissions-target__options">
             <label class="permissions-radio">
               <input
@@ -312,7 +283,7 @@ function renderExecTargetSection(props: PermissionsContentProps) {
                 }}
               />
               <span class="permissions-radio__mark"></span>
-              <span class="permissions-radio__text">本地网关</span>
+              <span class="permissions-radio__text">${t('permissions.target.gateway')}</span>
             </label>
             <label class="permissions-radio">
               <input
@@ -331,17 +302,17 @@ function renderExecTargetSection(props: PermissionsContentProps) {
                 }}
               />
               <span class="permissions-radio__mark"></span>
-              <span class="permissions-radio__text">远程节点</span>
-              ${!hasNodes ? html`<span class="permissions-radio__hint">（无可用节点）</span>` : nothing}
+              <span class="permissions-radio__text">${t('permissions.target.node')}</span>
+              ${!hasNodes ? html`<span class="permissions-radio__hint">${t('permissions.noNodesAvailable')}</span>` : nothing}
             </label>
           </div>
         </div>
 
-        <!-- 节点选择（仅在远程节点模式下显示） -->
+        <!-- Node selection (only shown in remote node mode) -->
         ${!isGateway
           ? html`
               <div class="permissions-target__node">
-                <label class="permissions-target__label">选择节点</label>
+                <label class="permissions-target__label">${t('permissions.selectNode')}</label>
                 <select
                   class="permissions-select"
                   ?disabled=${props.saving || !hasNodes}
@@ -369,7 +340,7 @@ function renderExecTargetSection(props: PermissionsContentProps) {
             `
           : nothing}
 
-        <!-- 目标说明 -->
+        <!-- Target description -->
         <div class="permissions-target__info">
           ${isGateway
             ? html`
@@ -382,7 +353,7 @@ function renderExecTargetSection(props: PermissionsContentProps) {
                     </svg>
                   </span>
                   <span class="permissions-info-box__text">
-                    <strong>本地网关</strong>：配置在本机执行命令的权限。所有通过此网关执行的命令都将受此配置控制。
+                    ${t('permissions.gatewayTargetInfo')}
                   </span>
                 </div>
               `
@@ -396,7 +367,7 @@ function renderExecTargetSection(props: PermissionsContentProps) {
                     </svg>
                   </span>
                   <span class="permissions-info-box__text">
-                    <strong>远程节点</strong>：配置在远程设备执行命令的权限。选择的节点必须支持 exec approvals 功能。
+                    ${t('permissions.nodeTargetInfo')}
                   </span>
                 </div>
               `}
@@ -407,7 +378,7 @@ function renderExecTargetSection(props: PermissionsContentProps) {
 }
 
 /**
- * 渲染命令执行权限内容
+ * Render command execution permissions content
  */
 function renderExecPermissionsContent(props: PermissionsContentProps) {
   const form = props.execApprovalsForm ?? props.execApprovalsSnapshot?.file ?? null;
@@ -417,40 +388,40 @@ function renderExecPermissionsContent(props: PermissionsContentProps) {
   const isDefaults = selectedScope === EXEC_APPROVALS_DEFAULT_SCOPE;
 
   return html`
-    <!-- 头部说明 -->
+    <!-- Header description -->
     <div class="permissions-header">
-      <h3 class="permissions-title">命令执行权限</h3>
+      <h3 class="permissions-title">${t('permissions.exec')}</h3>
       <p class="permissions-desc">
-        配置命令执行的安全策略、用户确认方式和允许列表。这些设置控制 Agent 执行系统命令的权限。
+        ${t('permissions.execDesc')}
       </p>
     </div>
 
-    <!-- 目标选择器 -->
+    <!-- Target selector -->
     ${renderExecTargetSection(props)}
 
     ${!ready
       ? html`
           <div class="permissions-empty">
             ${props.loading
-              ? html`<p>正在加载权限配置...</p>`
-              : html`<p>权限配置加载中，请稍候...</p>`}
+              ? html`<p>${t('permissions.loadingConfig')}</p>`
+              : html`<p>${t('permissions.configLoading')}</p>`}
           </div>
         `
       : html`
-          <!-- Agent 选择器 -->
+          <!-- Agent selector -->
           ${renderAgentSelector(props, selectedScope)}
 
-          <!-- 策略配置 -->
+          <!-- Policy configuration -->
           ${renderPolicySection(props, form, defaults, selectedScope, isDefaults)}
 
-          <!-- 允许列表（仅非默认 Agent 显示） -->
+          <!-- Allowlist (only shown for non-default agents) -->
           ${!isDefaults ? renderAllowlistSection(props, form, selectedScope) : nothing}
         `}
   `;
 }
 
 /**
- * 渲染 Agent 选择器
+ * Render Agent selector
  */
 function renderAgentSelector(props: PermissionsContentProps, selectedScope: string) {
   const form = props.execApprovalsForm ?? props.execApprovalsSnapshot?.file ?? null;
@@ -461,8 +432,8 @@ function renderAgentSelector(props: PermissionsContentProps, selectedScope: stri
     <div class="permissions-section">
       <div class="permissions-section__header">
         <div>
-          <h4 class="permissions-section__title">作用域</h4>
-          <p class="permissions-section__desc">选择要配置的 Agent，或配置全局默认设置。</p>
+          <h4 class="permissions-section__title">${t('permissions.scope')}</h4>
+          <p class="permissions-section__desc">${t('permissions.agentScopeDesc')}</p>
         </div>
         <div class="permissions-section__actions">
           ${!hasWildcard
@@ -471,9 +442,9 @@ function renderAgentSelector(props: PermissionsContentProps, selectedScope: stri
                   class="mc-btn mc-btn--sm"
                   ?disabled=${props.saving}
                   @click=${() => props.onAddAgent("*")}
-                  title="添加通配符规则，匹配所有 Agent"
+                  title="${t('permissions.addWildcardTooltip')}"
                 >
-                  + 通配符 (*)
+                  + ${t('permissions.wildcardAgent')}
                 </button>
               `
             : nothing}
@@ -487,7 +458,7 @@ function renderAgentSelector(props: PermissionsContentProps, selectedScope: stri
               }
             }}
           >
-            + 新建 Agent
+            + ${t('permissions.newAgent')}
           </button>
         </div>
       </div>
@@ -496,7 +467,7 @@ function renderAgentSelector(props: PermissionsContentProps, selectedScope: stri
           class="permissions-tab ${selectedScope === EXEC_APPROVALS_DEFAULT_SCOPE ? "permissions-tab--active" : ""}"
           @click=${() => props.onSelectAgent(null)}
         >
-          全局默认
+          ${t('permissions.globalDefault')}
         </button>
         ${hasWildcard
           ? html`
@@ -504,8 +475,8 @@ function renderAgentSelector(props: PermissionsContentProps, selectedScope: stri
                 class="permissions-tab permissions-tab--wildcard ${isWildcardSelected ? "permissions-tab--active" : ""}"
                 @click=${() => props.onSelectAgent("*")}
               >
-                * 通配符
-                <span class="permissions-tab__badge">匹配所有</span>
+                * ${t('permissions.wildcard')}
+                <span class="permissions-tab__badge">${t('permissions.matchAll')}</span>
               </button>
             `
           : nothing}
@@ -521,9 +492,9 @@ function renderAgentSelector(props: PermissionsContentProps, selectedScope: stri
                 @click=${() => props.onSelectAgent(agent.id)}
               >
                 ${label}
-                ${agent.isDefault ? html`<span class="permissions-tab__badge">默认</span>` : nothing}
+                ${agent.isDefault ? html`<span class="permissions-tab__badge">${t('label.default')}</span>` : nothing}
                 ${hasConfig && !agent.isDefault
-                  ? html`<span class="permissions-tab__badge permissions-tab__badge--config">已配置</span>`
+                  ? html`<span class="permissions-tab__badge permissions-tab__badge--config">${t('permissions.configured')}</span>`
                   : nothing}
               </button>
             `;
@@ -534,7 +505,7 @@ function renderAgentSelector(props: PermissionsContentProps, selectedScope: stri
 }
 
 /**
- * 渲染策略配置
+ * Render policy configuration
  */
 function renderPolicySection(
   props: PermissionsContentProps,
@@ -560,7 +531,7 @@ function renderPolicySection(
   const autoEffective = autoOverride ?? defaults.autoAllowSkills;
   const autoIsDefault = autoOverride == null;
 
-  // 判断是否可以删除此 Agent 配置
+  // Check if agent configuration can be deleted
   const hasAgentConfig = !isDefaults && form?.agents?.[selectedScope] != null;
   const isWildcard = selectedScope === "*";
 
@@ -568,13 +539,13 @@ function renderPolicySection(
     <div class="permissions-section">
       <div class="permissions-section__header">
         <div>
-          <h4 class="permissions-section__title">安全策略</h4>
+          <h4 class="permissions-section__title">${t('permissions.securityPolicy')}</h4>
           <p class="permissions-section__desc">
             ${isDefaults
-              ? "配置全局默认的安全策略。"
+              ? t('permissions.globalPolicyDesc')
               : isWildcard
-                ? "配置通配符规则，匹配所有未单独配置的 Agent。"
-                : `配置 ${selectedScope} Agent 的安全策略。`}
+                ? t('permissions.wildcardPolicyDesc')
+                : t('permissions.agentPolicyDesc', { agentId: selectedScope })}
           </p>
         </div>
         ${hasAgentConfig
@@ -583,24 +554,24 @@ function renderPolicySection(
                 class="mc-btn mc-btn--sm mc-btn--danger"
                 ?disabled=${props.saving}
                 @click=${() => {
-                  if (confirm(`确定要删除 ${isWildcard ? "通配符" : selectedScope} 的配置吗？`)) {
+                  if (confirm(t('permissions.confirmDeleteConfig', { target: isWildcard ? t('permissions.wildcard') : selectedScope }))) {
                     props.onRemoveAgent(selectedScope);
                   }
                 }}
               >
-                删除配置
+                ${t('permissions.deleteConfig')}
               </button>
             `
           : nothing}
       </div>
 
       <div class="permissions-policy-grid">
-        <!-- 安全模式 -->
+        <!-- Security Mode -->
         <div class="permissions-policy-item">
           <div class="permissions-policy-item__header">
-            <span class="permissions-policy-item__title">安全模式</span>
+            <span class="permissions-policy-item__title">${t('permissions.security')}</span>
             <span class="permissions-policy-item__desc">
-              ${isDefaults ? "默认的安全级别。" : `默认: ${defaults.security}`}
+              ${isDefaults ? t('permissions.defaultSecurityLevel') : t('permissions.defaultLabel', { value: defaults.security })}
             </span>
           </div>
           <select
@@ -618,7 +589,7 @@ function renderPolicySection(
           >
             ${!isDefaults
               ? html`<option value="__default__" ?selected=${securityValue === "__default__"}>
-                  使用默认 (${defaults.security})
+                  ${t('permissions.useDefault', { value: defaults.security })}
                 </option>`
               : nothing}
             ${getSecurityOptions().map(
@@ -630,12 +601,12 @@ function renderPolicySection(
           </select>
         </div>
 
-        <!-- 用户确认 -->
+        <!-- User Confirmation -->
         <div class="permissions-policy-item">
           <div class="permissions-policy-item__header">
-            <span class="permissions-policy-item__title">用户确认</span>
+            <span class="permissions-policy-item__title">${t('permissions.ask')}</span>
             <span class="permissions-policy-item__desc">
-              ${isDefaults ? "何时提示用户确认。" : `默认: ${defaults.ask}`}
+              ${isDefaults ? t('permissions.whenToPrompt') : t('permissions.defaultLabel', { value: defaults.ask })}
             </span>
           </div>
           <select
@@ -653,7 +624,7 @@ function renderPolicySection(
           >
             ${!isDefaults
               ? html`<option value="__default__" ?selected=${askValue === "__default__"}>
-                  使用默认 (${defaults.ask})
+                  ${t('permissions.useDefault', { value: defaults.ask })}
                 </option>`
               : nothing}
             ${getAskOptions().map(
@@ -665,12 +636,12 @@ function renderPolicySection(
           </select>
         </div>
 
-        <!-- 确认失败回退 -->
+        <!-- Confirmation Fallback -->
         <div class="permissions-policy-item">
           <div class="permissions-policy-item__header">
-            <span class="permissions-policy-item__title">确认失败回退</span>
+            <span class="permissions-policy-item__title">${t('permissions.askFallback')}</span>
             <span class="permissions-policy-item__desc">
-              ${isDefaults ? "UI 确认不可用时的处理方式。" : `默认: ${defaults.askFallback}`}
+              ${isDefaults ? t('permissions.fallbackAction') : t('permissions.defaultLabel', { value: defaults.askFallback })}
             </span>
           </div>
           <select
@@ -688,7 +659,7 @@ function renderPolicySection(
           >
             ${!isDefaults
               ? html`<option value="__default__" ?selected=${askFallbackValue === "__default__"}>
-                  使用默认 (${defaults.askFallback})
+                  ${t('permissions.useDefault', { value: defaults.askFallback })}
                 </option>`
               : nothing}
             ${getSecurityOptions().map(
@@ -700,16 +671,16 @@ function renderPolicySection(
           </select>
         </div>
 
-        <!-- 自动允许技能 CLI -->
+        <!-- Auto-allow Skill CLI -->
         <div class="permissions-policy-item">
           <div class="permissions-policy-item__header">
-            <span class="permissions-policy-item__title">自动允许技能 CLI</span>
+            <span class="permissions-policy-item__title">${t('permissions.autoAllowSkills')}</span>
             <span class="permissions-policy-item__desc">
               ${isDefaults
-                ? "自动允许 Gateway 注册的技能可执行文件。"
+                ? t('permissions.autoAllowSkillsDesc')
                 : autoIsDefault
-                  ? `使用默认 (${defaults.autoAllowSkills ? t('label.enabled') : t('permissions.ask.off')})`
-                  : `覆盖 (${autoEffective ? t('label.enabled') : t('permissions.ask.off')})`}
+                  ? t('permissions.useDefault', { value: defaults.autoAllowSkills ? t('label.enabled') : t('permissions.ask.off')})
+                  : t('permissions.overrideLabel', { value: autoEffective ? t('label.enabled') : t('permissions.ask.off')})}
             </span>
           </div>
           <div class="permissions-checkbox-row">
@@ -723,7 +694,7 @@ function renderPolicySection(
                   props.onPatch([...basePath, "autoAllowSkills"], target.checked);
                 }}
               />
-              <span>启用</span>
+              <span>${t('action.enable')}</span>
             </label>
             ${!isDefaults && !autoIsDefault
               ? html`
@@ -732,7 +703,7 @@ function renderPolicySection(
                     ?disabled=${props.saving}
                     @click=${() => props.onRemove([...basePath, "autoAllowSkills"])}
                   >
-                    使用默认
+                    ${t('permissions.useDefaultButton')}
                   </button>
                 `
               : nothing}
@@ -744,7 +715,7 @@ function renderPolicySection(
 }
 
 /**
- * 渲染允许列表
+ * Render allowlist section
  */
 function renderAllowlistSection(
   props: PermissionsContentProps,
@@ -758,9 +729,9 @@ function renderAllowlistSection(
     <div class="permissions-section">
       <div class="permissions-section__header">
         <div>
-          <h4 class="permissions-section__title">命令允许列表</h4>
+          <h4 class="permissions-section__title">${t('permissions.allowlist')}</h4>
           <p class="permissions-section__desc">
-            配置允许执行的命令模式。使用 glob 模式匹配命令（不区分大小写）。
+            ${t('permissions.allowlistDesc')}
           </p>
         </div>
         <button
@@ -768,7 +739,7 @@ function renderAllowlistSection(
           ?disabled=${props.saving}
           @click=${() => props.onAddAllowlistEntry(selectedScope)}
         >
-          添加规则
+          ${t('permissions.addRule')}
         </button>
       </div>
 
@@ -776,8 +747,8 @@ function renderAllowlistSection(
         ${allowlist.length === 0
           ? html`
               <div class="permissions-allowlist__empty">
-                <p>暂无允许列表规则。</p>
-                <p class="muted">点击"添加规则"来添加允许执行的命令模式。</p>
+                <p>${t('permissions.noRules')}</p>
+                <p class="muted">${t('permissions.noRulesHint')}</p>
               </div>
             `
           : allowlist.map((entry, index) =>
@@ -789,7 +760,7 @@ function renderAllowlistSection(
 }
 
 /**
- * 渲染允许列表条目
+ * Render allowlist entry
  */
 function renderAllowlistEntry(
   props: PermissionsContentProps,
@@ -807,7 +778,7 @@ function renderAllowlistEntry(
           <input
             type="text"
             class="permissions-input"
-            placeholder="例如: git *, npm run *, /usr/bin/*"
+            placeholder="${t('permissions.patternPlaceholder')}"
             .value=${pattern}
             ?disabled=${props.saving}
             @input=${(event: Event) => {
@@ -820,7 +791,7 @@ function renderAllowlistEntry(
           />
         </div>
         <div class="permissions-allowlist__item-meta">
-          <span class="muted">最后使用: ${lastUsed}</span>
+          <span class="muted">${t('permissions.lastUsed')}: ${lastUsed}</span>
           ${entry.lastUsedCommand
             ? html`<span class="mono muted" title=${entry.lastUsedCommand}>
                 ${entry.lastUsedCommand.length > 50
@@ -836,7 +807,7 @@ function renderAllowlistEntry(
           ?disabled=${props.saving}
           @click=${() => props.onRemoveAllowlistEntry(selectedScope, index)}
         >
-          删除
+          ${t('action.delete')}
         </button>
       </div>
     </div>
@@ -844,17 +815,17 @@ function renderAllowlistEntry(
 }
 
 // ============================================
-// 工具权限管理相关函数
+// Tool permissions management functions
 // ============================================
 
 /**
- * 渲染工具权限管理区块
+ * Render tools permissions management section
  */
 function renderToolsPermissionsSection(props: PermissionsContentProps) {
   const selectedScope = props.toolsSelectedAgent ?? TOOLS_DEFAULT_SCOPE;
   const isGlobal = selectedScope === TOOLS_DEFAULT_SCOPE;
 
-  // 获取当前作用域的配置
+  // Get configuration for the current scope
   const globalConfig = props.toolsConfig ?? {};
   const agentConfig = !isGlobal
     ? props.agentToolsConfigs.find((a) => a.id === selectedScope)?.tools ?? {}
@@ -863,33 +834,33 @@ function renderToolsPermissionsSection(props: PermissionsContentProps) {
 
   return html`
     <div class="permissions-header">
-      <h3 class="permissions-title">工具权限</h3>
+      <h3 class="permissions-title">${t('permissions.tools')}</h3>
       <p class="permissions-desc">
-        配置 Agent 可以使用的工具。可以选择预设配置档案，或单独控制每个工具的启用/禁用状态。
+        ${t('permissions.toolsSectionDesc')}
       </p>
     </div>
 
-    <!-- 工具作用域选择器 -->
+    <!-- Tool scope selector -->
     ${renderToolsScopeSelector(props, selectedScope)}
 
-    <!-- 配置档案选择 -->
+    <!-- Profile selection -->
     ${renderToolsProfileSection(props, currentConfig, selectedScope, isGlobal, globalConfig)}
 
-    <!-- 工具列表（带开关） -->
+    <!-- Tool list (with toggles) -->
     ${renderToolsListSection(props, currentConfig, selectedScope, isGlobal)}
   `;
 }
 
 /**
- * 渲染工具作用域选择器
+ * Render tools scope selector
  */
 function renderToolsScopeSelector(props: PermissionsContentProps, selectedScope: string) {
   return html`
     <div class="permissions-section">
       <div class="permissions-section__header">
         <div>
-          <h4 class="permissions-section__title">作用域</h4>
-          <p class="permissions-section__desc">选择要配置的 Agent，或配置全局默认设置。</p>
+          <h4 class="permissions-section__title">${t('permissions.scope')}</h4>
+          <p class="permissions-section__desc">${t('permissions.agentScopeDesc')}</p>
         </div>
       </div>
       <div class="permissions-tabs">
@@ -897,7 +868,7 @@ function renderToolsScopeSelector(props: PermissionsContentProps, selectedScope:
           class="permissions-tab ${selectedScope === TOOLS_DEFAULT_SCOPE ? "permissions-tab--active" : ""}"
           @click=${() => props.onToolsSelectAgent(null)}
         >
-          全局默认
+          ${t('permissions.globalDefault')}
         </button>
         ${props.toolsAgents.map((agent) => {
           const label = agent.name?.trim() ? `${agent.name} (${agent.id})` : agent.id;
@@ -908,7 +879,7 @@ function renderToolsScopeSelector(props: PermissionsContentProps, selectedScope:
               @click=${() => props.onToolsSelectAgent(agent.id)}
             >
               ${label}
-              ${agent.isDefault ? html`<span class="permissions-tab__badge">默认</span>` : nothing}
+              ${agent.isDefault ? html`<span class="permissions-tab__badge">${t('label.default')}</span>` : nothing}
             </button>
           `;
         })}
@@ -918,7 +889,7 @@ function renderToolsScopeSelector(props: PermissionsContentProps, selectedScope:
 }
 
 /**
- * 渲染配置档案选择
+ * Render profile selection
  */
 function renderToolsProfileSection(
   props: PermissionsContentProps,
@@ -934,22 +905,22 @@ function renderToolsProfileSection(
     <div class="permissions-section">
       <div class="permissions-section__header">
         <div>
-          <h4 class="permissions-section__title">配置档案</h4>
+          <h4 class="permissions-section__title">${t('permissions.profile.title')}</h4>
           <p class="permissions-section__desc">
             ${isGlobal
-              ? "选择预设的工具配置档案，或留空使用默认配置。"
+              ? t('permissions.profile.globalDesc')
               : globalProfile
-                ? `全局档案: ${globalProfile}`
-                : "全局未设置档案，使用系统默认"}
+                ? t('permissions.profile.globalProfileLabel', { profile: globalProfile })
+                : t('permissions.profile.noGlobalProfile')}
           </p>
         </div>
       </div>
       <div class="permissions-policy-grid">
         <div class="permissions-policy-item">
           <div class="permissions-policy-item__header">
-            <span class="permissions-policy-item__title">工具档案</span>
+            <span class="permissions-policy-item__title">${t('permissions.profile.toolProfile')}</span>
             <span class="permissions-policy-item__desc">
-              选择预设的工具权限集合
+              ${t('permissions.profile.toolProfileDesc')}
             </span>
           </div>
           <select
@@ -969,10 +940,10 @@ function renderToolsProfileSection(
           >
             ${!isGlobal
               ? html`<option value="__default__" ?selected=${profileValue === "__default__"}>
-                  使用全局设置${globalProfile ? ` (${globalProfile})` : ""}
+                  ${t('permissions.profile.useGlobal', { profile: globalProfile ? ` (${globalProfile})` : "" })}
                 </option>`
               : html`<option value="" ?selected=${!profileValue}>
-                  未设置（使用系统默认）
+                  ${t('permissions.profile.notSet')}
                 </option>`}
             ${getToolProfiles().map(
               (profile) =>
@@ -988,7 +959,7 @@ function renderToolsProfileSection(
 }
 
 /**
- * 渲染工具列表（带开关）
+ * Render tools list (with toggles)
  */
 function renderToolsListSection(
   props: PermissionsContentProps,
@@ -997,16 +968,18 @@ function renderToolsListSection(
   isGlobal: boolean,
 ) {
   const denyList = currentConfig.deny ?? [];
+  const TOOL_GROUPS = getToolGroups();
+  const STANDALONE_TOOLS = getStandaloneTools();
   const totalTools = Object.values(TOOL_GROUPS).reduce(
     (sum, group) => sum + group.tools.length,
     0,
   ) + STANDALONE_TOOLS.length;
 
-  // 检查工具是否被禁用
+  // Check if a tool is denied
   const isToolDenied = (toolId: string): boolean => {
-    // 直接禁用
+    // Directly denied
     if (denyList.includes(toolId)) return true;
-    // 通过分组禁用
+    // Denied via group
     for (const [groupId, group] of Object.entries(TOOL_GROUPS)) {
       if (group.tools.includes(toolId) && denyList.includes(groupId)) {
         return true;
@@ -1015,22 +988,22 @@ function renderToolsListSection(
     return false;
   };
 
-  // 检查分组是否被禁用
+  // Check if a group is denied
   const isGroupDenied = (groupId: string): boolean => {
     return denyList.includes(groupId);
   };
 
-  // 切换工具禁用状态
+  // Toggle tool denial status
   const handleToolToggle = (toolId: string, currentlyDenied: boolean) => {
     if (currentlyDenied) {
-      // 启用工具（从 deny 列表移除）
+      // Enable tool (remove from deny list)
       if (isGlobal) {
         props.onToolsRemoveGlobalDeny(toolId);
       } else {
         props.onToolsRemoveAgentDeny(selectedScope, toolId);
       }
     } else {
-      // 禁用工具（添加到 deny 列表）
+      // Disable tool (add to deny list)
       if (isGlobal) {
         props.onToolsAddGlobalDeny(toolId);
       } else {
@@ -1039,7 +1012,7 @@ function renderToolsListSection(
     }
   };
 
-  // 切换分组禁用状态
+  // Toggle group denial status
   const handleGroupToggle = (groupId: string, currentlyDenied: boolean) => {
     if (currentlyDenied) {
       if (isGlobal) {
@@ -1060,9 +1033,9 @@ function renderToolsListSection(
     <div class="permissions-section">
       <div class="permissions-section__header">
         <div>
-          <h4 class="permissions-section__title">工具列表</h4>
+          <h4 class="permissions-section__title">${t('permissions.toolList.title')}</h4>
           <p class="permissions-section__desc">
-            共 ${totalTools} 个工具，使用开关控制启用/禁用状态。
+            ${t('permissions.toolList.desc', { count: totalTools })}
           </p>
         </div>
         <button
@@ -1086,7 +1059,7 @@ function renderToolsListSection(
                         <span class="tools-group__desc">${group.desc}</span>
                       </div>
                       <div class="tools-group__toggle">
-                        <span class="tools-group__count">${group.tools.length} 个工具</span>
+                        <span class="tools-group__count">${t('permissions.toolCount', { count: group.tools.length })}</span>
                         <label class="mc-toggle">
                           <input
                             type="checkbox"
@@ -1101,7 +1074,7 @@ function renderToolsListSection(
                     <div class="tools-group__items">
                       ${group.tools.map((toolId) => {
                         const denied = isToolDenied(toolId);
-                        const desc = TOOL_DESCRIPTIONS[toolId] ?? "";
+                        const desc = getToolDescription(toolId);
                         return html`
                           <div class="tools-item ${denied ? "tools-item--denied" : ""}">
                             <div class="tools-item__info">
@@ -1125,21 +1098,21 @@ function renderToolsListSection(
                 `;
               })}
 
-              <!-- 独立工具 -->
+              <!-- Standalone tools -->
               <div class="tools-group">
                 <div class="tools-group__header">
                   <div class="tools-group__info">
-                    <span class="tools-group__name">独立工具</span>
-                    <span class="tools-group__desc">不属于任何分组的工具</span>
+                    <span class="tools-group__name">${t('permissions.standaloneTools')}</span>
+                    <span class="tools-group__desc">${t('permissions.standaloneToolsDesc')}</span>
                   </div>
                   <div class="tools-group__toggle">
-                    <span class="tools-group__count">${STANDALONE_TOOLS.length} 个工具</span>
+                    <span class="tools-group__count">${t('permissions.toolCount', { count: STANDALONE_TOOLS.length })}</span>
                   </div>
                 </div>
                 <div class="tools-group__items">
                   ${STANDALONE_TOOLS.map((tool) => {
                     const denied = isToolDenied(tool.id);
-                    const desc = TOOL_DESCRIPTIONS[tool.id] ?? "";
+                    const desc = getToolDescription(tool.id);
                     return html`
                       <div class="tools-item ${denied ? "tools-item--denied" : ""}">
                         <div class="tools-item__info">

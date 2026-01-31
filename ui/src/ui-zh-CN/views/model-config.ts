@@ -49,15 +49,7 @@ import type {
   SessionsListResult,
 } from "../controllers/model-config";
 
-// 中文标签
-const LABELS = {
-  save: "保存配置",
-  apply: "保存并应用",
-  reload: "重新加载",
-  saving: "保存中...",
-  applying: "应用中...",
-  loading: "加载中...",
-};
+import { t } from "../i18n";
 
 // 类型定义
 export type ModelApi =
@@ -609,8 +601,8 @@ export function renderModelConfig(props: ModelConfigProps) {
         <div class="mc-actions">
           <div class="mc-actions__left">
             ${props.hasChanges
-              ? html`<span class="mc-changes-badge">有未保存的更改</span>`
-              : html`<span class="mc-status">配置已同步</span>`}
+              ? html`<span class="mc-changes-badge">${t('sidebar.unsaved')}</span>`
+              : html`<span class="mc-status">${t('status.synced')}</span>`}
           </div>
           <div class="mc-actions__right">
             <button
@@ -618,14 +610,14 @@ export function renderModelConfig(props: ModelConfigProps) {
               ?disabled=${props.loading}
               @click=${props.onReload}
             >
-              ${props.loading ? LABELS.loading : LABELS.reload}
+              ${props.loading ? t('action.loading') : t('action.reload')}
             </button>
             <button
               class="btn btn--sm"
               ?disabled=${!props.hasChanges || props.saving || props.applying || !props.connected}
               @click=${props.onSave}
             >
-              ${props.saving ? LABELS.saving : LABELS.save}
+              ${props.saving ? t('action.saving') : t('action.save')}
             </button>
             <button
               class="btn btn--sm primary"
@@ -633,7 +625,7 @@ export function renderModelConfig(props: ModelConfigProps) {
               @click=${props.onApply}
               title="保存配置并重启相关服务"
             >
-              ${props.applying ? LABELS.applying : LABELS.apply}
+              ${props.applying ? t('action.applying') : t('action.apply')}
             </button>
           </div>
         </div>

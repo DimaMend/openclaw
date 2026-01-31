@@ -20,10 +20,10 @@ import type {
   SkillEditorMode,
 } from "../types/skills-config";
 
-// ─── 辅助函数 / Helper functions ────────────────────────────────────────────
+// ─── Helper functions ────────────────────────────────────────────
 
 /**
- * 按来源分组技能
+ * Group skills by source
  */
 function groupSkillsBySource(skills: SkillStatusEntry[]): SkillGroup[] {
   const groups: Record<string, SkillStatusEntry[]> = {
@@ -64,7 +64,7 @@ function groupSkillsBySource(skills: SkillStatusEntry[]): SkillGroup[] {
 }
 
 /**
- * 过滤技能列表
+ * Filter skill list
  */
 function filterSkills(
   skills: SkillStatusEntry[],
@@ -74,7 +74,7 @@ function filterSkills(
 ): SkillStatusEntry[] {
   let filtered = skills;
 
-  // 文本搜索
+  // Text search
   if (filter.trim()) {
     const q = filter.trim().toLowerCase();
     filtered = filtered.filter(
@@ -85,7 +85,7 @@ function filterSkills(
     );
   }
 
-  // 来源过滤
+  // Source filter
   if (sourceFilter !== "all") {
     const sourceMap: Record<string, string> = {
       bundled: "openclaw-bundled",
@@ -98,7 +98,7 @@ function filterSkills(
     }
   }
 
-  // 状态过滤
+  // Status filter
   if (statusFilter === "eligible") {
     filtered = filtered.filter((s) => s.eligible);
   } else if (statusFilter === "blocked") {
@@ -111,7 +111,6 @@ function filterSkills(
 }
 
 /**
- * 将完整来源名称转换为短格式（用于 RPC）
  * Convert full source name to short format (for RPC)
  */
 function toShortSource(source: string): EditableSkillSource | null {
@@ -121,7 +120,7 @@ function toShortSource(source: string): EditableSkillSource | null {
 }
 
 /**
- * 截断文本
+ * Clamp text
  */
 function clampText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
@@ -129,8 +128,7 @@ function clampText(text: string, maxLength: number): string {
 }
 
 /**
- * 高亮搜索文本 (Phase 4)
- * Highlight search text in content
+ * Highlight search text in content (Phase 4)
  */
 function highlightText(text: string, query: string): ReturnType<typeof html> {
   if (!query.trim()) return html`${text}`;
@@ -149,8 +147,7 @@ function highlightText(text: string, query: string): ReturnType<typeof html> {
 }
 
 /**
- * 计算技能统计 (Phase 4)
- * Calculate skill statistics
+ * Calculate skill statistics (Phase 4)
  */
 function calculateStats(skills: SkillStatusEntry[]) {
   return {
@@ -164,10 +161,9 @@ function calculateStats(skills: SkillStatusEntry[]) {
   };
 }
 
-// ─── 技能优先级说明 / Skill priority explanation ────────────────────────────
+// ─── Skill priority explanation ────────────────────────────
 
 /**
- * 渲染技能优先级说明
  * Render skill priority explanation
  */
 function renderPriorityExplanation() {
@@ -181,32 +177,32 @@ function renderPriorityExplanation() {
             <line x1="12" y1="8" x2="12.01" y2="8"></line>
           </svg>
         </span>
-        <span class="skills-priority-info__title">技能加载优先级</span>
+        <span class="skills-priority-info__title">${t('skills.priority.title')}</span>
       </div>
       <div class="skills-priority-info__content">
         <p class="skills-priority-info__desc">
-          当多个来源存在同名技能时，高优先级来源会覆盖低优先级来源的技能定义：
+          ${t('skills.priority.desc')}
         </p>
         <ol class="skills-priority-info__list">
           <li>
-            <span class="skills-priority-info__source">额外目录</span>
-            <span class="skills-priority-info__priority">最低优先级</span>
+            <span class="skills-priority-info__source">${t('skills.priority.extraDirs')}</span>
+            <span class="skills-priority-info__priority">${t('skills.priority.lowest')}</span>
           </li>
           <li>
-            <span class="skills-priority-info__source">内置技能</span>
+            <span class="skills-priority-info__source">${t('skills.priority.bundled')}</span>
             <span class="skills-priority-info__priority">openclaw-bundled</span>
           </li>
           <li>
-            <span class="skills-priority-info__source">本地技能</span>
+            <span class="skills-priority-info__source">${t('skills.priority.managed')}</span>
             <span class="skills-priority-info__priority">~/.openclaw/skills/</span>
           </li>
           <li>
-            <span class="skills-priority-info__source">工作区技能</span>
-            <span class="skills-priority-info__priority skills-priority-info__priority--high">最高优先级</span>
+            <span class="skills-priority-info__source">${t('skills.priority.workspace')}</span>
+            <span class="skills-priority-info__priority skills-priority-info__priority--high">${t('skills.priority.highest')}</span>
           </li>
         </ol>
         <p class="skills-priority-info__note">
-          例如：如果内置技能和工作区技能都定义了 "git" 技能，Agent 将使用工作区版本。
+          ${t('skills.priority.note')}
         </p>
       </div>
     </div>
@@ -226,8 +222,8 @@ export function renderSkillsContent(props: SkillsContentProps) {
       <!-- 头部 -->
       <div class="skills-header">
         <div class="skills-header__info">
-          <h3 class="skills-title">技能管理</h3>
-          <p class="skills-desc">管理 Agent 可用的技能、白名单和安装配置</p>
+          <h3 class="skills-title">${t('skills.title')}</h3>
+          <p class="skills-desc">${t('skills.desc')}</p>
         </div>
         <div class="skills-header__actions">
           <!-- 创建技能按钮 -->
@@ -235,7 +231,7 @@ export function renderSkillsContent(props: SkillsContentProps) {
             class="mc-btn mc-btn--sm"
             @click=${() => props.onCreateOpen()}
           >
-            + 新建技能
+            + ${t('skills.createSkill')}
           </button>
           <button
             class="mc-btn mc-btn--sm"
@@ -277,9 +273,9 @@ export function renderSkillsContent(props: SkillsContentProps) {
 
       <!-- 技能列表 -->
       ${props.loading && !props.report
-        ? html`<div class="skills-loading">正在加载技能列表...</div>`
+        ? html`<div class="skills-loading">${t('skills.loading')}</div>`
         : groups.length === 0
-          ? html`<div class="skills-empty">没有找到匹配的技能</div>`
+          ? html`<div class="skills-empty">${t('skills.noResults')}</div>`
           : groups.map((group) => renderSkillGroup(group, props))}
     </div>
 
@@ -311,33 +307,33 @@ function renderStatsBar(stats: SkillStats) {
     <div class="skills-stats">
       <div class="skills-stats__item">
         <span class="skills-stats__value">${stats.total}</span>
-        <span class="skills-stats__label">总计</span>
+        <span class="skills-stats__label">${t('stats.total')}</span>
       </div>
       <div class="skills-stats__divider"></div>
       <div class="skills-stats__item skills-stats__item--ok">
         <span class="skills-stats__value">${stats.eligible}</span>
-        <span class="skills-stats__label">可用</span>
+        <span class="skills-stats__label">${t('stats.eligible')}</span>
       </div>
       <div class="skills-stats__item skills-stats__item--warn">
         <span class="skills-stats__value">${stats.blocked}</span>
-        <span class="skills-stats__label">受阻</span>
+        <span class="skills-stats__label">${t('stats.blocked')}</span>
       </div>
       <div class="skills-stats__item skills-stats__item--disabled">
         <span class="skills-stats__value">${stats.disabled}</span>
-        <span class="skills-stats__label">已禁用</span>
+        <span class="skills-stats__label">${t('stats.disabled')}</span>
       </div>
       <div class="skills-stats__divider"></div>
       <div class="skills-stats__item">
         <span class="skills-stats__value">${stats.bundled}</span>
-        <span class="skills-stats__label">内置</span>
+        <span class="skills-stats__label">${t('stats.bundled')}</span>
       </div>
       <div class="skills-stats__item">
         <span class="skills-stats__value">${stats.managed}</span>
-        <span class="skills-stats__label">本地</span>
+        <span class="skills-stats__label">${t('stats.managed')}</span>
       </div>
       <div class="skills-stats__item">
         <span class="skills-stats__value">${stats.workspace}</span>
-        <span class="skills-stats__label">工作区</span>
+        <span class="skills-stats__label">${t('stats.workspace')}</span>
       </div>
     </div>
   `;
@@ -352,14 +348,14 @@ function renderGlobalSettings(props: SkillsContentProps) {
   return html`
     <div class="skills-section skills-global-settings">
       <div class="skills-section__header">
-        <h4 class="skills-section__title">全局设置</h4>
+        <h4 class="skills-section__title">${t('skills.globalSettings')}</h4>
       </div>
       <div class="skills-settings-grid">
         <!-- 白名单模式 -->
         <div class="skills-setting-item">
           <div class="skills-setting-item__header">
-            <span class="skills-setting-item__title">内置技能模式</span>
-            <span class="skills-setting-item__desc">控制内置技能的启用方式</span>
+            <span class="skills-setting-item__title">${t('skills.bundledMode')}</span>
+            <span class="skills-setting-item__desc">${t('skills.bundledModeDesc')}</span>
           </div>
           <div class="skills-radio-group">
             <label class="skills-radio">
@@ -371,7 +367,7 @@ function renderGlobalSettings(props: SkillsContentProps) {
                 @change=${() => props.onAllowlistModeChange("all")}
               />
               <span class="skills-radio__mark"></span>
-              <span class="skills-radio__text">允许全部</span>
+              <span class="skills-radio__text">${t('skills.allowAll')}</span>
             </label>
             <label class="skills-radio">
               <input
@@ -382,7 +378,7 @@ function renderGlobalSettings(props: SkillsContentProps) {
                 @change=${() => props.onAllowlistModeChange("whitelist")}
               />
               <span class="skills-radio__mark"></span>
-              <span class="skills-radio__text">仅白名单</span>
+              <span class="skills-radio__text">${t('skills.allowlistOnly')}</span>
             </label>
           </div>
         </div>
@@ -390,8 +386,8 @@ function renderGlobalSettings(props: SkillsContentProps) {
         <!-- 安装偏好 -->
         <div class="skills-setting-item">
           <div class="skills-setting-item__header">
-            <span class="skills-setting-item__title">安装偏好</span>
-            <span class="skills-setting-item__desc">技能依赖的安装方式</span>
+            <span class="skills-setting-item__title">${t('skills.installPreference')}</span>
+            <span class="skills-setting-item__desc">${t('skills.installPreferenceDesc')}</span>
           </div>
           <select
             class="skills-select"
@@ -401,16 +397,16 @@ function renderGlobalSettings(props: SkillsContentProps) {
               props.onGlobalSettingChange("preferBrew", value);
             }}
           >
-            <option value="true">优先使用 Homebrew</option>
-            <option value="false">使用默认方式</option>
+            <option value="true">${t('skills.preferBrew')}</option>
+            <option value="false">${t('skills.useDefaultInstall')}</option>
           </select>
         </div>
 
         <!-- Node 包管理器 -->
         <div class="skills-setting-item">
           <div class="skills-setting-item__header">
-            <span class="skills-setting-item__title">Node 包管理器</span>
-            <span class="skills-setting-item__desc">用于安装 Node.js 技能依赖</span>
+            <span class="skills-setting-item__title">${t('skills.nodePackageManager')}</span>
+            <span class="skills-setting-item__desc">${t('skills.nodePackageManagerDesc')}</span>
           </div>
           <select
             class="skills-select"
@@ -430,8 +426,8 @@ function renderGlobalSettings(props: SkillsContentProps) {
         <!-- 文件监视 -->
         <div class="skills-setting-item">
           <div class="skills-setting-item__header">
-            <span class="skills-setting-item__title">文件监视</span>
-            <span class="skills-setting-item__desc">自动重载技能文件变更</span>
+            <span class="skills-setting-item__title">${t('skills.fileWatching')}</span>
+            <span class="skills-setting-item__desc">${t('skills.fileWatchingDesc')}</span>
           </div>
           <label class="skills-checkbox">
             <input
@@ -442,7 +438,7 @@ function renderGlobalSettings(props: SkillsContentProps) {
                 props.onGlobalSettingChange("watch", checked);
               }}
             />
-            <span class="skills-checkbox__text">启用文件监视</span>
+            <span class="skills-checkbox__text">${t('skills.enableFileWatching')}</span>
           </label>
         </div>
       </div>
@@ -450,8 +446,8 @@ function renderGlobalSettings(props: SkillsContentProps) {
       <!-- 额外技能目录 -->
       <div class="skills-extra-dirs">
         <div class="skills-extra-dirs__header">
-          <span class="skills-extra-dirs__title">额外技能目录</span>
-          <span class="skills-extra-dirs__desc">每行一个目录路径</span>
+          <span class="skills-extra-dirs__title">${t('skills.extraDirs')}</span>
+          <span class="skills-extra-dirs__desc">${t('skills.extraDirsDesc')}</span>
         </div>
         <textarea
           class="skills-extra-dirs__textarea"
@@ -480,7 +476,7 @@ function renderFilterBar(props: SkillsContentProps, total: number, shown: number
         <input
           type="text"
           class="skills-filter__input"
-          placeholder=t('skills.search')
+          placeholder=${t('skills.search')}
           .value=${props.filter}
           @input=${(e: Event) =>
             props.onFilterChange((e.target as HTMLInputElement).value)}
@@ -495,10 +491,10 @@ function renderFilterBar(props: SkillsContentProps, total: number, shown: number
               (e.target as HTMLSelectElement).value as SkillSourceFilter,
             )}
         >
-          <option value="all">全部来源</option>
-          <option value="bundled">内置技能</option>
-          <option value="managed">本地技能</option>
-          <option value="workspace">工作区技能</option>
+          <option value="all">${t('skills.source.all')}</option>
+          <option value="bundled">${t('skills.source.bundled')}</option>
+          <option value="managed">${t('skills.source.managed')}</option>
+          <option value="workspace">${t('skills.source.workspace')}</option>
         </select>
         <select
           class="skills-filter__select"
@@ -508,14 +504,14 @@ function renderFilterBar(props: SkillsContentProps, total: number, shown: number
               (e.target as HTMLSelectElement).value as SkillStatusFilter,
             )}
         >
-          <option value="all">全部状态</option>
-          <option value="eligible">可用</option>
-          <option value="blocked">受阻</option>
-          <option value="disabled">已禁用</option>
+          <option value="all">${t('skills.status.all')}</option>
+          <option value="eligible">${t('skills.status.eligible')}</option>
+          <option value="blocked">${t('skills.status.blocked')}</option>
+          <option value="disabled">${t('skills.status.disabled')}</option>
         </select>
       </div>
       <div class="skills-filter__count">
-        显示 ${shown} / ${total}
+        ${t('skills.showing', { shown, total })}
       </div>
     </div>
   `;
@@ -590,7 +586,7 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
           </span>
           ${isBundled && props.allowlistMode === "whitelist"
             ? html`
-                <label class="skills-allowlist-toggle" title=t('skills.addToAllowlist')>
+                <label class="skills-allowlist-toggle" title=${t('skills.addToAllowlist')}>
                   <input
                     type="checkbox"
                     .checked=${inAllowlist}
@@ -623,20 +619,20 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
             ${skill.eligible ? t('skills.status.available') : t('skills.status.blocked')}
           </span>
           ${skill.disabled
-            ? html`<span class="skills-chip skills-chip--warn">已禁用</span>`
+            ? html`<span class="skills-chip skills-chip--warn">${t('label.disabled')}</span>`
             : nothing}
         </div>
         ${missing.length > 0
           ? html`
               <div class="skills-item__missing">
-                缺失: ${missing.join(", ")}
+                ${t('skills.missing')}: ${missing.join(", ")}
               </div>
             `
           : nothing}
         ${reasons.length > 0
           ? html`
               <div class="skills-item__reasons">
-                原因: ${reasons.join(", ")}
+                ${t('skills.reasons')}: ${reasons.join(", ")}
               </div>
             `
           : nothing}
@@ -679,7 +675,7 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
                     toShortSource(skill.source) as EditableSkillSource
                   )}
               >
-                编辑
+                ${t('action.edit')}
               </button>
               <button
                 class="mc-btn mc-btn--sm mc-btn--danger"
@@ -691,7 +687,7 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
                     toShortSource(skill.source) as EditableSkillSource
                   )}
               >
-                删除
+                ${t('action.delete')}
               </button>
             `
           : nothing}
@@ -712,20 +708,20 @@ function renderSkillItem(skill: SkillStatusEntry, props: SkillsContentProps) {
             <div class="skills-item__details">
               <!-- 基本信息 -->
               <div class="skills-detail-section">
-                <div class="skills-detail-section__title">基本信息</div>
+                <div class="skills-detail-section__title">${t('skills.details.basicInfo')}</div>
                 <div class="skills-detail-info">
                   <div class="skills-detail-row">
-                    <span class="skills-detail-label">技能键:</span>
+                    <span class="skills-detail-label">${t('skills.details.skillKey')}:</span>
                     <span class="skills-detail-value mono">${skill.skillKey}</span>
                   </div>
                   <div class="skills-detail-row">
-                    <span class="skills-detail-label">路径:</span>
+                    <span class="skills-detail-label">${t('skills.details.path')}:</span>
                     <span class="skills-detail-value mono">${clampText(skill.filePath, 60)}</span>
                   </div>
                   ${skill.homepage
                     ? html`
                         <div class="skills-detail-row">
-                          <span class="skills-detail-label">主页:</span>
+                          <span class="skills-detail-label">${t('skills.details.homepage')}:</span>
                           <a class="skills-detail-link" href="${skill.homepage}" target="_blank" rel="noreferrer">
                             ${skill.homepage}
                           </a>
@@ -767,14 +763,14 @@ function renderInstallProgress(skillName: string) {
   return html`
     <div class="skills-progress">
       <div class="skills-progress__header">
-        <span class="skills-progress__title">正在安装 ${skillName}</span>
-        <span class="skills-progress__status">请稍候...</span>
+        <span class="skills-progress__title">${t('skills.install.title', { skillName })}</span>
+        <span class="skills-progress__status">${t('skills.install.status')}</span>
       </div>
       <div class="skills-progress__bar">
         <div class="skills-progress__fill skills-progress__fill--indeterminate"></div>
       </div>
       <div class="skills-progress__message">
-        正在下载并安装依赖项，这可能需要几分钟时间...
+        ${t('skills.install.message')}
       </div>
     </div>
   `;
@@ -823,7 +819,7 @@ function renderApiKeyInput(
         <input
           type="password"
           class="skills-apikey__input"
-          placeholder=t('skills.enterApiKey')
+          placeholder=${t('skills.enterApiKey')}
           .value=${apiKey}
           @input=${(e: Event) =>
             props.onSkillApiKeyChange(
@@ -836,7 +832,7 @@ function renderApiKeyInput(
           ?disabled=${isBusy || !apiKey.trim()}
           @click=${() => props.onSkillApiKeySave(skill.skillKey)}
         >
-          保存
+          ${t('action.save')}
         </button>
       </div>
     </div>
@@ -867,7 +863,7 @@ function renderEnvEditor(
   return html`
     <div class="skills-env-editor">
       <div class="skills-env-editor__header">
-        <span class="skills-env-editor__title">环境变量</span>
+        <span class="skills-env-editor__title">${t('skills.env.title')}</span>
       </div>
       <div class="skills-env-editor__list">
         ${otherEnvKeys.map((envKey) => {
@@ -880,14 +876,14 @@ function renderEnvEditor(
               <div class="skills-env-row__key">
                 <span class="skills-env-row__label">${envKey}</span>
                 ${isRequired
-                  ? html`<span class="skills-env-row__badge">必需</span>`
+                  ? html`<span class="skills-env-row__badge">${t('skills.env.required')}</span>`
                   : nothing}
               </div>
               <div class="skills-env-row__value">
                 <input
                   type="password"
                   class="skills-env-row__input"
-                  placeholder=t('skills.enterValue')
+                  placeholder=${t('skills.enterValue')}
                   .value=${value}
                   @input=${(e: Event) =>
                     props.onSkillEnvChange(
@@ -900,7 +896,7 @@ function renderEnvEditor(
                   ? html`
                       <button
                         class="mc-icon-btn mc-icon-btn--danger"
-                        title=t('action.delete')
+                        title=${t('action.delete')}
                         @click=${() => props.onSkillEnvRemove(skill.skillKey, envKey)}
                       >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -933,8 +929,8 @@ function renderConfigEditor(
   return html`
     <div class="skills-config-editor">
       <div class="skills-config-editor__header">
-        <span class="skills-config-editor__title">自定义配置</span>
-        <span class="skills-config-editor__hint">JSON 格式</span>
+        <span class="skills-config-editor__title">${t('skills.config.title')}</span>
+        <span class="skills-config-editor__hint">${t('skills.config.hint')}</span>
       </div>
       <textarea
         class="skills-config-editor__textarea"
@@ -982,7 +978,7 @@ function renderEditorModal(props: SkillsContentProps) {
                 <line x1="16" y1="17" x2="8" y2="17"></line>
               </svg>
             </span>
-            编辑技能: ${editorState.skillName}
+            ${t('skills.editor.title', { skillName: editorState.skillName })}
           </div>
           <button class="skills-modal__close" @click=${props.onEditorClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -999,31 +995,31 @@ function renderEditorModal(props: SkillsContentProps) {
               class="skills-editor__mode-tab ${editorState.mode === "edit" ? "active" : ""}"
               @click=${() => props.onEditorModeChange("edit")}
             >
-              编辑
+              ${t('action.edit')}
             </button>
             <button
               class="skills-editor__mode-tab ${editorState.mode === "preview" ? "active" : ""}"
               @click=${() => props.onEditorModeChange("preview")}
             >
-              预览
+              ${t('workspace.preview')}
             </button>
             <button
               class="skills-editor__mode-tab ${editorState.mode === "split" ? "active" : ""}"
               @click=${() => props.onEditorModeChange("split")}
             >
-              分屏
+              ${t('workspace.split')}
             </button>
           </div>
           <div class="skills-editor__info">
             <span class="skills-editor__source">${editorState.source}</span>
-            ${hasChanges ? html`<span class="skills-editor__dirty">未保存</span>` : nothing}
+            ${hasChanges ? html`<span class="skills-editor__dirty">${t('workspace.unsaved')}</span>` : nothing}
           </div>
         </div>
 
         <!-- 编辑器内容 -->
         <div class="skills-modal__body skills-editor__body">
           ${editorState.loading
-            ? html`<div class="skills-editor__loading">加载中...</div>`
+            ? html`<div class="skills-editor__loading">${t('label.loading')}</div>`
             : editorState.error
               ? html`<div class="skills-editor__error">${editorState.error}</div>`
               : renderEditorContent(props)}
@@ -1032,7 +1028,7 @@ function renderEditorModal(props: SkillsContentProps) {
         <!-- 底部按钮 -->
         <div class="skills-modal__footer">
           <button class="mc-btn" @click=${props.onEditorClose}>
-            取消
+            ${t('action.cancel')}
           </button>
           <button
             class="mc-btn primary"
@@ -1063,7 +1059,7 @@ function renderEditorContent(props: SkillsContentProps) {
             .value=${editorState.content}
             @input=${(e: Event) =>
               props.onEditorContentChange((e.target as HTMLTextAreaElement).value)}
-            placeholder="# 技能名称\n\n在此编写技能说明..."
+            placeholder=${t('skills.editor.placeholder')}
           ></textarea>
         </div>
       `;
@@ -1082,7 +1078,7 @@ function renderEditorContent(props: SkillsContentProps) {
               .value=${editorState.content}
               @input=${(e: Event) =>
                 props.onEditorContentChange((e.target as HTMLTextAreaElement).value)}
-              placeholder="# 技能名称\n\n在此编写技能说明..."
+              placeholder=${t('skills.editor.placeholder')}
             ></textarea>
           </div>
           <div class="skills-editor__divider"></div>
@@ -1164,7 +1160,7 @@ function renderCreateModal(props: SkillsContentProps) {
                 <line x1="8" y1="12" x2="16" y2="12"></line>
               </svg>
             </span>
-            新建技能
+            ${t('skills.create.title')}
           </div>
           <button class="skills-modal__close" @click=${props.onCreateClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1181,7 +1177,7 @@ function renderCreateModal(props: SkillsContentProps) {
             : nothing}
 
           <div class="skills-create__field">
-            <label class="skills-create__label">技能名称</label>
+            <label class="skills-create__label">${t('skills.create.nameLabel')}</label>
             <input
               type="text"
               class="skills-create__input ${createState.nameError ? "error" : ""}"
@@ -1192,11 +1188,11 @@ function renderCreateModal(props: SkillsContentProps) {
             />
             ${createState.nameError
               ? html`<div class="skills-create__field-error">${createState.nameError}</div>`
-              : html`<div class="skills-create__hint">仅允许小写字母、数字和连字符</div>`}
+              : html`<div class="skills-create__hint">${t('skills.create.nameHint')}</div>`}
           </div>
 
           <div class="skills-create__field">
-            <label class="skills-create__label">创建位置</label>
+            <label class="skills-create__label">${t('skills.create.locationLabel')}</label>
             <div class="skills-create__radio-group">
               <label class="skills-create__radio">
                 <input
@@ -1208,8 +1204,8 @@ function renderCreateModal(props: SkillsContentProps) {
                 />
                 <span class="skills-create__radio-mark"></span>
                 <span class="skills-create__radio-text">
-                  <strong>工作区技能</strong>
-                  <small>仅当前项目可用</small>
+                  <strong>${t('skills.create.workspace')}</strong>
+                  <small>${t('skills.create.workspaceDesc')}</small>
                 </span>
               </label>
               <label class="skills-create__radio">
@@ -1222,8 +1218,8 @@ function renderCreateModal(props: SkillsContentProps) {
                 />
                 <span class="skills-create__radio-mark"></span>
                 <span class="skills-create__radio-text">
-                  <strong>本地技能</strong>
-                  <small>所有项目可用</small>
+                  <strong>${t('skills.create.managed')}</strong>
+                  <small>${t('skills.create.managedDesc')}</small>
                 </span>
               </label>
             </div>
@@ -1233,7 +1229,7 @@ function renderCreateModal(props: SkillsContentProps) {
         <!-- 底部按钮 -->
         <div class="skills-modal__footer">
           <button class="mc-btn" @click=${props.onCreateClose}>
-            取消
+            ${t('action.cancel')}
           </button>
           <button
             class="mc-btn primary"
@@ -1271,7 +1267,7 @@ function renderDeleteModal(props: SkillsContentProps) {
                 <line x1="14" y1="11" x2="14" y2="17"></line>
               </svg>
             </span>
-            删除技能
+            ${t('skills.delete.title')}
           </div>
           <button class="skills-modal__close" @click=${props.onDeleteClose}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1293,21 +1289,21 @@ function renderDeleteModal(props: SkillsContentProps) {
               <line x1="12" y1="9" x2="12" y2="13"></line>
               <line x1="12" y1="17" x2="12.01" y2="17"></line>
             </svg>
-            <span>此操作不可撤销</span>
+            <span>${t('skills.delete.warning')}</span>
           </div>
 
           <p class="skills-delete__message">
-            确定要删除技能 <strong>${deleteState.skillName}</strong> 吗？
+            ${t('skills.delete.message', { skillName: deleteState.skillName })}
           </p>
           <p class="skills-delete__info">
-            技能目录及其所有文件将被永久删除。
+            ${t('skills.delete.info')}
           </p>
         </div>
 
         <!-- 底部按钮 -->
         <div class="skills-modal__footer">
           <button class="mc-btn" @click=${props.onDeleteClose}>
-            取消
+            ${t('action.cancel')}
           </button>
           <button
             class="mc-btn mc-btn--danger"

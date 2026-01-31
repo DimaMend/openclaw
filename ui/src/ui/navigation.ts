@@ -150,7 +150,7 @@ export function titleForTab(tab: Tab) {
     case "chat":
       return "Chat";
     case "model-config":
-      return "可视化配置";
+      return "Visual Config";
     case "config":
       return "Config";
     case "debug":
@@ -181,7 +181,7 @@ export function subtitleForTab(tab: Tab) {
     case "chat":
       return "Direct gateway chat session for quick interventions.";
     case "model-config":
-      return "可视化管理模型供应商、Agent 默认设置和网关配置";
+      return "Visually manage model providers, agent defaults, and gateway config.";
     case "config":
       return "Edit ~/.openclaw/openclaw.json safely.";
     case "debug":

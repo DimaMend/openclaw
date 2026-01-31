@@ -39,7 +39,7 @@ function getAuthModes(): Array<{ value: AuthMode; label: string; hint: string }>
   ];
 }
 
-// 新建供应商表单状态
+// New provider form state
 export type ProviderFormState = {
   name: string;
   baseUrl: string;
@@ -48,7 +48,7 @@ export type ProviderFormState = {
   auth: AuthMode;
 };
 
-// 默认表单状态
+// Default form state
 const DEFAULT_PROVIDER_FORM: ProviderFormState = {
   name: "",
   baseUrl: "",
@@ -60,11 +60,11 @@ const DEFAULT_PROVIDER_FORM: ProviderFormState = {
 export type ProvidersContentProps = {
   providers: Record<string, ProviderConfig>;
   expandedProviders: Set<string>;
-  // 新建供应商弹窗状态
+  // Add provider modal state
   showAddModal?: boolean;
   addForm?: ProviderFormState;
   addError?: string | null;
-  // 回调函数
+  // Callbacks
   onProviderToggle: (key: string) => void;
   onProviderAdd: () => void;
   onProviderRemove: (key: string) => void;
@@ -73,14 +73,14 @@ export type ProvidersContentProps = {
   onModelAdd: (providerKey: string) => void;
   onModelRemove: (providerKey: string, modelIndex: number) => void;
   onModelUpdate: (providerKey: string, modelIndex: number, field: string, value: unknown) => void;
-  // 弹窗回调
+  // Modal callbacks
   onShowAddModal?: (show: boolean) => void;
   onAddFormChange?: (patch: Partial<ProviderFormState>) => void;
   onAddConfirm?: () => void;
 };
 
 /**
- * 渲染模型行
+ * Render model row
  */
 function renderModelRow(
   providerKey: string,
@@ -98,7 +98,7 @@ function renderModelRow(
       newInput = [...new Set([...currentInput, type])];
     } else {
       newInput = currentInput.filter((t) => t !== type);
-      if (newInput.length === 0) newInput = ["text"]; // 至少保留文本
+      if (newInput.length === 0) newInput = ["text"]; // At least keep text
     }
     props.onModelUpdate(providerKey, index, "input", newInput);
   };
@@ -209,7 +209,7 @@ function renderModelRow(
       </div>
       <button
         class="mc-icon-btn mc-icon-btn--danger mc-model-row__remove"
-        title="删除模型"
+        title=${t('action.delete')}
         @click=${() => props.onModelRemove(providerKey, index)}
       >
         ${icons.trash}
@@ -220,7 +220,7 @@ function renderModelRow(
 }
 
 /**
- * 渲染模型高级配置（成本和兼容性）
+ * Render model advanced config (cost and compatibility)
  */
 function renderModelAdvanced(
   providerKey: string,
@@ -377,7 +377,7 @@ function renderModelAdvanced(
 }
 
 /**
- * 渲染 Headers 编辑器
+ * Render Headers editor
  */
 function renderHeadersEditor(
   providerKey: string,
@@ -456,7 +456,7 @@ function renderHeadersEditor(
 }
 
 /**
- * 获取协议标签
+ * Get protocol label
  */
 function getProtocolLabel(api: ModelApi): string {
   const protocol = getApiProtocols().find((p) => p.value === api);
@@ -464,7 +464,7 @@ function getProtocolLabel(api: ModelApi): string {
 }
 
 /**
- * 渲染供应商卡片
+ * Render provider card
  */
 function renderProviderCard(
   key: string,
@@ -495,7 +495,7 @@ function renderProviderCard(
         <div class="mc-provider-card__actions">
           <button
             class="mc-icon-btn mc-icon-btn--danger"
-            title="删除供应商"
+            title=${t('action.delete')}
             @click=${(e: Event) => {
               e.stopPropagation();
               props.onProviderRemove(key);
@@ -595,7 +595,7 @@ function renderProviderCard(
 
               <div class="mc-models-section">
                 <div class="mc-models-header">
-                  <span class="mc-models-title">模型列表</span>
+                  <span class="mc-models-title">${t('providers.modelsList')}</span>
                   <button
                     class="mc-btn mc-btn--sm"
                     @click=${() => props.onModelAdd(key)}
@@ -618,7 +618,7 @@ function renderProviderCard(
 }
 
 /**
- * 渲染添加供应商弹窗
+ * Render add provider modal
  */
 function renderAddProviderModal(props: ProvidersContentProps) {
   if (!props.showAddModal) return nothing;
@@ -651,7 +651,7 @@ function renderAddProviderModal(props: ProvidersContentProps) {
         </div>
 
         <div class="cron-create-modal__body">
-          <!-- 供应商名称 -->
+          <!-- Provider name -->
           <div class="mc-field" style="margin-bottom: 16px;">
             <label class="mc-field__label">${t('providers.name')}</label>
             <input
@@ -664,7 +664,7 @@ function renderAddProviderModal(props: ProvidersContentProps) {
             />
           </div>
 
-          <!-- API 地址 -->
+          <!-- Base URL -->
           <div class="mc-field" style="margin-bottom: 16px;">
             <label class="mc-field__label">${t('providers.baseUrl')}</label>
             <input
@@ -677,7 +677,7 @@ function renderAddProviderModal(props: ProvidersContentProps) {
             />
           </div>
 
-          <!-- API 协议和认证方式 -->
+          <!-- API protocol and auth mode -->
           <div class="cron-form-grid" style="margin-bottom: 16px;">
             <div class="mc-field">
               <label class="mc-field__label">${t('providers.apiProtocol')}</label>
@@ -705,7 +705,7 @@ function renderAddProviderModal(props: ProvidersContentProps) {
             </div>
           </div>
 
-          <!-- API 密钥 -->
+          <!-- API Key -->
           ${showApiKey
             ? html`
                 <div class="mc-field" style="margin-bottom: 16px;">
@@ -722,7 +722,7 @@ function renderAddProviderModal(props: ProvidersContentProps) {
               `
             : nothing}
 
-          <!-- 错误提示 -->
+          <!-- Error message -->
           ${props.addError
             ? html`
                 <div class="cron-error-banner">
@@ -751,13 +751,13 @@ function renderAddProviderModal(props: ProvidersContentProps) {
 }
 
 /**
- * 渲染供应商配置内容
+ * Render provider config content
  */
 export function renderProvidersContent(props: ProvidersContentProps) {
   const providerKeys = Object.keys(props.providers);
   const onShowAddModal = props.onShowAddModal ?? (() => {});
 
-  // 兼容旧逻辑：如果没有提供 onShowAddModal，则直接调用 onProviderAdd
+  // For backward compatibility: if onShowAddModal is not provided, call onProviderAdd directly
   const handleAddClick = () => {
     if (props.onShowAddModal) {
       onShowAddModal(true);
@@ -780,73 +780,73 @@ export function renderProvidersContent(props: ProvidersContentProps) {
         </button>
       </div>
 
-      <!-- 字段说明提示卡 -->
+      <!-- Field description tip card -->
       <details class="cron-tip-card cron-tip-card--collapsible">
         <summary class="cron-tip-card__title">
           ${icons.info}
-          <span>配置说明</span>
+          <span>${t('providers.configGuide')}</span>
           ${icons.chevron}
         </summary>
         <div class="cron-tip-card__content">
           <div class="cron-tip-card__section">
-            <div class="cron-tip-card__section-title">供应商配置</div>
+            <div class="cron-tip-card__section-title">${t('providers.providerConfig')}</div>
             <table class="cron-tip-card__table">
               <tr>
-                <td class="cron-tip-card__term">API 地址</td>
-                <td class="cron-tip-card__def">供应商的 API 端点 URL，如 <b>https://api.openai.com/v1</b></td>
+                <td class="cron-tip-card__term">${t('providers.baseUrl')}</td>
+                <td class="cron-tip-card__def">${t('providers.baseUrlDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">API 协议</td>
-                <td class="cron-tip-card__def">选择 API 格式：<b>OpenAI</b>（大多数兼容）、<b>Anthropic</b>、<b>Google</b>、<b>Bedrock</b> 等</td>
+                <td class="cron-tip-card__term">${t('providers.apiProtocol')}</td>
+                <td class="cron-tip-card__def">${t('providers.apiProtocolDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">认证方式</td>
-                <td class="cron-tip-card__def"><b>API Key</b>（标准密钥）、<b>AWS SDK</b>（IAM 凭证）、<b>OAuth</b>、<b>Token</b></td>
+                <td class="cron-tip-card__term">${t('providers.authMode')}</td>
+                <td class="cron-tip-card__def">${t('providers.authModeDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">API 密钥</td>
-                <td class="cron-tip-card__def">填入密钥或使用 <b>\${ENV_VAR}</b> 引用环境变量</td>
+                <td class="cron-tip-card__term">${t('providers.apiKey')}</td>
+                <td class="cron-tip-card__def">${t('providers.apiKeyDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">自定义 Headers</td>
-                <td class="cron-tip-card__def">可选，添加额外请求头（如 <b>x-api-version</b>）</td>
+                <td class="cron-tip-card__term">${t('providers.headers')}</td>
+                <td class="cron-tip-card__def">${t('providers.headersDesc')}</td>
               </tr>
             </table>
           </div>
           <div class="cron-tip-card__section">
-            <div class="cron-tip-card__section-title">模型配置</div>
+            <div class="cron-tip-card__section-title">${t('providers.modelConfig')}</div>
             <table class="cron-tip-card__table">
               <tr>
-                <td class="cron-tip-card__term">模型 ID</td>
-                <td class="cron-tip-card__def">发送给 API 的模型标识符，如 <b>gpt-4o</b>、<b>claude-3-opus</b></td>
+                <td class="cron-tip-card__term">${t('providers.modelId')}</td>
+                <td class="cron-tip-card__def">${t('providers.modelIdDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">显示名称</td>
-                <td class="cron-tip-card__def">在 UI 中展示的友好名称</td>
+                <td class="cron-tip-card__term">${t('providers.modelName')}</td>
+                <td class="cron-tip-card__def">${t('providers.modelNameDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">上下文窗口</td>
-                <td class="cron-tip-card__def">模型支持的最大上下文长度（tokens）</td>
+                <td class="cron-tip-card__term">${t('providers.contextWindow')}</td>
+                <td class="cron-tip-card__def">${t('providers.contextWindowDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">最大输出</td>
-                <td class="cron-tip-card__def">单次请求的最大输出 tokens 数</td>
+                <td class="cron-tip-card__term">${t('providers.maxTokens')}</td>
+                <td class="cron-tip-card__def">${t('providers.maxTokensDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">输入类型</td>
-                <td class="cron-tip-card__def">模型支持的输入：<b>文本</b>（必选）、<b>图片</b>（多模态）</td>
+                <td class="cron-tip-card__term">${t('providers.modelInput')}</td>
+                <td class="cron-tip-card__def">${t('providers.modelInputDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">推理模型</td>
-                <td class="cron-tip-card__def">启用后支持 reasoning effort 参数（如 o1/o3 系列）</td>
+                <td class="cron-tip-card__term">${t('providers.modelReasoning')}</td>
+                <td class="cron-tip-card__def">${t('providers.modelReasoningDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">成本配置</td>
-                <td class="cron-tip-card__def">每百万 tokens 的价格（输入/输出/缓存读/缓存写）</td>
+                <td class="cron-tip-card__term">${t('providers.modelCost')}</td>
+                <td class="cron-tip-card__def">${t('providers.modelCostDesc')}</td>
               </tr>
               <tr>
-                <td class="cron-tip-card__term">兼容性</td>
-                <td class="cron-tip-card__def">API 特性支持：Store、Developer Role、max_tokens 字段名</td>
+                <td class="cron-tip-card__term">${t('providers.modelCompat')}</td>
+                <td class="cron-tip-card__def">${t('providers.modelCompatDesc')}</td>
               </tr>
             </table>
           </div>
@@ -870,7 +870,7 @@ export function renderProvidersContent(props: ProvidersContentProps) {
             `}
       </div>
 
-      <!-- 添加供应商弹窗 -->
+      <!-- Add provider modal -->
       ${renderAddProviderModal(props)}
     </div>
   `;

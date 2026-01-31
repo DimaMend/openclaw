@@ -100,14 +100,14 @@ function getReactionLevelOptions() {
   ];
 }
 
-// 通道元数据定义 - 基于实际代码库
+// Channel metadata definition - based on actual codebase
 export const CHANNEL_METADATA: ChannelMeta[] = [
-  // ===== 内置通道 =====
+  // ===== Built-in Channels =====
   {
     id: "telegram",
     label: "Telegram",
     icon: "telegram",
-    description: "Telegram Bot 消息通道",
+    description: t('channels.telegram.desc'),
     docsUrl: "https://docs.molt.bot/channels/telegram",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -136,7 +136,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "discord",
     label: "Discord",
     icon: "discord",
-    description: "Discord Bot 消息通道",
+    description: t('channels.discord.desc'),
     docsUrl: "https://docs.molt.bot/channels/discord",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -154,7 +154,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "slack",
     label: "Slack",
     icon: "slack",
-    description: "Slack App 消息通道",
+    description: t('channels.slack.desc'),
     docsUrl: "https://docs.molt.bot/channels/slack",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -177,7 +177,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "whatsapp",
     label: "WhatsApp",
     icon: "whatsapp",
-    description: "WhatsApp Web 消息通道",
+    description: t('channels.whatsapp.desc'),
     docsUrl: "https://docs.molt.bot/channels/whatsapp",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -200,7 +200,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "signal",
     label: "Signal",
     icon: "signal",
-    description: "Signal 消息通道",
+    description: t('channels.signal.desc'),
     docsUrl: "https://docs.molt.bot/channels/signal",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -221,7 +221,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "googlechat",
     label: "Google Chat",
     icon: "googlechat",
-    description: "Google Chat 消息通道",
+    description: t('channels.googlechat.desc'),
     docsUrl: "https://docs.molt.bot/channels/googlechat",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -244,7 +244,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "imessage",
     label: "iMessage",
     icon: "imessage",
-    description: "iMessage 消息通道 (仅 macOS)",
+    description: t('channels.imessage.desc'),
     docsUrl: "https://docs.molt.bot/channels/imessage",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -268,7 +268,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "msteams",
     label: "MS Teams",
     icon: "msteams",
-    description: "Microsoft Teams 消息通道",
+    description: t('channels.msteams.desc'),
     docsUrl: "https://docs.molt.bot/channels/msteams",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -288,12 +288,12 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     ],
   },
 
-  // ===== 扩展通道 =====
+  // ===== Extension Channels =====
   {
     id: "wechat",
     label: "WeChat",
     icon: "wechat",
-    description: "微信消息通道 (扩展)",
+    description: t('channels.wechat.desc'),
     docsUrl: "https://docs.molt.bot/channels/wechat",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -317,7 +317,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "matrix",
     label: "Matrix",
     icon: "matrix",
-    description: "Matrix 消息通道 (扩展)",
+    description: t('channels.matrix.desc'),
     docsUrl: "https://docs.molt.bot/channels/matrix",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -341,7 +341,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "mattermost",
     label: "Mattermost",
     icon: "mattermost",
-    description: "Mattermost 消息通道 (扩展)",
+    description: t('channels.mattermost.desc'),
     docsUrl: "https://docs.molt.bot/channels/mattermost",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -357,7 +357,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "nostr",
     label: "Nostr",
     icon: "nostr",
-    description: "Nostr 消息通道 (扩展)",
+    description: t('channels.nostr.desc'),
     docsUrl: "https://docs.molt.bot/channels/nostr",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -369,7 +369,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "line",
     label: "LINE",
     icon: "line",
-    description: "LINE 消息通道 (扩展)",
+    description: t('channels.line.desc'),
     docsUrl: "https://docs.molt.bot/channels/line",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -383,7 +383,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "twitch",
     label: "Twitch",
     icon: "twitch",
-    description: "Twitch 消息通道 (扩展)",
+    description: t('channels.twitch.desc'),
     docsUrl: "https://docs.molt.bot/channels/twitch",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -398,7 +398,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "bluebubbles",
     label: "BlueBubbles",
     icon: "bluebubbles",
-    description: "BlueBubbles iMessage 通道 (扩展)",
+    description: t('channels.bluebubbles.desc'),
     docsUrl: "https://docs.molt.bot/channels/bluebubbles",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -416,7 +416,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "zalo",
     label: "Zalo",
     icon: "zalo",
-    description: "Zalo OA 消息通道 (扩展)",
+    description: t('channels.zalo.desc'),
     docsUrl: "https://docs.molt.bot/channels/zalo",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -432,7 +432,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "nextcloud-talk",
     label: "Nextcloud Talk",
     icon: "nextcloud",
-    description: "Nextcloud Talk 消息通道 (扩展)",
+    description: t('channels.nextcloud-talk.desc'),
     docsUrl: "https://docs.molt.bot/channels/nextcloud-talk",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -450,7 +450,7 @@ export const CHANNEL_METADATA: ChannelMeta[] = [
     id: "tlon",
     label: "Tlon (Urbit)",
     icon: "tlon",
-    description: "Tlon/Urbit 消息通道 (扩展)",
+    description: t('channels.tlon.desc'),
     docsUrl: "https://docs.molt.bot/channels/tlon",
     configFields: [
       { key: "enabled", label: t('channels.enabled'), type: "toggle", section: "basic" },
@@ -490,7 +490,7 @@ export type ChannelsContentProps = {
 };
 
 /**
- * 渲染通道列表
+ * Render channel list
  */
 function renderChannelList(props: ChannelsContentProps) {
   return html`
@@ -508,7 +508,7 @@ function renderChannelList(props: ChannelsContentProps) {
             <span class="channel-list__icon ${enabled ? "channel-list__icon--enabled" : ""}">${getChannelIcon(channel.icon)}</span>
             <span class="channel-list__content">
               <span class="channel-list__label">${channel.label}</span>
-              <span class="channel-list__status">${enabled ? "已启用" : "已禁用"}</span>
+              <span class="channel-list__status">${enabled ? t('label.enabled') : t('label.disabled')}</span>
             </span>
             <span class="channel-list__indicator">
               ${enabled ? icons.check : icons.x}
@@ -645,14 +645,14 @@ function renderConfigField(
 }
 
 /**
- * 渲染通道配置详情
+ * Render channel configuration details
  */
 function renderChannelDetail(props: ChannelsContentProps) {
   if (!props.selectedChannel) {
     return html`
       <div class="channel-detail__empty">
         <div class="channel-detail__empty-icon">${icons.channel}</div>
-        <div class="channel-detail__empty-text">选择一个通道查看配置</div>
+        <div class="channel-detail__empty-text">${t('channels.selectChannel')}</div>
       </div>
     `;
   }
@@ -662,7 +662,7 @@ function renderChannelDetail(props: ChannelsContentProps) {
 
   const config = (props.channelsConfig[channel.id] ?? {}) as Record<string, unknown>;
 
-  // 按 section 分组字段
+  // Group fields by section
   const fieldsBySection = new Map<string, ChannelConfigField[]>();
   for (const field of channel.configFields) {
     const section = field.section ?? "basic";
@@ -687,7 +687,7 @@ function renderChannelDetail(props: ChannelsContentProps) {
                 href=${channel.docsUrl}
                 target="_blank"
                 rel="noreferrer"
-                title="查看文档"
+                title="${t('channels.viewDocs')}"
               >
                 ${icons.externalLink}
               </a>
@@ -714,7 +714,7 @@ function renderChannelDetail(props: ChannelsContentProps) {
 }
 
 /**
- * 渲染通道配置内容
+ * Render channel configuration content
  */
 export function renderChannelsContent(props: ChannelsContentProps) {
   return html`
@@ -722,12 +722,12 @@ export function renderChannelsContent(props: ChannelsContentProps) {
       <div class="config-content__header">
         <div class="config-content__icon">${icons.channel}</div>
         <div class="config-content__titles">
-          <h2 class="config-content__title">通道配置</h2>
-          <p class="config-content__desc">配置消息通道（Telegram、Discord、WhatsApp 等）</p>
+          <h2 class="config-content__title">${t('channels.title')}</h2>
+          <p class="config-content__desc">${t('channels.desc')}</p>
         </div>
         <button class="mc-btn" @click=${props.onNavigateToChannels}>
           ${icons.externalLink}
-          <span>通道管理</span>
+          <span>${t('channels.manage')}</span>
         </button>
       </div>
 

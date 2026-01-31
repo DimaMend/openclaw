@@ -39,7 +39,8 @@ function detectLocale(): Locale {
  * Initialize locale (call once on app start)
  */
 export function initLocale(locale?: Locale): void {
-  currentLocale = locale ?? detectLocale();
+  // currentLocale = locale ?? detectLocale();
+  currentLocale = 'en'; // Force English for testing
 }
 
 /**

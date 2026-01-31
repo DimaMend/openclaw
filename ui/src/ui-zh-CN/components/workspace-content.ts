@@ -5,9 +5,9 @@
 import { html, nothing } from "lit";
 import { t } from "../i18n";
 
-// ─── 类型定义 / Types ──────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────
 
-/** 工作区文件信息 / Workspace file info */
+/** Workspace file info */
 export type WorkspaceFileInfo = {
   name: string;
   path: string;
@@ -16,100 +16,99 @@ export type WorkspaceFileInfo = {
   modifiedAt: number | null;
 };
 
-/** Agent 选项 / Agent option */
+/** Agent option */
 export type WorkspaceAgentOption = {
   id: string;
   name?: string;
   default?: boolean;
 };
 
-/** 组件属性 / Component props */
+/** Component props */
 export type WorkspaceContentProps = {
-  /** 文件列表 / File list */
+  /** File list */
   files: WorkspaceFileInfo[];
-  /** 当前工作区目录 / Current workspace directory */
+  /** Current workspace directory */
   workspaceDir: string;
-  /** 当前 Agent ID */
+  /** Current Agent ID */
   agentId: string;
-  /** 可用的 Agent 列表 / Available agents */
+  /** Available agents */
   agents: WorkspaceAgentOption[];
-  /** 当前选中的文件名 / Currently selected file name */
+  /** Currently selected file name */
   selectedFile: string | null;
-  /** 编辑器内容 / Editor content */
+  /** Editor content */
   editorContent: string;
-  /** 原始内容（用于变更检测）/ Original content (for change detection) */
+  /** Original content (for change detection) */
   originalContent: string;
-  /** 是否正在加载 / Loading state */
+  /** Loading state */
   loading: boolean;
-  /** 是否正在保存 / Saving state */
+  /** Saving state */
   saving: boolean;
-  /** 错误信息 / Error message */
+  /** Error message */
   error: string | null;
-  /** 编辑模式：edit=编辑, preview=预览, split=分屏 / Editor mode */
+  /** Editor mode: edit, preview, split */
   editorMode: "edit" | "preview" | "split";
-  /** 展开的文件夹集合 / Set of expanded folders */
+  /** Set of expanded folders */
   expandedFolders?: Set<string>;
 
-  // 回调函数 / Callbacks
-  /** 选择文件 / Select file */
+  // Callbacks
+  /** Select file */
   onFileSelect: (fileName: string) => void;
-  /** 编辑器内容变更 / Editor content changed */
+  /** Editor content changed */
   onContentChange: (content: string) => void;
-  /** 保存文件 / Save file */
+  /** Save file */
   onFileSave: () => void;
-  /** 刷新文件列表 / Refresh file list */
+  /** Refresh file list */
   onRefresh: () => void;
-  /** 切换编辑模式 / Toggle editor mode */
+  /** Toggle editor mode */
   onModeChange: (mode: "edit" | "preview" | "split") => void;
-  /** 创建新文件 / Create new file */
+  /** Create new file */
   onFileCreate: (fileName: string) => void;
-  /** 切换文件夹展开状态 / Toggle folder expansion */
+  /** Toggle folder expansion */
   onFolderToggle?: (folderName: string) => void;
-  /** 切换 Agent / Switch agent */
+  /** Switch agent */
   onAgentChange?: (agentId: string) => void;
 };
 
-// ─── SVG 图标 / Icons ──────────────────────────────────────────────────────
+// ─── Icons ──────────────────────────────────────────────────────
 
 const icons = {
-  // 文件夹图标 / Folder icon
+  // Folder icon
   folder: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
-  // 文件图标 / File icon
+  // File icon
   file: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`,
-  // 编辑图标 / Edit icon
+  // Edit icon
   edit: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
-  // 预览图标 / Eye icon
+  // Eye icon
   eye: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
-  // 分屏图标 / Split icon
+  // Split icon
   split: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>`,
-  // 保存图标 / Save icon
+  // Save icon
   save: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>`,
-  // 刷新图标 / Refresh icon
+  // Refresh icon
   refresh: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>`,
-  // 加号图标 / Plus icon
+  // Plus icon
   plus: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
-  // 展开箭头 / Chevron right (collapsed)
+  // Chevron right (collapsed)
   chevronRight: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
-  // 收起箭头 / Chevron down (expanded)
+  // Chevron down (expanded)
   chevronDown: html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`,
 };
 
 // ─── File description map ────────────────────────────────────────
 
 const FILE_DESCRIPTIONS: Record<string, string> = {
-  "SOUL.md": "人格定义 - 行为准则、语气风格、道德边界",
-  "IDENTITY.md": "身份信息 - 名称、表情、头像、类型",
-  "TOOLS.md": "工具说明 - 可用工具的使用文档",
-  "USER.md": "用户身份 - 用户的上下文信息",
-  "HEARTBEAT.md": "心跳消息 - 周期性提醒内容",
-  "BOOTSTRAP.md": "引导文件 - 启动时加载的初始内容",
-  "MEMORY.md": "持久记忆 - Agent 的长期记忆",
-  "memory.md": "持久记忆 (小写) - Agent 的长期记忆",
-  "AGENTS.md": "Agent 配置 - 多 Agent 协作设置",
+  "SOUL.md": t('workspace.file.soul'),
+  "IDENTITY.md": t('workspace.file.identity'),
+  "TOOLS.md": t('workspace.file.tools'),
+  "USER.md": t('workspace.file.user'),
+  "HEARTBEAT.md": t('workspace.file.heartbeat'),
+  "BOOTSTRAP.md": t('workspace.file.bootstrap'),
+  "MEMORY.md": t('workspace.file.memory'),
+  "memory.md": t('workspace.file.memory'),
+  "AGENTS.md": t('workspace.file.agents'),
 };
 
 /**
- * 获取文件描述，支持 memory/ 目录下的日期文件
  * Get file description, supports dated files in memory/ directory
  */
 function getFileDescription(fileName: string): string {
@@ -123,9 +122,9 @@ function getFileDescription(fileName: string): string {
     const dateMatch = fileName.match(/^memory\/(\d{4})-(\d{2})-(\d{2})\.md$/);
     if (dateMatch) {
       const [, year, month, day] = dateMatch;
-      return `每日日志 - ${year}年${month}月${day}日的记录`;
+      return t('workspace.file.dailyLog', { year, month, day });
     }
-    return "每日日志 - 日期记录文件";
+    return t('workspace.file.dailyLogFallback');
   }
 
   return "";
@@ -133,7 +132,7 @@ function getFileDescription(fileName: string): string {
 
 // ─── 辅助函数 / Helpers ─────────────────────────────────────────────────────
 
-/** 格式化文件大小 / Format file size */
+/** Format file size */
 function formatSize(bytes: number): string {
   if (bytes === 0) return "0 B";
   if (bytes < 1024) return `${bytes} B`;
@@ -141,11 +140,11 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** 格式化时间 / Format time */
+/** Format time */
 function formatTime(ts: number | null): string {
   if (!ts) return "-";
   const d = new Date(ts);
-  return d.toLocaleString("zh-CN", {
+  return d.toLocaleString(undefined, {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -154,44 +153,43 @@ function formatTime(ts: number | null): string {
 }
 
 /**
- * 简易 Markdown → HTML 渲染
  * Simple Markdown to HTML renderer
- * 支持标题、粗体、斜体、代码块、列表
+ * Supports headings, bold, italic, code blocks, lists
  */
 function renderMarkdownToHtml(md: string): string {
-  if (!md) return '<p class="ws-preview__empty">文件为空</p>';
+  if (!md) return `<p class="ws-preview__empty">${t('workspace.emptyFile')}</p>`;
 
   let result = md
-    // 转义 HTML / Escape HTML
+    // Escape HTML
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  // 代码块 / Code blocks
+  // Code blocks
   result = result.replace(
     /```(\w*)\n([\s\S]*?)```/g,
     '<pre class="ws-preview__code"><code>$2</code></pre>',
   );
 
-  // 行内代码 / Inline code
+  // Inline code
   result = result.replace(/`([^`]+)`/g, '<code class="ws-preview__inline-code">$1</code>');
 
-  // 标题 / Headings
+  // Headings
   result = result.replace(/^### (.+)$/gm, '<h3 class="ws-preview__h3">$1</h3>');
   result = result.replace(/^## (.+)$/gm, '<h2 class="ws-preview__h2">$1</h2>');
   result = result.replace(/^# (.+)$/gm, '<h1 class="ws-preview__h1">$1</h1>');
 
-  // 粗体和斜体 / Bold and italic
+  // Bold and italic
   result = result.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   result = result.replace(/\*(.+?)\*/g, "<em>$1</em>");
 
-  // 无序列表 / Unordered lists
+  // Unordered lists
   result = result.replace(/^[-*] (.+)$/gm, '<li class="ws-preview__li">$1</li>');
 
-  // 水平线 / Horizontal rule
+  // Horizontal rule
   result = result.replace(/^---$/gm, '<hr class="ws-preview__hr">');
 
-  // 段落 / Paragraphs (lines that are not already wrapped)
+  // Paragraphs (lines that are not already wrapped)
   const lines = result.split("\n");
   const processed: string[] = [];
   for (const line of lines) {
@@ -216,20 +214,19 @@ function renderMarkdownToHtml(md: string): string {
 // ─── 文件分组 / Group files by directory ──────────────────────────────────
 
 type FileGroup = {
-  /** 文件夹名称（null 表示根目录）/ Folder name (null = root) */
+  /** Folder name (null = root) */
   folder: string | null;
-  /** 文件夹描述 / Folder description */
+  /** Folder description */
   desc: string;
-  /** 文件列表 / File list */
+  /** File list */
   files: WorkspaceFileInfo[];
 };
 
 const FOLDER_DESCRIPTIONS: Record<string, string> = {
-  memory: "每日日志 - 按日期存放的记录文件",
+  memory: t('workspace.folder.memory'),
 };
 
 /**
- * 将文件列表按目录分组
  * Group file list by directory
  */
 function groupFilesByFolder(files: WorkspaceFileInfo[]): FileGroup[] {
@@ -251,12 +248,12 @@ function groupFilesByFolder(files: WorkspaceFileInfo[]): FileGroup[] {
 
   const groups: FileGroup[] = [];
 
-  // Root files first / 根目录文件优先
+  // Root files first
   if (rootFiles.length > 0) {
     groups.push({ folder: null, desc: "", files: rootFiles });
   }
 
-  // Then folders / 然后是文件夹
+  // Then folders
   for (const [folder, folderFiles] of folderMap) {
     groups.push({
       folder,
