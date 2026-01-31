@@ -19,7 +19,9 @@ const DEFAULT_TIMEOUT_MS = 720_000;
 
 function normalizeBaseUrl(raw: string | undefined, fallback: string): string {
   const trimmed = (raw ?? "").trim();
-  if (!trimmed) return fallback;
+  if (!trimmed) {
+    return fallback;
+  }
   return trimmed.replace(/\/$/, "");
 }
 
@@ -388,7 +390,7 @@ export class RtrvrClient {
     } catch (err) {
       clearTimeout(timeoutId);
       if (err instanceof Error && err.name === "AbortError") {
-        throw new Error(`rtrvr.ai API request timed out after ${timeoutMs}ms`);
+        throw new Error(`rtrvr.ai API request timed out after ${timeoutMs}ms`, { cause: err });
       }
       throw err;
     }
@@ -736,7 +738,9 @@ export class RtrvrClient {
    * Get the configured device ID, or the first available online device
    */
   async getEffectiveDeviceId(): Promise<string | undefined> {
-    if (this.deviceId) return this.deviceId;
+    if (this.deviceId) {
+      return this.deviceId;
+    }
 
     const { devices } = await this.listDevices();
     const onlineDevices = devices.filter((d) => d.online);

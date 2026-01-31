@@ -71,7 +71,9 @@ async function respondWithSnapshot(
         );
       }
       const provider = profileCtx.getRtrvrProvider?.();
-      if (!provider) return jsonError(res, 500, "rtrvr.ai provider unavailable");
+      if (!provider) {
+        return jsonError(res, 500, "rtrvr.ai provider unavailable");
+      }
       const snap = await provider.snapshot({
         format: opts.format,
         targetId: tab.targetId,
@@ -82,7 +84,9 @@ async function respondWithSnapshot(
     }
     if (opts.format === "ai") {
       const pw = await requirePwAi(res, "ai snapshot");
-      if (!pw) return;
+      if (!pw) {
+        return;
+      }
       const wantsRoleSnapshot =
         opts.labels === true ||
         opts.interactive === true ||
@@ -179,7 +183,9 @@ async function respondWithSnapshot(
             // Extension relay doesn't expose per-page WS URLs; run AX snapshot via Playwright CDP session.
             // Also covers cases where wsUrl is missing/unusable.
             return requirePwAi(res, "aria snapshot").then(async (pw) => {
-              if (!pw) return null;
+              if (!pw) {
+                return null;
+              }
               return await pw.snapshotAriaViaPlaywright({
                 cdpUrl: profileCtx.profile.cdpUrl,
                 targetId: tab.targetId,
@@ -190,7 +196,9 @@ async function respondWithSnapshot(
         : snapshotAria({ wsUrl: tab.wsUrl ?? "", limit: opts.limit });
 
     const resolved = await Promise.resolve(snap);
-    if (!resolved) return;
+    if (!resolved) {
+      return;
+    }
     return send({
       ok: true,
       format: "aria",
@@ -223,7 +231,9 @@ export function registerBrowserAgentSnapshotRoutes(
         profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud";
       if (isRtrvr) {
         const provider = profileCtx.getRtrvrProvider?.();
-        if (!provider) return jsonError(res, 500, "rtrvr.ai provider unavailable");
+        if (!provider) {
+          return jsonError(res, 500, "rtrvr.ai provider unavailable");
+        }
         const tab = await profileCtx.ensureTabAvailable(targetId);
         const result = await provider.navigate(url, tab.targetId);
         return res.json({ targetId: tab.targetId, ...result });
@@ -301,7 +311,9 @@ export function registerBrowserAgentSnapshotRoutes(
     try {
       if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
         const provider = profileCtx.getRtrvrProvider?.();
-        if (!provider) return jsonError(res, 500, "rtrvr.ai provider unavailable");
+        if (!provider) {
+          return jsonError(res, 500, "rtrvr.ai provider unavailable");
+        }
         const result = await provider.screenshot({
           targetId,
           fullPage,
@@ -360,10 +372,14 @@ export function registerBrowserAgentSnapshotRoutes(
 
   app.post("/scrape", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     const body = readBody(req);
     const url = toStringOrEmpty(body.url);
-    if (!url) return jsonError(res, 400, "url is required");
+    if (!url) {
+      return jsonError(res, 400, "url is required");
+    }
 
     const mode = body.mode === "efficient" ? "efficient" : undefined;
     const labels = toBoolean(body.labels) ?? undefined;

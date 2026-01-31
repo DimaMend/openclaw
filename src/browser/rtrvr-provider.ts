@@ -624,7 +624,9 @@ export class RtrvrProvider {
 
     if (request.kind === "fill") {
       const fields = Array.isArray(request.fields) ? request.fields : [];
-      if (!fields.length) throw new Error("fields are required for fill");
+      if (!fields.length) {
+        throw new Error("fields are required for fill");
+      }
       await this.runFillActions(fields, tabId);
       return { ok: true };
     }
@@ -646,7 +648,7 @@ export class RtrvrProvider {
     urls?: string[];
     schema?: RtrvrSchema;
     targetId?: string;
-    tool?: RtrvrAiTool | string;
+    tool?: string;
     maxSteps?: number;
     context?: string;
     maxPages?: number;
@@ -655,7 +657,9 @@ export class RtrvrProvider {
     outputDestination?: RtrvrOutputDestination;
   }): Promise<unknown> {
     const userInput = opts.userInput.trim();
-    if (!userInput) throw new Error("userInput is required for ai");
+    if (!userInput) {
+      throw new Error("userInput is required for ai");
+    }
 
     const { tabId, url: tabUrl } = await this.resolveTabContext(opts.targetId);
     const urls = (opts.urls ?? []).filter(Boolean);
@@ -762,11 +766,17 @@ export class RtrvrProvider {
   }
 
   private resolveExtensionTabId(targetId?: string): number | undefined {
-    if (!targetId) return undefined;
+    if (!targetId) {
+      return undefined;
+    }
     const direct = this.extensionTabCache.get(targetId);
-    if (direct !== undefined) return direct;
+    if (direct !== undefined) {
+      return direct;
+    }
     for (const [key, value] of this.extensionTabCache.entries()) {
-      if (key.startsWith(targetId)) return value;
+      if (key.startsWith(targetId)) {
+        return value;
+      }
     }
     const match = targetId.match(/rtrvr-ext-(\d+)/);
     return match ? Number.parseInt(match[1], 10) : undefined;
@@ -782,7 +792,9 @@ export class RtrvrProvider {
 
     const { activeTab, tabs } = await this.client.getBrowserTabs({ filter: "active" });
     const tab = activeTab ?? tabs[0];
-    if (!tab) return null;
+    if (!tab) {
+      return null;
+    }
     const resolvedTargetId = `rtrvr-ext-${tab.id}`;
     this.extensionTabCache.set(resolvedTargetId, tab.id);
     return { tabId: tab.id, targetId: resolvedTargetId };
@@ -792,11 +804,17 @@ export class RtrvrProvider {
     targetId: string;
     data: { url: string; title?: string; tree?: string };
   } | null {
-    if (!targetId) return null;
+    if (!targetId) {
+      return null;
+    }
     const cached = this.cloudTabCache.get(targetId);
-    if (cached) return { targetId, data: cached };
+    if (cached) {
+      return { targetId, data: cached };
+    }
     for (const [key, value] of this.cloudTabCache.entries()) {
-      if (key.startsWith(targetId)) return { targetId: key, data: value };
+      if (key.startsWith(targetId)) {
+        return { targetId: key, data: value };
+      }
     }
     return null;
   }
@@ -826,14 +844,16 @@ export class RtrvrProvider {
 
     const { activeTab, tabs } = await this.client.getBrowserTabs({ filter: "active" });
     const tab = activeTab ?? tabs[0];
-    if (!tab) return {};
+    if (!tab) {
+      return {};
+    }
     const resolvedTargetId = `rtrvr-ext-${tab.id}`;
     this.extensionTabCache.set(resolvedTargetId, tab.id);
     return { tabId: tab.id, url: tab.url };
   }
 
   private resolveAiTool(
-    rawTool: RtrvrAiTool | string | undefined,
+    rawTool: string | undefined,
     _userInput: string,
     urls?: string[],
   ): RtrvrAiTool {
@@ -841,7 +861,9 @@ export class RtrvrProvider {
     if (tool === "planner" || tool === "act" || tool === "extract" || tool === "crawl") {
       return tool as RtrvrAiTool;
     }
-    if (urls && urls.length > 0) return "planner";
+    if (urls && urls.length > 0) {
+      return "planner";
+    }
     return "act";
   }
 
@@ -852,7 +874,9 @@ export class RtrvrProvider {
     let didRun = false;
     for (const field of fields) {
       const elementId = this.parseRefToElementId(field.ref);
-      if (!elementId) continue;
+      if (!elementId) {
+        continue;
+      }
       const type = field.type.toLowerCase();
       if (type === "checkbox" || type === "radio") {
         if (field.value === true) {
@@ -865,7 +889,9 @@ export class RtrvrProvider {
         }
         continue;
       }
-      if (field.value === undefined || field.value === null) continue;
+      if (field.value === undefined || field.value === null) {
+        continue;
+      }
       await this.client.takePageAction({
         actions: [
           {
@@ -998,7 +1024,9 @@ export class RtrvrProvider {
 
   private countRefs(tree: string): number {
     const refMatches = tree.match(/\[ref=e\d+\]/g);
-    if (refMatches?.length) return refMatches.length;
+    if (refMatches?.length) {
+      return refMatches.length;
+    }
     const idMatches = tree.match(/\[id=\d+\]/g);
     return idMatches?.length ?? 0;
   }
@@ -1046,7 +1074,9 @@ export class RtrvrProvider {
 
     switch (request.kind) {
       case "click":
-        if (!elementId) throw new Error("ref is required for click");
+        if (!elementId) {
+          throw new Error("ref is required for click");
+        }
         return {
           tab_id: tabId,
           tool_name: request.doubleClick
@@ -1058,7 +1088,9 @@ export class RtrvrProvider {
         };
 
       case "type":
-        if (!elementId) throw new Error("ref is required for type");
+        if (!elementId) {
+          throw new Error("ref is required for type");
+        }
         return {
           tab_id: tabId,
           tool_name: request.submit ? "type_and_enter" : "type_into_element",
@@ -1073,7 +1105,9 @@ export class RtrvrProvider {
         };
 
       case "hover":
-        if (!elementId) throw new Error("ref is required for hover");
+        if (!elementId) {
+          throw new Error("ref is required for hover");
+        }
         return {
           tab_id: tabId,
           tool_name: "hover_element",
@@ -1081,7 +1115,9 @@ export class RtrvrProvider {
         };
 
       case "scrollIntoView":
-        if (!elementId) throw new Error("ref is required for scrollIntoView");
+        if (!elementId) {
+          throw new Error("ref is required for scrollIntoView");
+        }
         return {
           tab_id: tabId,
           tool_name: "scroll_to_element",
@@ -1106,8 +1142,12 @@ export class RtrvrProvider {
         };
 
       case "select":
-        if (!elementId) throw new Error("ref is required for select");
-        if (!request.values?.length) throw new Error("values are required for select");
+        if (!elementId) {
+          throw new Error("ref is required for select");
+        }
+        if (!request.values?.length) {
+          throw new Error("values are required for select");
+        }
         return {
           tab_id: tabId,
           tool_name: "select_dropdown_value",

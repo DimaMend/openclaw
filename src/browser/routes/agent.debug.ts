@@ -13,7 +13,9 @@ export function registerBrowserAgentDebugRoutes(
 ) {
   app.get("/console", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Console messages are not supported for rtrvr.ai profiles");
     }
@@ -39,7 +41,9 @@ export function registerBrowserAgentDebugRoutes(
 
   app.get("/errors", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Page errors are not supported for rtrvr.ai profiles");
     }
@@ -65,7 +69,9 @@ export function registerBrowserAgentDebugRoutes(
 
   app.get("/requests", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Network request tracing is not supported for rtrvr.ai profiles");
     }
@@ -93,7 +99,9 @@ export function registerBrowserAgentDebugRoutes(
 
   app.post("/trace/start", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Tracing is not supported for rtrvr.ai profiles");
     }
@@ -123,7 +131,9 @@ export function registerBrowserAgentDebugRoutes(
 
   app.post("/trace/stop", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Tracing is not supported for rtrvr.ai profiles");
     }

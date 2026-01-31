@@ -42,13 +42,19 @@ export function registerBrowserAgentActRoutes(
         profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud";
       if (isRtrvr) {
         const provider = profileCtx.getRtrvrProvider?.();
-        if (!provider) return jsonError(res, 500, "rtrvr.ai provider unavailable");
+        if (!provider) {
+          return jsonError(res, 500, "rtrvr.ai provider unavailable");
+        }
 
         if (kind === "ai") {
           const userInput = toStringOrEmpty(body.userInput);
-          if (!userInput) return jsonError(res, 400, "userInput is required");
+          if (!userInput) {
+            return jsonError(res, 400, "userInput is required");
+          }
           const urls = (() => {
-            if (Array.isArray(body.urls)) return toStringArray(body.urls) ?? [];
+            if (Array.isArray(body.urls)) {
+              return toStringArray(body.urls) ?? [];
+            }
             if (typeof body.urls === "string") {
               return body.urls
                 .split(",")
@@ -117,7 +123,9 @@ export function registerBrowserAgentActRoutes(
         switch (kind) {
           case "click": {
             const ref = toStringOrEmpty(body.ref);
-            if (!ref) return jsonError(res, 400, "ref is required");
+            if (!ref) {
+              return jsonError(res, 400, "ref is required");
+            }
             const doubleClick = toBoolean(body.doubleClick) ?? false;
             const button = toStringOrEmpty(body.button) || undefined;
             const actResult = await provider.act({
@@ -136,8 +144,12 @@ export function registerBrowserAgentActRoutes(
           }
           case "type": {
             const ref = toStringOrEmpty(body.ref);
-            if (!ref) return jsonError(res, 400, "ref is required");
-            if (typeof body.text !== "string") return jsonError(res, 400, "text is required");
+            if (!ref) {
+              return jsonError(res, 400, "ref is required");
+            }
+            if (typeof body.text !== "string") {
+              return jsonError(res, 400, "text is required");
+            }
             const submit = toBoolean(body.submit) ?? false;
             const actResult = await provider.act({
               kind,
@@ -155,7 +167,9 @@ export function registerBrowserAgentActRoutes(
           }
           case "press": {
             const key = toStringOrEmpty(body.key);
-            if (!key) return jsonError(res, 400, "key is required");
+            if (!key) {
+              return jsonError(res, 400, "key is required");
+            }
             const actResult = await provider.act({ kind, key, targetId: tab.targetId });
             return res.json({
               ok: true,
@@ -166,22 +180,27 @@ export function registerBrowserAgentActRoutes(
           }
           case "hover": {
             const ref = toStringOrEmpty(body.ref);
-            if (!ref) return jsonError(res, 400, "ref is required");
-            const actResult = await provider.act({ kind, ref, targetId: tab.targetId });
+            if (!ref) {
+              return jsonError(res, 400, "ref is required");
+            }
+            await provider.act({ kind, ref, targetId: tab.targetId });
             return res.json({ ok: true, targetId: tab.targetId, url: tab.url });
           }
           case "scrollIntoView": {
             const ref = toStringOrEmpty(body.ref);
-            if (!ref) return jsonError(res, 400, "ref is required");
-            const actResult = await provider.act({ kind, ref, targetId: tab.targetId });
+            if (!ref) {
+              return jsonError(res, 400, "ref is required");
+            }
+            await provider.act({ kind, ref, targetId: tab.targetId });
             return res.json({ ok: true, targetId: tab.targetId, url: tab.url });
           }
           case "drag": {
             const startRef = toStringOrEmpty(body.startRef);
             const endRef = toStringOrEmpty(body.endRef);
-            if (!startRef || !endRef)
+            if (!startRef || !endRef) {
               return jsonError(res, 400, "startRef and endRef are required");
-            const actResult = await provider.act({
+            }
+            await provider.act({
               kind,
               startRef,
               endRef,
@@ -192,19 +211,25 @@ export function registerBrowserAgentActRoutes(
           case "select": {
             const ref = toStringOrEmpty(body.ref);
             const values = toStringArray(body.values);
-            if (!ref || !values?.length) return jsonError(res, 400, "ref and values are required");
-            const actResult = await provider.act({ kind, ref, values, targetId: tab.targetId });
+            if (!ref || !values?.length) {
+              return jsonError(res, 400, "ref and values are required");
+            }
+            await provider.act({ kind, ref, values, targetId: tab.targetId });
             return res.json({ ok: true, targetId: tab.targetId, url: tab.url });
           }
           case "fill": {
             const rawFields = Array.isArray(body.fields) ? body.fields : [];
             const fields = rawFields
               .map((field) => {
-                if (!field || typeof field !== "object") return null;
+                if (!field || typeof field !== "object") {
+                  return null;
+                }
                 const rec = field as Record<string, unknown>;
                 const ref = toStringOrEmpty(rec.ref);
                 const type = toStringOrEmpty(rec.type);
-                if (!ref || !type) return null;
+                if (!ref || !type) {
+                  return null;
+                }
                 const value =
                   typeof rec.value === "string" ||
                   typeof rec.value === "number" ||
@@ -219,8 +244,10 @@ export function registerBrowserAgentActRoutes(
                 ): field is { ref: string; type: string; value?: string | number | boolean } =>
                   field !== null,
               );
-            if (!fields.length) return jsonError(res, 400, "fields are required");
-            const actResult = await provider.act({ kind, fields, targetId: tab.targetId });
+            if (!fields.length) {
+              return jsonError(res, 400, "fields are required");
+            }
+            await provider.act({ kind, fields, targetId: tab.targetId });
             return res.json({ ok: true, targetId: tab.targetId, url: tab.url });
           }
           case "wait": {
@@ -234,8 +261,10 @@ export function registerBrowserAgentActRoutes(
             if (text || textGone || selector || url || loadState || fn) {
               return jsonError(res, 400, "wait supports only timeMs for rtrvr.ai");
             }
-            if (timeMs === undefined) return jsonError(res, 400, "timeMs is required");
-            const actResult = await provider.act({ kind, timeMs, targetId: tab.targetId });
+            if (timeMs === undefined) {
+              return jsonError(res, 400, "timeMs is required");
+            }
+            await provider.act({ kind, timeMs, targetId: tab.targetId });
             return res.json({ ok: true, targetId: tab.targetId, url: tab.url });
           }
           case "evaluate": {
@@ -250,7 +279,9 @@ export function registerBrowserAgentActRoutes(
               );
             }
             const fn = toStringOrEmpty(body.fn);
-            if (!fn) return jsonError(res, 400, "fn is required");
+            if (!fn) {
+              return jsonError(res, 400, "fn is required");
+            }
             const actResult = await provider.act({ kind, fn, targetId: tab.targetId });
             return res.json({
               ok: true,
@@ -569,7 +600,9 @@ export function registerBrowserAgentActRoutes(
 
   app.post("/hooks/file-chooser", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "File chooser hooks are not supported for rtrvr.ai profiles");
     }
@@ -623,7 +656,9 @@ export function registerBrowserAgentActRoutes(
 
   app.post("/hooks/dialog", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Dialog hooks are not supported for rtrvr.ai profiles");
     }
@@ -656,7 +691,9 @@ export function registerBrowserAgentActRoutes(
 
   app.post("/wait/download", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Downloads are not supported for rtrvr.ai profiles");
     }
@@ -684,7 +721,9 @@ export function registerBrowserAgentActRoutes(
 
   app.post("/download", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Downloads are not supported for rtrvr.ai profiles");
     }
@@ -720,7 +759,9 @@ export function registerBrowserAgentActRoutes(
 
   app.post("/response/body", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Response inspection is not supported for rtrvr.ai profiles");
     }
@@ -753,7 +794,9 @@ export function registerBrowserAgentActRoutes(
 
   app.post("/highlight", async (req, res) => {
     const profileCtx = resolveProfileContext(req, res, ctx);
-    if (!profileCtx) return;
+    if (!profileCtx) {
+      return;
+    }
     if (profileCtx.profile.driver === "rtrvr" || profileCtx.profile.driver === "rtrvr-cloud") {
       return jsonError(res, 501, "Highlight is not supported for rtrvr.ai profiles");
     }

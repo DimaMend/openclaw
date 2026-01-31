@@ -26,7 +26,7 @@ import type { PwAiModule } from "./pw-ai-module.js";
 import { getPwAiModule } from "./pw-ai-module.js";
 import { resolveTargetIdFromTabs } from "./target-id.js";
 import { movePathToTrash } from "./trash.js";
-import { createRtrvrProvider, isRtrvrProfile, type RtrvrProvider } from "./rtrvr-provider.js";
+import { createRtrvrProvider, isRtrvrProfile } from "./rtrvr-provider.js";
 
 export type {
   BrowserRouteContext,
@@ -101,7 +101,9 @@ function createRtrvrProfileContext(
 ): ProfileContext {
   const getProfileState = () => {
     const current = opts.getState();
-    if (!current) throw new Error("Browser server not started");
+    if (!current) {
+      throw new Error("Browser server not started");
+    }
     let profileState = current.profiles.get(profile.name);
     if (!profileState) {
       profileState = { profile, running: null, lastTargetId: null };
@@ -175,7 +177,10 @@ function createRtrvrProfileContext(
           return found;
         }
       }
-      const chosen = tabs[0]!;
+      const chosen = tabs[0];
+      if (!chosen) {
+        throw new Error(`No tabs available for profile "${profile.name}".`);
+      }
       profileState.lastTargetId = chosen.targetId;
       return chosen;
     },
