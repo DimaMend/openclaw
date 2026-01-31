@@ -3,7 +3,7 @@
  * @module extensions/feishu/runtime
  */
 
-import type { PluginRuntime } from "openclaw/plugin-sdk";
+import type { PluginRuntime } from "../../../src/plugin-sdk/index.js";
 
 let runtime: PluginRuntime | null = null;
 

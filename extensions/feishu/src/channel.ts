@@ -51,7 +51,10 @@ async function loadFeishuModule(): Promise<FeishuModule> {
 }
 
 function resolveFeishuAccount(cfg: OpenClawConfig, accountId?: string | null) {
-  return getFeishuRuntime().channel.feishu.resolveFeishuAccount({ cfg, accountId });
+  return getFeishuRuntime().channel.feishu.resolveFeishuAccount({
+    cfg,
+    accountId: accountId ?? undefined,
+  });
 }
 
 async function resolveFeishuClient(cfg: OpenClawConfig, accountId?: string | null) {
@@ -249,11 +252,11 @@ async function deliverFeishuReply(params: {
 }
 
 const feishuMessageActions: ChannelMessageActionAdapter = {
-  listActions: (ctx: any) => getFeishuRuntime().channel.feishu.messageActions.listActions(ctx),
+  listActions: (ctx: any) => getFeishuRuntime().channel.feishu.messageActions!.listActions(ctx),
   extractToolSend: (ctx: any) =>
-    getFeishuRuntime().channel.feishu.messageActions.extractToolSend(ctx),
+    getFeishuRuntime().channel.feishu.messageActions!.extractToolSend(ctx),
   handleAction: async (ctx: any) =>
-    await getFeishuRuntime().channel.feishu.messageActions.handleAction(ctx),
+    await getFeishuRuntime().channel.feishu.messageActions!.handleAction(ctx),
 };
 
 /**
@@ -504,7 +507,7 @@ export const feishuPlugin: ChannelPlugin = {
         if (keep) {
           // Ensure enabled
           return {
-            cfg: feishuPlugin.setup!.applyAccountConfig!({
+            cfg: feishuPlugin.setup!.applyAccountConfig({
               cfg,
               accountId,
               input: { appId: existingAppId, appSecret: existingAppSecret } as any,
@@ -749,17 +752,17 @@ export const feishuPlugin: ChannelPlugin = {
       if (nextFeishu) {
         if (
           accountId === DEFAULT_ACCOUNT_ID &&
-          ((nextFeishu as any).appId || (nextFeishu as any).appSecret)
+          (nextFeishu.appId || nextFeishu.appSecret)
         ) {
-          delete (nextFeishu as any).appId;
-          delete (nextFeishu as any).appSecret;
+          delete nextFeishu.appId;
+          delete nextFeishu.appSecret;
           cleared = true;
           changed = true;
         }
 
         const accounts =
-          (nextFeishu as any).accounts && typeof (nextFeishu as any).accounts === "object"
-            ? { ...(nextFeishu as any).accounts }
+          nextFeishu.accounts && typeof nextFeishu.accounts === "object"
+            ? { ...nextFeishu.accounts }
             : undefined;
 
         if (accounts && accountId in accounts) {
@@ -784,10 +787,10 @@ export const feishuPlugin: ChannelPlugin = {
 
         if (accounts) {
           if (Object.keys(accounts).length === 0) {
-            delete (nextFeishu as any).accounts;
+            delete nextFeishu.accounts;
             changed = true;
           } else {
-            (nextFeishu as any).accounts = accounts;
+            nextFeishu.accounts = accounts;
           }
         }
       }
