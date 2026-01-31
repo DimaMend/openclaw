@@ -1411,7 +1411,7 @@ export class MemoryIndexManager {
     if (this.fallbackFrom) {
       return false;
     }
-    const fallbackFrom = this.provider.id as "openai" | "gemini" | "local";
+    const fallbackFrom = this.provider.id as "openai" | "gemini" | "voyageai" | "local";
 
     const fallbackModel =
       fallback === "gemini"

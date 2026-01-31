@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 export type MemoryConfig = {
   embedding: {
-    provider: "openai";
+    provider: "openai" | "voyageai";
     model?: string;
     apiKey: string;
   };
@@ -87,6 +87,13 @@ function resolveEmbeddingModel(embedding: Record<string, unknown>): string {
   return model;
 }
 
+function resolveEmbeddingProvider(model: string): "openai" | "voyageai" {
+  if (model.startsWith("voyage-")) {
+    return "voyageai";
+  }
+  return "openai";
+}
+
 export const memoryConfigSchema = {
   parse(value: unknown): MemoryConfig {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -102,10 +109,11 @@ export const memoryConfigSchema = {
     assertAllowedKeys(embedding, ["apiKey", "model"], "embedding config");
 
     const model = resolveEmbeddingModel(embedding);
+    const provider = resolveEmbeddingProvider(model);
 
     return {
       embedding: {
-        provider: "openai",
+        provider,
         model,
         apiKey: resolveEnvVars(embedding.apiKey),
       },
@@ -116,15 +124,15 @@ export const memoryConfigSchema = {
   },
   uiHints: {
     "embedding.apiKey": {
-      label: "OpenAI API Key",
+      label: "Embedding API Key",
       sensitive: true,
-      placeholder: "sk-proj-...",
-      help: "API key for OpenAI embeddings (or use ${OPENAI_API_KEY})",
+      placeholder: "sk-proj-... or pa-...",
+      help: "API key for embeddings (${OPENAI_API_KEY} or ${VOYAGE_API_KEY})",
     },
     "embedding.model": {
       label: "Embedding Model",
       placeholder: DEFAULT_MODEL,
-      help: "OpenAI embedding model to use",
+      help: "Embedding model (OpenAI text-embedding-* or VoyageAI voyage-*)",
     },
     dbPath: {
       label: "Database Path",
