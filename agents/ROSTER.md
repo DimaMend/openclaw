@@ -145,6 +145,22 @@ This document defines all sub-agents available for DBH Ventures incubation proje
 
 ---
 
+### 🧠 Thinker
+- **Role:** Deep reasoning, complex analysis, strategic thinking
+- **Location:** `/agents/thinker/AGENT.md`
+- **Spawnable:** Yes
+- **Label:** `thinker`
+- **Model:** `anthropic/claude-opus-4-5` with `thinking: "high"`
+- **Outputs:** Strategic analysis, architecture decisions, risk assessments
+- **Used for:**
+  - Complex architectural decisions
+  - Strategic business analysis
+  - Multi-factor tradeoff evaluation
+  - Debugging difficult problems
+  - Long-term planning
+
+---
+
 ## Spawning Agents
 
 ```python
