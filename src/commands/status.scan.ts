@@ -61,6 +61,7 @@ export async function scanStatus(
     json?: boolean;
     timeoutMs?: number;
     all?: boolean;
+    fetchUpdates?: boolean;
   },
   _runtime: RuntimeEnv,
 ): Promise<StatusScanResult> {
@@ -92,10 +93,11 @@ export async function scanStatus(
 
       progress.setLabel("Checking for updates…");
       const updateTimeoutMs = opts.all ? 6500 : 2500;
+      const doFetchUpdates = opts.fetchUpdates !== false;
       const update = await getUpdateCheckResult({
         timeoutMs: updateTimeoutMs,
-        fetchGit: true,
-        includeRegistry: true,
+        fetchGit: doFetchUpdates,
+        includeRegistry: doFetchUpdates,
       });
       progress.tick();
 

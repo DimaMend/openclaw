@@ -28,12 +28,26 @@ export async function runMonitorTui(runtime: RuntimeEnv, opts: { intervalMs: num
   tui.addChild(root);
 
   let running = true;
+  let lastVersionCheck = 0;
+  let cachedUpdateMsg = "";
 
   const refresh = async () => {
     if (!running) return;
     try {
       const now = Date.now();
-      const status = await scanStatus({ json: true, timeoutMs: opts.intervalMs - 200 }, runtime);
+      const shouldCheckUpdates = now - lastVersionCheck > 300_000 || lastVersionCheck === 0;
+      if (shouldCheckUpdates) {
+        lastVersionCheck = now;
+      }
+
+      const status = await scanStatus(
+        {
+          json: true,
+          timeoutMs: Math.max(100, opts.intervalMs - 200),
+          fetchUpdates: shouldCheckUpdates,
+        },
+        runtime,
+      );
 
       const latency = status.gatewayProbe?.connectLatencyMs
         ? formatDuration(status.gatewayProbe.connectLatencyMs)
@@ -46,10 +60,12 @@ export async function runMonitorTui(runtime: RuntimeEnv, opts: { intervalMs: num
       const updateLatency = Date.now() - now;
 
       const updates = resolveUpdateAvailability(status.update);
-      const updateMsg = updates.available ? ` • ${theme.accent("UPDATE AVAILABLE")}` : "";
+      if (shouldCheckUpdates) {
+        cachedUpdateMsg = updates.available ? ` • ${theme.accent("UPDATE AVAILABLE")}` : "";
+      }
 
       header.setText(
-        theme.header(`Moltbot Monitor • ${new Date().toLocaleTimeString()}${updateMsg}`),
+        theme.header(`Moltbot Monitor • ${new Date().toLocaleTimeString()}${cachedUpdateMsg}`),
       );
 
       statusLine.setText(
@@ -90,13 +106,13 @@ export async function runMonitorTui(runtime: RuntimeEnv, opts: { intervalMs: num
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       footer.setText(theme.error(`Error: ${msg}`));
+      tui.requestRender();
     }
 
     if (running) {
       setTimeout(refresh, opts.intervalMs);
     }
   };
-
   tui.start();
   void refresh();
 
