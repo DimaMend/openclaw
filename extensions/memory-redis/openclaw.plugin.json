@@ -22,8 +22,13 @@
     },
     "namespace": {
       "label": "Namespace",
+      "placeholder": "openclaw",
+      "help": "Namespace for organizing memories (isolates memories by project/app)"
+    },
+    "userId": {
+      "label": "User ID",
       "placeholder": "default",
-      "help": "Default namespace for organizing memories"
+      "help": "User ID for memory isolation (each user gets their own memories)"
     },
     "timeout": {
       "label": "Timeout (ms)",
@@ -49,6 +54,36 @@
       "placeholder": "3",
       "help": "Maximum number of memories to recall",
       "advanced": true
+    },
+    "extractionStrategy": {
+      "label": "Extraction Strategy",
+      "placeholder": "discrete",
+      "help": "How to extract memories: discrete (semantic/episodic), summary, preferences, or custom",
+      "advanced": true
+    },
+    "customPrompt": {
+      "label": "Custom Extraction Prompt",
+      "placeholder": "Extract action items and decisions from this conversation.",
+      "help": "Custom prompt for memory extraction (only used with 'custom' strategy)",
+      "advanced": true
+    },
+    "summaryViewName": {
+      "label": "Summary View Name",
+      "placeholder": "openclaw_user_summary",
+      "help": "Name for the rolling summary view of long-term memories",
+      "advanced": true
+    },
+    "summaryTimeWindowDays": {
+      "label": "Summary Time Window (days)",
+      "placeholder": "30",
+      "help": "Rolling window in days for the summary view (only recent memories included)",
+      "advanced": true
+    },
+    "summaryGroupBy": {
+      "label": "Summary Group By",
+      "placeholder": "user_id",
+      "help": "Fields to partition summaries by: user_id, namespace, or both",
+      "advanced": true
     }
   },
   "configSchema": {
@@ -65,6 +100,9 @@
         "type": "string"
       },
       "namespace": {
+        "type": "string"
+      },
+      "userId": {
         "type": "string"
       },
       "timeout": {
@@ -84,6 +122,35 @@
       "recallLimit": {
         "type": "number",
         "minimum": 1
+      },
+      "extractionStrategy": {
+        "type": "string",
+        "enum": [
+          "discrete",
+          "summary",
+          "preferences",
+          "custom"
+        ]
+      },
+      "customPrompt": {
+        "type": "string"
+      },
+      "summaryViewName": {
+        "type": "string"
+      },
+      "summaryTimeWindowDays": {
+        "type": "number",
+        "minimum": 1
+      },
+      "summaryGroupBy": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "user_id",
+            "namespace"
+          ]
+        }
       }
     }
   }

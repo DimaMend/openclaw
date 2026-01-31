@@ -4,8 +4,8 @@
   "type": "module",
   "description": "OpenClaw Redis-backed long-term memory plugin using agent-memory-server",
   "dependencies": {
-    "agent-memory-client": "^0.2.0",
-    "@sinclair/typebox": "0.34.47"
+    "@sinclair/typebox": "0.34.47",
+    "agent-memory-client": "^0.3.1"
   },
   "openclaw": {
     "extensions": [
@@ -13,4 +13,3 @@
     ]
   }
 }
-
