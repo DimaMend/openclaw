@@ -1,7 +1,7 @@
 # DBH Ventures — Agent Roster
 
 > **Orchestrator:** Steve 🐺
-> **Last Updated:** 2026-01-30
+> **Last Updated:** 2026-01-31
 
 This document defines all sub-agents available for DBH Ventures incubation projects. Each agent has a specific role, can be spawned via `sessions_spawn`, and follows the Multi-Agent Coordination Protocol.
 
@@ -114,6 +114,20 @@ This document defines all sub-agents available for DBH Ventures incubation proje
   - Financial projections
   - Metrics analysis
   - Data-driven insights
+
+---
+
+### 💳 Payments
+- **Role:** Stripe setup, payment flows, subscriptions
+- **Location:** `/agents/payments/AGENT.md`
+- **Spawnable:** Yes
+- **Label:** `payments`
+- **Outputs:** Stripe products, prices, checkout links, webhook configs
+- **Used for:**
+  - Creating Stripe products and pricing tiers
+  - Generating checkout/payment links
+  - Webhook endpoint configuration
+  - Customer portal setup
 
 ---
 

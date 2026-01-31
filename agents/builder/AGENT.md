@@ -97,6 +97,22 @@ Builder should conclude with:
 - [Suggested follow-up if any]
 ```
 
+---
+
+## ⚠️ MANDATORY: Sentinel QA Handoff
+
+**Every Builder task that touches UI or deployed code MUST be followed by Sentinel QA.**
+
+This is NOT optional. The orchestrator (Steve) will:
+1. Receive Builder's completion report
+2. Immediately spawn Sentinel for QA review
+3. Route any issues back to Builder for fixing
+4. Repeat until Sentinel approves
+
+**Why:** Catches visual bugs (borders, padding, spacing), mobile issues, broken links, security concerns, and performance problems that Builder might miss.
+
+Builder should NOT mark work as "fully complete" — it's complete pending QA review.
+
 ## Coordination
 
 When working on Vikunja tasks:
