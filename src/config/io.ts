@@ -208,12 +208,18 @@ export function detectDuplicateKeys(raw: string): DuplicateKeyWarning[] {
       const c = raw[i];
       if (c === " " || c === "\t" || c === "\n" || c === "\r") {
         i++;
-      } else if (c === "/" && raw[i + 1] === "/") {
-        while (i < raw.length && raw[i] !== "\n") i++;
-      } else if (c === "/" && raw[i + 1] === "*") {
+      } else if (c === "/" && i + 1 < raw.length && raw[i + 1] === "/") {
+        while (i < raw.length && raw[i] !== "\n") {
+          i++;
+        }
+      } else if (c === "/" && i + 1 < raw.length && raw[i + 1] === "*") {
         i += 2;
-        while (i < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) i++;
-        i += 2;
+        while (i + 1 < raw.length && !(raw[i] === "*" && raw[i + 1] === "/")) {
+          i++;
+        }
+        if (i + 1 < raw.length && raw[i] === "*" && raw[i + 1] === "/") {
+          i += 2;
+        }
       } else {
         break;
       }
@@ -222,33 +228,48 @@ export function detectDuplicateKeys(raw: string): DuplicateKeyWarning[] {
 
   const readString = (): string | null => {
     const q = raw[i];
-    if (q !== '"' && q !== "'") return null;
+    if (q !== '"' && q !== "'") {
+      return null;
+    }
     i++;
     let s = "";
     while (i < raw.length && raw[i] !== q) {
       if (raw[i] === "\\") {
         i++;
-        if (i < raw.length) s += raw[i++];
+        if (i < raw.length) {
+          s += raw[i++];
+        }
       } else {
         s += raw[i++];
       }
     }
-    i++;
+    if (i < raw.length && raw[i] === q) {
+      i++;
+    }
     return s;
   };
 
   const readUnquoted = (): string | null => {
     const start = i;
-    while (i < raw.length && /[a-zA-Z0-9_$]/.test(raw[i])) i++;
+    while (i < raw.length && /[a-zA-Z0-9_$]/.test(raw[i])) {
+      i++;
+    }
     return i > start ? raw.slice(start, i) : null;
   };
 
   const skipValue = (): void => {
     skipWs();
-    if (raw[i] === "{") parseObj();
-    else if (raw[i] === "[") parseArr();
-    else if (raw[i] === '"' || raw[i] === "'") readString();
-    else while (i < raw.length && !/[,}\]\s]/.test(raw[i])) i++;
+    if (raw[i] === "{") {
+      parseObj();
+    } else if (raw[i] === "[") {
+      parseArr();
+    } else if (raw[i] === '"' || raw[i] === "'") {
+      readString();
+    } else {
+      while (i < raw.length && !/[,}\]\s]/.test(raw[i])) {
+        i++;
+      }
+    }
   };
 
   const parseArr = (): void => {
@@ -261,7 +282,9 @@ export function detectDuplicateKeys(raw: string): DuplicateKeyWarning[] {
       }
       skipValue();
       skipWs();
-      if (raw[i] === ",") i++;
+      if (raw[i] === ",") {
+        i++;
+      }
     }
   };
 
@@ -288,19 +311,26 @@ export function detectDuplicateKeys(raw: string): DuplicateKeyWarning[] {
         keys.set(key, true);
       }
       skipWs();
-      if (raw[i] === ":") i++;
+      if (raw[i] === ":") {
+        i++;
+      }
       pathStack.push(key);
       skipValue();
       pathStack.pop();
       skipWs();
-      if (raw[i] === ",") i++;
+      if (raw[i] === ",") {
+        i++;
+      }
     }
     keyStack.pop();
   };
 
   skipWs();
-  if (raw[i] === "{") parseObj();
-  else if (raw[i] === "[") parseArr();
+  if (raw[i] === "{") {
+    parseObj();
+  } else if (raw[i] === "[") {
+    parseArr();
+  }
   return warnings;
 }
 

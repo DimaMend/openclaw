@@ -51,4 +51,33 @@ describe("detectDuplicateKeys", () => {
     const warnings = detectDuplicateKeys(raw);
     expect(warnings).toHaveLength(0);
   });
+
+  it("handles unterminated block comment at EOF", () => {
+    const raw = `{ a: 1 /* unterminated`;
+    const warnings = detectDuplicateKeys(raw);
+    expect(warnings).toHaveLength(0); // should not crash
+  });
+
+  it("handles unterminated string at EOF", () => {
+    const raw = `{ a: "unterminated`;
+    const warnings = detectDuplicateKeys(raw);
+    expect(warnings).toHaveLength(0); // should not crash
+  });
+
+  it("handles trailing slash at EOF", () => {
+    const raw = `{ a: 1 } /`;
+    const warnings = detectDuplicateKeys(raw);
+    expect(warnings).toHaveLength(0); // should not crash
+  });
+
+  it("detects duplicates after comments", () => {
+    const raw = `{
+      // comment
+      key: 1,
+      /* block */ key: 2
+    }`;
+    const warnings = detectDuplicateKeys(raw);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].path).toBe("key");
+  });
 });
