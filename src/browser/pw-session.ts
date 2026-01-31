@@ -258,10 +258,50 @@ export function ensurePageState(page: Page): PageState {
   return state;
 }
 
+/**
+ * Stealth init script: patches common headless-detection signals so sites
+ * like Reddit cannot trivially fingerprint the automated browser.
+ */
+const STEALTH_INIT_SCRIPT = `
+  // Hide navigator.webdriver
+  Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+  // Spoof chrome.runtime to look like a real Chrome extension environment
+  if (!window.chrome) window.chrome = {};
+  if (!window.chrome.runtime) window.chrome.runtime = { connect: () => {}, sendMessage: () => {} };
+
+  // Spoof plugins (headless Chrome reports 0 plugins)
+  Object.defineProperty(navigator, 'plugins', {
+    get: () => [1, 2, 3, 4, 5],
+  });
+
+  // Spoof languages (some detectors check for empty array)
+  Object.defineProperty(navigator, 'languages', {
+    get: () => ['en-US', 'en'],
+  });
+
+  // Remove "HeadlessChrome" from user-agent exposed to JS
+  Object.defineProperty(navigator, 'userAgent', {
+    get: () => navigator.userAgent.replace(/HeadlessChrome/g, 'Chrome'),
+  });
+
+  // Patch permissions API (headless often throws on query)
+  const origQuery = window.navigator.permissions?.query?.bind(window.navigator.permissions);
+  if (origQuery) {
+    window.navigator.permissions.query = (params) =>
+      params.name === 'notifications'
+        ? Promise.resolve({ state: Notification.permission })
+        : origQuery(params);
+  }
+`;
+
 function observeContext(context: BrowserContext) {
   if (observedContexts.has(context)) return;
   observedContexts.add(context);
   ensureContextState(context);
+
+  // Inject stealth patches before any page script runs
+  context.addInitScript(STEALTH_INIT_SCRIPT).catch(() => {});
 
   for (const page of context.pages()) ensurePageState(page);
   context.on("page", (page) => ensurePageState(page));

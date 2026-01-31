@@ -1755,10 +1755,8 @@ High level:
 - Protects the last `keepLastAssistants` assistant messages (no tool results after that point are pruned).
 - Protects the bootstrap prefix (nothing before the first user message is pruned).
 - Modes:
-  - `adaptive`: soft-trims oversized tool results (keep head/tail) when the estimated context ratio crosses `softTrimRatio`.
-    Then hard-clears the oldest eligible tool results when the estimated context ratio crosses `hardClearRatio` **and**
-    there’s enough prunable tool-result bulk (`minPrunableToolChars`).
-  - `aggressive`: always replaces eligible tool results before the cutoff with the `hardClear.placeholder` (no ratio checks).
+  - `cache-ttl`: prunes old tool results when the Anthropic prompt cache TTL expires. Soft-trims oversized tool results (keep head/tail) when the estimated context ratio crosses `softTrimRatio`, then hard-clears the oldest eligible tool results when the estimated context ratio crosses `hardClearRatio` **and** there's enough prunable tool-result bulk (`minPrunableToolChars`).
+  - `off`: disables context pruning entirely.
 
 Soft vs hard pruning (what changes in the context sent to the LLM):
 - **Soft-trim**: only for *oversized* tool results. Keeps the beginning + end and inserts `...` in the middle.
@@ -1771,13 +1769,12 @@ Soft vs hard pruning (what changes in the context sent to the LLM):
 Notes / current limitations:
 - Tool results containing **image blocks are skipped** (never trimmed/cleared) right now.
 - The estimated “context ratio” is based on **characters** (approximate), not exact tokens.
-- If the session doesn’t contain at least `keepLastAssistants` assistant messages yet, pruning is skipped.
-- In `aggressive` mode, `hardClear.enabled` is ignored (eligible tool results are always replaced with `hardClear.placeholder`).
+- If the session doesn't contain at least `keepLastAssistants` assistant messages yet, pruning is skipped.
 
-Default (adaptive):
+Default (`cache-ttl` is auto-enabled for Anthropic credentials):
 ```json5
 {
-  agents: { defaults: { contextPruning: { mode: "adaptive" } } }
+  agents: { defaults: { contextPruning: { mode: "cache-ttl" } } }
 }
 ```
 
@@ -1788,28 +1785,23 @@ To disable:
 }
 ```
 
-Defaults (when `mode` is `"adaptive"` or `"aggressive"`):
+Defaults (when `mode` is `"cache-ttl"`):
+- `ttl`: `"1h"` (cache TTL duration; pruning only triggers after this expires)
 - `keepLastAssistants`: `3`
-- `softTrimRatio`: `0.3` (adaptive only)
-- `hardClearRatio`: `0.5` (adaptive only)
-- `minPrunableToolChars`: `50000` (adaptive only)
-- `softTrim`: `{ maxChars: 4000, headChars: 1500, tailChars: 1500 }` (adaptive only)
+- `softTrimRatio`: `0.3`
+- `hardClearRatio`: `0.5`
+- `minPrunableToolChars`: `50000`
+- `softTrim`: `{ maxChars: 4000, headChars: 1500, tailChars: 1500 }`
 - `hardClear`: `{ enabled: true, placeholder: "[Old tool result content cleared]" }`
 
-Example (aggressive, minimal):
-```json5
-{
-  agents: { defaults: { contextPruning: { mode: "aggressive" } } }
-}
-```
-
-Example (adaptive tuned):
+Example (cache-ttl tuned):
 ```json5
 {
   agents: {
     defaults: {
       contextPruning: {
-        mode: "adaptive",
+        mode: "cache-ttl",
+        ttl: "30m",
         keepLastAssistants: 3,
         softTrimRatio: 0.3,
         hardClearRatio: 0.5,
