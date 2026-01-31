@@ -8,6 +8,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Chat: display error messages in webchat/native apps instead of blank bubbles when LLM requests fail. (#4418)
 - Telegram: restore draft streaming partials. (#5543) Thanks @obviyus.
 
 ## 2026.1.30
