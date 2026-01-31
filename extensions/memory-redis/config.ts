@@ -10,6 +10,11 @@ import { Type } from "@sinclair/typebox";
  */
 export type MemoryStrategy = "discrete" | "summary" | "preferences" | "custom";
 
+/**
+ * Fields that can be used for grouping in summary views.
+ */
+export type SummaryGroupByField = "user_id" | "namespace";
+
 export type MemoryConfig = {
   /** Base URL of the agent-memory-server (e.g., 'http://localhost:8000') */
   serverUrl: string;
@@ -17,8 +22,10 @@ export type MemoryConfig = {
   apiKey?: string;
   /** Optional bearer token for authentication */
   bearerToken?: string;
-  /** Optional default namespace for memories */
+  /** Namespace for organizing memories (default: "openclaw") */
   namespace?: string;
+  /** User ID for memory isolation (default: "default") */
+  userId?: string;
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;
   /** Enable auto-capture of important information from conversations */
@@ -58,14 +65,24 @@ export type MemoryConfig = {
    * Only memories from the last N days are included in the summary.
    */
   summaryTimeWindowDays?: number;
+  /**
+   * Fields to group by in the summary view (default: ["user_id"]).
+   *
+   * Each unique combination of these fields gets its own summary partition.
+   * Options: "user_id", "namespace"
+   */
+  summaryGroupBy?: SummaryGroupByField[];
 };
 
 const DEFAULT_SERVER_URL = "http://localhost:8000";
 const DEFAULT_TIMEOUT = 30000;
 const DEFAULT_MIN_SCORE = 0.3;
 const DEFAULT_RECALL_LIMIT = 3;
+const DEFAULT_NAMESPACE = "openclaw";
+const DEFAULT_USER_ID = "default";
 const DEFAULT_SUMMARY_VIEW_NAME = "openclaw_user_summary";
 const DEFAULT_SUMMARY_TIME_WINDOW_DAYS = 30;
+const DEFAULT_SUMMARY_GROUP_BY: SummaryGroupByField[] = ["user_id"];
 
 function assertAllowedKeys(
   value: Record<string, unknown>,
@@ -100,6 +117,7 @@ export const memoryConfigSchema = {
         "apiKey",
         "bearerToken",
         "namespace",
+        "userId",
         "timeout",
         "autoCapture",
         "autoRecall",
@@ -109,6 +127,7 @@ export const memoryConfigSchema = {
         "customPrompt",
         "summaryViewName",
         "summaryTimeWindowDays",
+        "summaryGroupBy",
       ],
       "memory config",
     );
@@ -137,12 +156,26 @@ export const memoryConfigSchema = {
       );
     }
 
+    // Parse and validate summaryGroupBy
+    let summaryGroupBy: SummaryGroupByField[] = DEFAULT_SUMMARY_GROUP_BY;
+    if (Array.isArray(cfg.summaryGroupBy)) {
+      const validFields: SummaryGroupByField[] = ["user_id", "namespace"];
+      const parsed = cfg.summaryGroupBy.filter(
+        (f): f is SummaryGroupByField =>
+          typeof f === "string" && validFields.includes(f as SummaryGroupByField),
+      );
+      if (parsed.length > 0) {
+        summaryGroupBy = parsed;
+      }
+    }
+
     return {
       serverUrl: resolveEnvVars(serverUrl),
       apiKey: typeof cfg.apiKey === "string" ? resolveEnvVars(cfg.apiKey) : undefined,
       bearerToken:
         typeof cfg.bearerToken === "string" ? resolveEnvVars(cfg.bearerToken) : undefined,
-      namespace: typeof cfg.namespace === "string" ? cfg.namespace : undefined,
+      namespace: typeof cfg.namespace === "string" ? cfg.namespace : DEFAULT_NAMESPACE,
+      userId: typeof cfg.userId === "string" ? cfg.userId : DEFAULT_USER_ID,
       timeout:
         typeof cfg.timeout === "number" && Number.isFinite(cfg.timeout)
           ? cfg.timeout
@@ -168,6 +201,7 @@ export const memoryConfigSchema = {
         Number.isFinite(cfg.summaryTimeWindowDays)
           ? Math.max(1, Math.floor(cfg.summaryTimeWindowDays))
           : DEFAULT_SUMMARY_TIME_WINDOW_DAYS,
+      summaryGroupBy,
     };
   },
   uiHints: {
@@ -191,8 +225,13 @@ export const memoryConfigSchema = {
     },
     namespace: {
       label: "Namespace",
-      placeholder: "default",
-      help: "Default namespace for organizing memories",
+      placeholder: DEFAULT_NAMESPACE,
+      help: "Namespace for organizing memories (isolates memories by project/app)",
+    },
+    userId: {
+      label: "User ID",
+      placeholder: DEFAULT_USER_ID,
+      help: "User ID for memory isolation (each user gets their own memories)",
     },
     timeout: {
       label: "Timeout (ms)",
@@ -247,6 +286,12 @@ export const memoryConfigSchema = {
       label: "Summary Time Window (days)",
       placeholder: String(DEFAULT_SUMMARY_TIME_WINDOW_DAYS),
       help: "Rolling window in days for the summary view (only recent memories included)",
+      advanced: true,
+    },
+    summaryGroupBy: {
+      label: "Summary Group By",
+      placeholder: "user_id",
+      help: "Fields to partition summaries by: user_id, namespace, or both",
       advanced: true,
     },
   },

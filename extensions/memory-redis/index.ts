@@ -206,6 +206,7 @@ const memoryPlugin = {
               text: query,
               limit,
               namespace: cfg.namespace ? { eq: cfg.namespace } : undefined,
+              userId: cfg.userId ? { eq: cfg.userId } : undefined,
             });
 
             if (results.memories.length === 0) {
@@ -278,6 +279,7 @@ const memoryPlugin = {
               text,
               limit: 1,
               namespace: cfg.namespace ? { eq: cfg.namespace } : undefined,
+              userId: cfg.userId ? { eq: cfg.userId } : undefined,
             });
 
             if (existing.memories.length > 0 && existing.memories[0].dist < 0.05) {
@@ -365,6 +367,7 @@ const memoryPlugin = {
                 text: query,
                 limit: 5,
                 namespace: cfg.namespace ? { eq: cfg.namespace } : undefined,
+                userId: cfg.userId ? { eq: cfg.userId } : undefined,
               });
 
               if (results.memories.length === 0) {
@@ -459,6 +462,7 @@ const memoryPlugin = {
                 text: query,
                 limit: parseInt(opts.limit),
                 namespace: cfg.namespace ? { eq: cfg.namespace } : undefined,
+                userId: cfg.userId ? { eq: cfg.userId } : undefined,
               });
 
               const output = results.memories.map((m) => ({
@@ -640,12 +644,18 @@ const memoryPlugin = {
           return existing.id;
         }
 
-        // Create the default summary view
+        // Build filters based on configured namespace
+        const filters: Record<string, unknown> = {};
+        if (cfg.namespace) {
+          filters.namespace = cfg.namespace;
+        }
+
+        // Create the default summary view with configured grouping
         const newView = await client.createSummaryView({
           name: cfg.summaryViewName,
           source: "long_term",
-          group_by: cfg.namespace ? ["namespace"] : [],
-          filters: cfg.namespace ? { namespace: cfg.namespace } : {},
+          group_by: cfg.summaryGroupBy ?? ["user_id"],
+          filters: Object.keys(filters).length > 0 ? filters : undefined,
           time_window_days: cfg.summaryTimeWindowDays,
           continuous: false, // We'll trigger refreshes manually after each turn
           prompt:
@@ -655,7 +665,7 @@ const memoryPlugin = {
         });
 
         api.logger.info(
-          `memory-redis: created summary view "${cfg.summaryViewName}" (id: ${newView.id}, window: ${cfg.summaryTimeWindowDays} days)`,
+          `memory-redis: created summary view "${cfg.summaryViewName}" (id: ${newView.id}, window: ${cfg.summaryTimeWindowDays} days, group_by: ${(cfg.summaryGroupBy ?? ["user_id"]).join(", ")})`,
         );
         return newView.id;
       } catch (err) {
@@ -680,15 +690,22 @@ const memoryPlugin = {
         // 1. Try to get the cached summary from the summary view
         if (summaryViewId) {
           try {
-            const group = cfg.namespace ? { namespace: cfg.namespace } : {};
+            // Fetch partitions filtered by our namespace and userId
             const partitions = await client.listSummaryViewPartitions(summaryViewId, {
               namespace: cfg.namespace,
+              userId: cfg.userId,
             });
 
-            // Find the partition matching our group (or the first one if no namespace)
-            const partition = cfg.namespace
-              ? partitions.find((p) => p.group.namespace === cfg.namespace)
-              : partitions[0];
+            // Find the partition matching our configured group
+            // The group fields depend on summaryGroupBy config
+            const partition = partitions.find((p) => {
+              const groupBy = cfg.summaryGroupBy ?? ["user_id"];
+              for (const field of groupBy) {
+                if (field === "user_id" && p.group.user_id !== cfg.userId) return false;
+                if (field === "namespace" && p.group.namespace !== cfg.namespace) return false;
+              }
+              return true;
+            }) ?? partitions[0]; // Fall back to first partition if no exact match
 
             if (partition && partition.summary && partition.memory_count > 0) {
               contextParts.push(
@@ -715,6 +732,7 @@ const memoryPlugin = {
               text: searchQuery,
               limit: cfg.recallLimit,
               namespace: cfg.namespace ? { eq: cfg.namespace } : undefined,
+              userId: cfg.userId ? { eq: cfg.userId } : undefined,
               distance_threshold: distanceThreshold,
             });
 
@@ -788,6 +806,7 @@ const memoryPlugin = {
           await client.putWorkingMemory(sessionId, {
             messages: memoryMessages,
             namespace: cfg.namespace,
+            user_id: cfg.userId,
             long_term_memory_strategy: longTermMemoryStrategy,
           });
 
