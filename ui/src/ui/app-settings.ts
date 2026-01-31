@@ -9,6 +9,7 @@ import { loadExecApprovals } from "./controllers/exec-approvals";
 import { loadPresence } from "./controllers/presence";
 import { loadSessions } from "./controllers/sessions";
 import { loadSkills } from "./controllers/skills";
+import { loadModelConfig, loadAgentSessions } from "./ui-zh-CN-adapter";
 import {
   inferBasePathFromPathname,
   normalizeBasePath,
@@ -172,6 +173,9 @@ export async function refreshActiveTab(host: SettingsHost) {
   if (host.tab === "config") {
     await loadConfigSchema(host as unknown as OpenClawApp);
     await loadConfig(host as unknown as OpenClawApp);
+  }
+  if (host.tab === "model-config") {
+    await loadModelConfig(host as unknown as MoltbotApp);
   }
   if (host.tab === "debug") {
     await loadDebug(host as unknown as OpenClawApp);

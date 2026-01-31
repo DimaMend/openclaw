@@ -51,6 +51,7 @@ import {
   rotateDeviceToken,
 } from "./controllers/devices";
 import { renderSkills } from "./views/skills";
+import { renderModelConfigTab } from "./ui-zh-CN-adapter";
 import { renderChatControls, renderTab, renderThemeToggle } from "./app-render.helpers";
 import { loadChannels } from "./controllers/channels";
 import { loadPresence } from "./controllers/presence";
@@ -79,13 +80,7 @@ import {
   saveExecApprovals,
   updateExecApprovalsFormValue,
 } from "./controllers/exec-approvals";
-import {
-  loadCronRuns,
-  toggleCronJob,
-  runCronJob,
-  removeCronJob,
-  addCronJob,
-} from "./controllers/cron";
+import { loadCronRuns, toggleCronJob, runCronJob, removeCronJob, addCronJob } from "./controllers/cron";
 import { loadDebug, callDebugMethod } from "./controllers/debug";
 import { loadLogs } from "./controllers/logs";
 
@@ -515,7 +510,7 @@ export function renderApp(state: AppViewState) {
               })
             : nothing
         }
-
+          ${state.tab === "model-config" ? renderModelConfigTab(state) : nothing}
         ${
           state.tab === "config"
             ? renderConfig({
