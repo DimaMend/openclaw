@@ -1,30 +1,30 @@
 FROM node:22-bullseye-slim
 
-# Install bun and enable corepack
-RUN apt-get update && apt-get install -y curl \
-  && curl -fsSL https://bun.sh/install | bash \
-  && corepack enable
+# ✅ curl installeren zodat bun werkt
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://bun.sh/install | bash && \
+    corepack enable && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install dependencies
+# Dependencies installeren
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY ui/package.json ./ui/package.json
 COPY scripts ./scripts
 RUN pnpm install --frozen-lockfile
 
-# Copy source
+# Source code kopiëren
 COPY . .
 
-# ✅ Skip canvas and UI builds, assume prebuilt assets exist
+# ✅ Skip alle build commando's die falen
 RUN pnpm ui:install
 
-# Create data directory
+# Data folder maken
 RUN mkdir -p /data/.clawdbot
 
-# Set entrypoint
+# Entrypoint instellen
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Default entrypoint
 ENTRYPOINT ["docker-entrypoint.sh"]
