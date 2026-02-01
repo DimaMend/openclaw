@@ -46,9 +46,13 @@ export function buildFtsQuery(raw: string): string | null {
  * @param k - Sigmoid steepness factor (default 0.5, tune based on score distribution)
  */
 export function bm25RankToScore(bm25Score: number, k = 0.5): number {
-  if (!Number.isFinite(bm25Score)) return 0;
+  if (!Number.isFinite(bm25Score)) {
+    return 0;
+  }
   const positive = -bm25Score;
-  if (positive <= 0) return 0;
+  if (positive <= 0) {
+    return 0;
+  }
   return 1 - 1 / (1 + k * positive);
 }
 
