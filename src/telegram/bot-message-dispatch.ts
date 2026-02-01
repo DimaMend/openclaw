@@ -235,6 +235,13 @@ export const dispatchTelegramMessage = async ({
           await flushDraft();
           draftStream?.stop();
         }
+        // DM thread hotfix:
+        // - In groups/forums, replyThreadId is the forum topic id (resolved earlier).
+        // - In DMs with private topics enabled, Telegram uses msg.message_thread_id.
+        //   We persist it as ctxPayload.MessageThreadId; use that for outbound so replies stay in the DM thread.
+        const outboundThreadId = isGroup
+          ? replyThreadId
+          : (ctxPayload.MessageThreadId ?? messageThreadId);
         const result = await deliverReplies({
           replies: [payload],
           chatId: String(chatId),
@@ -243,7 +250,7 @@ export const dispatchTelegramMessage = async ({
           bot,
           replyToMode,
           textLimit,
-          messageThreadId: replyThreadId,
+          messageThreadId: outboundThreadId,
           tableMode,
           chunkMode,
           onVoiceRecording: sendRecordVoice,
@@ -286,6 +293,9 @@ export const dispatchTelegramMessage = async ({
   draftStream?.stop();
   let sentFallback = false;
   if (!deliveryState.delivered && deliveryState.skippedNonSilent > 0) {
+    const outboundThreadId = isGroup
+      ? replyThreadId
+      : (ctxPayload.MessageThreadId ?? messageThreadId);
     const result = await deliverReplies({
       replies: [{ text: EMPTY_RESPONSE_FALLBACK }],
       chatId: String(chatId),
@@ -294,7 +304,7 @@ export const dispatchTelegramMessage = async ({
       bot,
       replyToMode,
       textLimit,
-      messageThreadId: replyThreadId,
+      messageThreadId: outboundThreadId,
       tableMode,
       chunkMode,
       linkPreview: telegramCfg.linkPreview,
