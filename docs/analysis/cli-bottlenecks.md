@@ -11,6 +11,14 @@
 ## Global command registry loading
 - `registerProgramCommands` iterates over `commandRegistry` and imports/registers every command file (`agents.js`, `status.js`, `memory-cli`, etc.) before Commander can pick a route. Even short commands (like `--help`) must load all these modules, so startup time always includes the cost of importing the entire CLI tree.
 
+### Deep Dive: Import Chain Analysis (2026-02-01)
+A targeted exploration of the startup path revealed specific culprits:
+1.  **The `status` Command Anchor**: `src/cli/program/command-registry.ts` eagerly imports `statusCommand`.
+    - Chain: `statusCommand` -> `src/commands/status.ts` -> `src/security/audit.ts` -> `src/channels/plugins/index.js`.
+    - Impact: This pulls in the entire channel plugin system and browser automation config for *every* CLI command.
+2.  **Compromised Fast Path**: `src/cli/route.ts` (the `tryRouteCli` function) imports `findRoutedCommand` from `command-registry.ts`.
+    - Impact: The router, intended to be a fast path, incurs the same initialization cost as the full program because it triggers the eager imports in the registry.
+
 ## Recommendations
 1. Ship a fresh `dist/` bundle (or skip the build step) to avoid the repeated pnpm/tsgo invocation and filesystem scan. Alternatively, allow using `bunx tsgo` or a bundled compiler so the runner succeeds without relying on a globally-installed pnpm.
 2. Cache `loadConfig()` and the plugin registry where possible so lazy subcommand registration no longer re-reads disk state for each invocation.
