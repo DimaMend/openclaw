@@ -51,7 +51,7 @@ export function isPrivateIPv6(ip: string): boolean {
   if (lower === "::1") return true;
   // ::ffff: mapped IPv4 - check the IPv4 portion
   if (lower.startsWith("::ffff:")) {
-    const ipv4Part = ip.slice("::ffff:".length);
+    const ipv4Part = lower.slice("::ffff:".length);
     return isPrivateIPv4(ipv4Part);
   }
   return false;
