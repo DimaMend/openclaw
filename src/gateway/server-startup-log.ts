@@ -53,8 +53,28 @@ function warnIfPublicBind(
   port: number,
   log: { info: (msg: string, meta?: Record<string, unknown>) => void },
 ): void {
+  // Empty bind address likely indicates a configuration error, not an intentional all-interfaces bind.
+  if (bindAddress === "") {
+    const warning = [
+      "",
+      chalk.bgYellow.black(" WARNING ") + chalk.yellow(" Empty bind address"),
+      chalk.dim("─".repeat(60)),
+      `  Bind: ${chalk.cyan(`(empty):${port}`)}`,
+      "",
+      chalk.dim("  The gateway was started without an explicit bind address."),
+      chalk.dim("  This may indicate a configuration error or missing setting."),
+      "",
+      chalk.dim("  Recommended: set an explicit bind address such as 127.0.0.1,"),
+      chalk.dim("  or 0.0.0.0/:: if you intend to bind on all interfaces."),
+      chalk.dim("─".repeat(60)),
+      "",
+    ].join("\n");
+    log.info(warning, { consoleMessage: warning });
+    return;
+  }
+
   // 0.0.0.0 or :: binds to all interfaces
-  if (bindAddress === "0.0.0.0" || bindAddress === "::" || bindAddress === "") {
+  if (bindAddress === "0.0.0.0" || bindAddress === "::") {
     const publicIPs = getPublicIPs();
     if (publicIPs.length > 0) {
       const warning = [
