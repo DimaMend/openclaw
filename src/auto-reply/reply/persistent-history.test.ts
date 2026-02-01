@@ -106,9 +106,9 @@ describe("PersistentHistoryStore", () => {
 
       const history = store.getHistory("key");
       expect(history.length).toBe(3);
-      expect(history[0]!.body).toBe("first");
-      expect(history[1]!.body).toBe("second");
-      expect(history[2]!.body).toBe("third");
+      expect(history[0]?.body).toBe("first");
+      expect(history[1]?.body).toBe("second");
+      expect(history[2]?.body).toBe("third");
 
       store.close();
     });
@@ -157,9 +157,9 @@ describe("PersistentHistoryStore", () => {
 
       const history = store.getHistory("chat-1");
       expect(history.length).toBe(1);
-      expect(history[0]!.sender).toBe("user");
-      expect(history[0]!.body).toBe("Hello world");
-      expect(history[0]!.messageId).toBe("msg-123");
+      expect(history[0]?.sender).toBe("user");
+      expect(history[0]?.body).toBe("Hello world");
+      expect(history[0]?.messageId).toBe("msg-123");
 
       store.close();
     });
@@ -171,7 +171,7 @@ describe("PersistentHistoryStore", () => {
       store.appendEntry("key", { sender: "user", body: "test", timestamp: Date.now() });
 
       const history = store.getHistory("key");
-      expect(history[0]!.messageId).toBeUndefined();
+      expect(history[0]?.messageId).toBeUndefined();
 
       store.close();
     });
@@ -191,9 +191,9 @@ describe("PersistentHistoryStore", () => {
       const history = store.getHistory("key");
       expect(history.length).toBe(3);
       // Should keep newest (highest timestamps)
-      expect(history[0]!.body).toBe("msg-7");
-      expect(history[1]!.body).toBe("msg-8");
-      expect(history[2]!.body).toBe("msg-9");
+      expect(history[0]?.body).toBe("msg-7");
+      expect(history[1]?.body).toBe("msg-8");
+      expect(history[2]?.body).toBe("msg-9");
 
       store.close();
     });
@@ -218,11 +218,9 @@ describe("PersistentHistoryStore", () => {
       expect(stats.totalKeys).toBeLessThanOrEqual(3);
 
       // Oldest keys should be evicted
-      const key0History = store.getHistory("key-0");
-      const key4History = store.getHistory("key-4");
-
       // key-0 and key-1 should be evicted (oldest)
       // key-4 should still exist (newest)
+      const key4History = store.getHistory("key-4");
       expect(key4History.length).toBeGreaterThan(0);
 
       store.close();
@@ -368,7 +366,7 @@ describe("PersistentHistoryStore", () => {
 
       const history = store.getHistory("key");
       expect(history.length).toBe(1);
-      expect(history[0]!.body).toBe("new");
+      expect(history[0]?.body).toBe("new");
 
       store.close();
     });
@@ -461,8 +459,6 @@ describe("createPersistentHistoryStore", () => {
 
     // The path should be constructed correctly
     // dbPath should be: tempDir/agents/agent-123/history.sqlite
-    const expectedPath = path.join(tempDir, "agents", "agent-123", "history.sqlite");
-
     // We can't directly check the internal path, but we can verify it works
     expect(store).toBeInstanceOf(PersistentHistoryStore);
 

@@ -6,13 +6,13 @@ This document analyzes the memory systems in OpenClaw and identifies improvement
 
 OpenClaw has **five distinct memory subsystems**:
 
-| Subsystem | Location | Purpose |
-|-----------|----------|---------|
-| **MemoryIndexManager** | `src/memory/manager.ts` | Semantic search over MEMORY.md + memory/*.md |
-| **Session Transcripts** | `~/.openclaw/agents/{id}/sessions/*.jsonl` | Full conversation history (JSONL) |
-| **In-Memory History** | `src/auto-reply/reply/history.ts` | Runtime message context between replies |
-| **Memory Flush** | `src/auto-reply/reply/memory-flush.ts` | Pre-compaction memory save trigger |
-| **Session Memory Hook** | `src/hooks/bundled/session-memory/handler.ts` | `/new` command session archiving |
+| Subsystem               | Location                                      | Purpose                                       |
+| ----------------------- | --------------------------------------------- | --------------------------------------------- |
+| **MemoryIndexManager**  | `src/memory/manager.ts`                       | Semantic search over MEMORY.md + memory/\*.md |
+| **Session Transcripts** | `~/.openclaw/agents/{id}/sessions/*.jsonl`    | Full conversation history (JSONL)             |
+| **In-Memory History**   | `src/auto-reply/reply/history.ts`             | Runtime message context between replies       |
+| **Memory Flush**        | `src/auto-reply/reply/memory-flush.ts`        | Pre-compaction memory save trigger            |
+| **Session Memory Hook** | `src/hooks/bundled/session-memory/handler.ts` | `/new` command session archiving              |
 
 ## Architecture Diagram
 
@@ -53,6 +53,7 @@ OpenClaw has **five distinct memory subsystems**:
 **Problem:** `manager.ts` violates the ~500-700 LOC guideline significantly. It handles database management, embedding provider management, file watching, sync, session delta tracking, batch embedding orchestration, vector table management, cache management, and hybrid search merging.
 
 **Refactor Opportunity:**
+
 ```
 src/memory/
 ├── manager.ts           → Slim coordinator (~300 LOC)
@@ -124,14 +125,14 @@ src/memory/
 
 ## Recommended Refactoring Priority
 
-| Priority | Task | Impact |
-|----------|------|--------|
-| **High** | Split `manager.ts` into focused modules | Maintainability, testability |
-| **High** | Extract duplicated embedding cache logic | DRY, bug reduction |
-| **Medium** | Centralize memory constants | Consistency |
-| **Medium** | Add session entry schema validation | Reliability |
-| **Low** | Add memory retention/pruning | Resource management |
-| **Low** | Persist runtime history to disk | Better UX |
+| Priority   | Task                                     | Impact                       |
+| ---------- | ---------------------------------------- | ---------------------------- |
+| **High**   | Split `manager.ts` into focused modules  | Maintainability, testability |
+| **High**   | Extract duplicated embedding cache logic | DRY, bug reduction           |
+| **Medium** | Centralize memory constants              | Consistency                  |
+| **Medium** | Add session entry schema validation      | Reliability                  |
+| **Low**    | Add memory retention/pruning             | Resource management          |
+| **Low**    | Persist runtime history to disk          | Better UX                    |
 
 ## Key Files
 

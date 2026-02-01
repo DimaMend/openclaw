@@ -2,7 +2,7 @@
  * Tests for memory consolidation and summarization module
  */
 
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   cosineSimilarity,
   findSimilarChunks,
@@ -13,7 +13,6 @@ import {
   runConsolidation,
   prepareForSummarization,
   getConsolidationStats,
-  type SimilarChunkPair,
   type ConsolidationCandidate,
 } from "./consolidation.js";
 import { EMBEDDING_CACHE_TABLE, FTS_TABLE } from "./constants.js";
@@ -153,10 +152,10 @@ describe("findSimilarChunks", () => {
     const pairs = findSimilarChunks(db, { similarityThreshold: 0.95 });
 
     expect(pairs.length).toBeGreaterThanOrEqual(1);
-    const topPair = pairs[0]!;
-    expect(topPair.similarity).toBeGreaterThan(0.95);
-    expect([topPair.chunkId1, topPair.chunkId2]).toContain("chunk-1");
-    expect([topPair.chunkId1, topPair.chunkId2]).toContain("chunk-2");
+    const topPair = pairs[0];
+    expect(topPair?.similarity).toBeGreaterThan(0.95);
+    expect([topPair?.chunkId1, topPair?.chunkId2]).toContain("chunk-1");
+    expect([topPair?.chunkId1, topPair?.chunkId2]).toContain("chunk-2");
 
     db.close();
   });
@@ -215,7 +214,8 @@ describe("findSimilarChunks", () => {
     });
 
     const sameSourcePairs = findSimilarChunks(db, { sameSourceOnly: true });
-    const allPairs = findSimilarChunks(db, { sameSourceOnly: false });
+    // Verify sameSourceOnly filtering works (allPairs would include cross-source matches)
+    findSimilarChunks(db, { sameSourceOnly: false });
 
     // Same source should not match memory with sessions
     for (const pair of sameSourcePairs) {
@@ -241,7 +241,7 @@ describe("findSimilarChunks", () => {
     const pairs = findSimilarChunks(db, { similarityThreshold: 0.5 });
 
     for (let i = 1; i < pairs.length; i++) {
-      expect(pairs[i - 1]!.similarity).toBeGreaterThanOrEqual(pairs[i]!.similarity);
+      expect(pairs[i - 1]?.similarity).toBeGreaterThanOrEqual(pairs[i]?.similarity ?? 0);
     }
 
     db.close();
@@ -266,9 +266,9 @@ describe("findExactDuplicates", () => {
     const duplicates = findExactDuplicates(db);
 
     expect(duplicates.length).toBe(1);
-    expect(duplicates[0]!.hash).toBe("same-hash");
-    expect(duplicates[0]!.chunkIds).toContain("chunk-1");
-    expect(duplicates[0]!.chunkIds).toContain("chunk-2");
+    expect(duplicates[0]?.hash).toBe("same-hash");
+    expect(duplicates[0]?.chunkIds).toContain("chunk-1");
+    expect(duplicates[0]?.chunkIds).toContain("chunk-2");
 
     db.close();
   });
@@ -344,7 +344,7 @@ describe("removeExactDuplicates", () => {
       id: string;
     }>;
     expect(remaining.length).toBe(1);
-    expect(remaining[0]!.id).toBe("chunk-2");
+    expect(remaining[0]?.id).toBe("chunk-2");
 
     db.close();
   });
@@ -376,7 +376,7 @@ describe("removeExactDuplicates", () => {
     const remaining = db.prepare(`SELECT id FROM chunks WHERE hash = 'same-hash'`).all() as Array<{
       id: string;
     }>;
-    expect(remaining[0]!.id).toBe("chunk-2");
+    expect(remaining[0]?.id).toBe("chunk-2");
 
     db.close();
   });
@@ -430,10 +430,10 @@ describe("identifyConsolidationCandidates", () => {
     const candidates = identifyConsolidationCandidates(db);
 
     expect(candidates.length).toBeGreaterThan(0);
-    const candidate = candidates[0]!;
-    expect(candidate.primaryId).toBe("primary"); // Highest importance
-    expect(candidate.relatedIds.length).toBeGreaterThanOrEqual(1);
-    expect(candidate.avgSimilarity).toBeGreaterThan(0.85);
+    const candidate = candidates[0];
+    expect(candidate?.primaryId).toBe("primary"); // Highest importance
+    expect(candidate?.relatedIds.length).toBeGreaterThanOrEqual(1);
+    expect(candidate?.avgSimilarity).toBeGreaterThan(0.85);
 
     db.close();
   });
@@ -616,10 +616,10 @@ describe("prepareForSummarization", () => {
     const prepared = prepareForSummarization(candidates);
 
     expect(prepared.length).toBe(1);
-    expect(prepared[0]!.primaryId).toBe("primary");
-    expect(prepared[0]!.relatedIds).toEqual(["related-1", "related-2"]);
-    expect(prepared[0]!.textToSummarize).toContain("Content from primary");
-    expect(prepared[0]!.truncated).toBe(false);
+    expect(prepared[0]?.primaryId).toBe("primary");
+    expect(prepared[0]?.relatedIds).toEqual(["related-1", "related-2"]);
+    expect(prepared[0]?.textToSummarize).toContain("Content from primary");
+    expect(prepared[0]?.truncated).toBe(false);
   });
 
   it("truncates long text", () => {
@@ -635,9 +635,9 @@ describe("prepareForSummarization", () => {
 
     const prepared = prepareForSummarization(candidates, { maxLength: 1000 });
 
-    expect(prepared[0]!.textToSummarize.length).toBeLessThanOrEqual(1100); // Some buffer for truncation message
-    expect(prepared[0]!.truncated).toBe(true);
-    expect(prepared[0]!.textToSummarize).toContain("[Content truncated...]");
+    expect(prepared[0]?.textToSummarize.length).toBeLessThanOrEqual(1100); // Some buffer for truncation message
+    expect(prepared[0]?.truncated).toBe(true);
+    expect(prepared[0]?.textToSummarize).toContain("[Content truncated...]");
   });
 });
 
