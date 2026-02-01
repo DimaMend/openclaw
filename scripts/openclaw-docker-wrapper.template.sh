@@ -16,6 +16,7 @@ export OPENCLAW_USE_DOCKER="${OPENCLAW_USE_DOCKER:-__USE_DOCKER_DEFAULT__}"
 
 openclaw() {
   local use_docker="$OPENCLAW_USE_DOCKER"
+  local explicit_no_docker=0
   local args=()
 
   while [[ $# -gt 0 ]]; do
@@ -26,6 +27,7 @@ openclaw() {
         ;;
       --no-docker)
         use_docker=0
+        explicit_no_docker=1
         shift
         ;;
       *)
@@ -37,8 +39,12 @@ openclaw() {
 
   if [[ "$use_docker" == "1" ]]; then
     docker compose -f "$OPENCLAW_DOCKER_PROJECT_DIR/docker-compose.yml" run --rm openclaw-cli "${args[@]}"
-  elif command -v openclaw >/dev/null 2>&1; then
+  elif type -P openclaw >/dev/null 2>&1; then
+    # type -P finds only binaries, not shell functions
     command openclaw "${args[@]}"
+  elif [[ "$explicit_no_docker" == "1" ]]; then
+    echo "error: --no-docker specified but native openclaw CLI not found in PATH" >&2
+    return 1
   else
     # Native not found, fall back to Docker
     docker compose -f "$OPENCLAW_DOCKER_PROJECT_DIR/docker-compose.yml" run --rm openclaw-cli "${args[@]}"
