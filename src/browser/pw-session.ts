@@ -195,7 +195,6 @@ async function configureDownloadBehavior(page: Page): Promise<void> {
   if (downloadBehaviorConfigured.has(page)) {
     return;
   }
-  downloadBehaviorConfigured.add(page);
 
   try {
     const session = await page.context().newCDPSession(page);
@@ -210,6 +209,9 @@ async function configureDownloadBehavior(page: Page): Promise<void> {
         downloadPath: CDP_DOWNLOAD_PATH,
         eventsEnabled: true,
       });
+
+      // Only mark as configured after successful setup
+      downloadBehaviorConfigured.add(page);
     } finally {
       await session.detach().catch(() => {});
     }
