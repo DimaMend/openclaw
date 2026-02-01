@@ -55,9 +55,7 @@ describe("PolicyEngine", () => {
 
     it("should match by category", () => {
       const engine = new PolicyEngine({
-        rules: [
-          rule({ id: "no-network", decision: "warn", match: { categories: ["network"] } }),
-        ],
+        rules: [rule({ id: "no-network", decision: "warn", match: { categories: ["network"] } })],
       });
       const result = engine.evaluate("WebFetch", "network", "https://example.com");
       expect(result.decision).toBe("warn");
@@ -116,7 +114,12 @@ describe("PolicyEngine", () => {
       const engine = new PolicyEngine({
         rules: [
           rule({ id: "allow-read", priority: 1, decision: "allow", match: { tools: ["Read"] } }),
-          rule({ id: "deny-all-reads", priority: 10, decision: "deny", match: { categories: ["file_read"] } }),
+          rule({
+            id: "deny-all-reads",
+            priority: 10,
+            decision: "deny",
+            match: { categories: ["file_read"] },
+          }),
         ],
       });
       // Read matches both, but allow-read has higher priority
@@ -127,9 +130,7 @@ describe("PolicyEngine", () => {
 
     it("should include reason from matched rule", () => {
       const engine = new PolicyEngine({
-        rules: [
-          rule({ id: "x", reason: "Blocked for safety", match: { tools: ["Bash"] } }),
-        ],
+        rules: [rule({ id: "x", reason: "Blocked for safety", match: { tools: ["Bash"] } })],
       });
       expect(engine.evaluate("Bash", "command", "ls").reason).toBe("Blocked for safety");
     });

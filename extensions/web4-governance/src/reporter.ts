@@ -83,7 +83,10 @@ export class AuditReporter {
   }
 
   private computeToolStats(): ToolStats[] {
-    const map = new Map<string, { success: number; error: number; blocked: number; durations: number[] }>();
+    const map = new Map<
+      string,
+      { success: number; error: number; blocked: number; durations: number[] }
+    >();
 
     for (const r of this.records) {
       let entry = map.get(r.tool);

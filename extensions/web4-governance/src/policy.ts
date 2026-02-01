@@ -7,12 +7,7 @@
  */
 
 import type { ToolCategory } from "./r6.js";
-import type {
-  PolicyConfig,
-  PolicyDecision,
-  PolicyEvaluation,
-  PolicyRule,
-} from "./policy-types.js";
+import type { PolicyConfig, PolicyDecision, PolicyEvaluation, PolicyRule } from "./policy-types.js";
 import { matchesRule } from "./matchers.js";
 import type { RateLimiter } from "./rate-limiter.js";
 
@@ -38,11 +33,7 @@ export class PolicyEngine {
   }
 
   /** Evaluate a tool call against all rules. First match wins. */
-  evaluate(
-    toolName: string,
-    category: ToolCategory,
-    target: string | undefined,
-  ): PolicyEvaluation {
+  evaluate(toolName: string, category: ToolCategory, target: string | undefined): PolicyEvaluation {
     for (const rule of this.rules) {
       // Check standard matchers
       const matchesStandard = matchesRule(toolName, category, target, rule.match);

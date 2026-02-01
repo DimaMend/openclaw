@@ -96,7 +96,10 @@ export function hashOutput(output: unknown): string {
   return createHash("sha256").update(str).digest("hex").slice(0, 16);
 }
 
-export function extractTarget(toolName: string, params: Record<string, unknown>): string | undefined {
+export function extractTarget(
+  toolName: string,
+  params: Record<string, unknown>,
+): string | undefined {
   if (params.file_path) return String(params.file_path);
   if (params.path) return String(params.path);
   if (params.pattern) return String(params.pattern);

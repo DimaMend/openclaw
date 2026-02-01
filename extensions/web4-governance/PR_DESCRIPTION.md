@@ -15,19 +15,23 @@ You're flying blind.
 Governance extension using your existing `before_tool_call` / `after_tool_call` hooks. Zero core changes.
 
 **What you get:**
+
 - Audit trail with structured records (tool, target, result, timing)
 - Hash-linked chain (SHA-256, tamper-evident)
 - Policy engine: allow/deny/warn before execution
 - CLI: `moltbot audit summary`, `moltbot policy test Bash "rm -rf /"`
 
 **Example policy:**
+
 ```json
 {
-  "rules": [{
-    "id": "deny-destructive",
-    "decision": "deny",
-    "match": { "tools": ["Bash"], "targetPatterns": ["rm\\s+-rf"] }
-  }]
+  "rules": [
+    {
+      "id": "deny-destructive",
+      "decision": "deny",
+      "match": { "tools": ["Bash"], "targetPatterns": ["rm\\s+-rf"] }
+    }
+  ]
 }
 ```
 

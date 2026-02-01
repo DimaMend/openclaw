@@ -13,7 +13,15 @@ function cleanup() {
 }
 
 function makeR6(actionIndex: number, toolName = "Read") {
-  return createR6Request("test-session", "agent-1", toolName, { file_path: "/foo" }, actionIndex, undefined, "standard");
+  return createR6Request(
+    "test-session",
+    "agent-1",
+    toolName,
+    { file_path: "/foo" },
+    actionIndex,
+    undefined,
+    "standard",
+  );
 }
 
 describe("AuditChain", () => {

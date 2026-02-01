@@ -131,7 +131,9 @@ export class AuditChain {
       try {
         const record: AuditRecord = JSON.parse(lines[i]!);
         if (record.provenance.prevRecordHash !== prevHash) {
-          errors.push(`Record ${i}: hash mismatch (expected ${prevHash}, got ${record.provenance.prevRecordHash})`);
+          errors.push(
+            `Record ${i}: hash mismatch (expected ${prevHash}, got ${record.provenance.prevRecordHash})`,
+          );
         }
         prevHash = createHash("sha256").update(lines[i]!).digest("hex").slice(0, 16);
       } catch (e) {

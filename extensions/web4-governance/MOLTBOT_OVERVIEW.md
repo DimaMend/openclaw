@@ -69,15 +69,15 @@ Source: `src/gateway/`
 
 Each channel translates between Moltbot's internal format and the platform's API:
 
-| Channel | Library | Location |
-|---------|---------|----------|
-| WhatsApp | Baileys | `src/whatsapp/` |
-| Telegram | grammY | `src/telegram/` |
-| Discord | discord.js | `src/discord/` |
-| Slack | Bolt | `src/slack/` |
-| Signal | signal-cli | `src/signal/` |
-| iMessage | imsg | `src/imessage/` |
-| Matrix | (extension) | `extensions/matrix/` |
+| Channel  | Library     | Location              |
+| -------- | ----------- | --------------------- |
+| WhatsApp | Baileys     | `src/whatsapp/`       |
+| Telegram | grammY      | `src/telegram/`       |
+| Discord  | discord.js  | `src/discord/`        |
+| Slack    | Bolt        | `src/slack/`          |
+| Signal   | signal-cli  | `src/signal/`         |
+| iMessage | imsg        | `src/imessage/`       |
+| Matrix   | (extension) | `extensions/matrix/`  |
 | MS Teams | (extension) | `extensions/msteams/` |
 
 Channels implement a standard interface (`ChannelPlugin`) with adapters for
@@ -99,6 +99,7 @@ When a message arrives, the agent processes it:
 ```
 
 Key components:
+
 - `src/agents/pi-tools.ts` — Tool execution pipeline
 - `src/providers/` — LLM provider integrations (Anthropic, OpenAI, etc.)
 - `src/sessions/` — Conversation state management
@@ -109,14 +110,14 @@ Key components:
 
 The agent can execute **tools** — this is where it becomes powerful (and risky):
 
-| Tool | Capability |
-|------|------------|
-| Browser | Navigate, click, screenshot web pages |
-| Canvas | Visual workspace the agent can draw on |
-| Bash | Run shell commands (sandboxed) |
-| Files | Read/write files on your system |
-| Cron | Schedule tasks |
-| Node actions | Control macOS/iOS/Android devices |
+| Tool         | Capability                             |
+| ------------ | -------------------------------------- |
+| Browser      | Navigate, click, screenshot web pages  |
+| Canvas       | Visual workspace the agent can draw on |
+| Bash         | Run shell commands (sandboxed)         |
+| Files        | Read/write files on your system        |
+| Cron         | Schedule tasks                         |
+| Node actions | Control macOS/iOS/Android devices      |
 
 Tools go through a hook system that extensions can intercept.
 
@@ -138,6 +139,7 @@ extensions/
 ```
 
 Extensions can:
+
 - Add new channels (messaging platforms)
 - Add new tools
 - **Hook into tool execution** (before/after)
@@ -203,6 +205,7 @@ The extension hooks into tool execution to provide:
 ### Why This Matters
 
 Without governance, an agent can:
+
 - Delete files (`rm -rf`)
 - Read secrets (`.env`, credentials)
 - Make network requests (exfiltration)
@@ -210,6 +213,7 @@ Without governance, an agent can:
 - Modify system configuration
 
 The web4-governance extension provides:
+
 1. **Visibility** — Every action is logged in a tamper-evident audit chain
 2. **Policy** — Configurable rules to allow/deny/warn on specific actions
 3. **Identity** — Session-bound tokens for attribution
@@ -221,14 +225,15 @@ The web4-governance extension provides:
 
 This extension is part of a broader governance architecture:
 
-| Tier | Implementation | Capabilities |
-|------|----------------|--------------|
-| **1 — Observational** | This extension | R6 audit, hash chain, soft LCT |
-| **1.5 — Policy** | This extension | Rule-based allow/deny/warn |
-| **2 — Authorization** | Hardbound (planned) | T3 trust tensors, ATP economics, hardware LCT |
-| **3 — Training** | HRM/SAGE (research) | Meta-cognitive training with trust trajectories |
+| Tier                  | Implementation      | Capabilities                                    |
+| --------------------- | ------------------- | ----------------------------------------------- |
+| **1 — Observational** | This extension      | R6 audit, hash chain, soft LCT                  |
+| **1.5 — Policy**      | This extension      | Rule-based allow/deny/warn                      |
+| **2 — Authorization** | Hardbound (planned) | T3 trust tensors, ATP economics, hardware LCT   |
+| **3 — Training**      | HRM/SAGE (research) | Meta-cognitive training with trust trajectories |
 
 The same R6 framework runs in:
+
 - **Moltbot** — This extension
 - **Claude Code** — `web4/claude-code-plugin/`
 - **Hardbound** — Full Rust implementation (Tier 2)
@@ -240,6 +245,7 @@ The same R6 framework runs in:
 Moltbot is a powerful agent runtime. Power requires accountability.
 
 The web4-governance extension answers:
+
 - **What did the agent do?** — R6 audit records
 - **Why did it do that?** — Request context and reasoning
 - **Should it have been allowed?** — Policy evaluation
@@ -258,4 +264,4 @@ This is governance as infrastructure, not governance as afterthought.
 
 ---
 
-*"An agent without governance is just automation with plausible deniability."*
+_"An agent without governance is just automation with plausible deniability."_

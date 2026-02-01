@@ -25,4 +25,3 @@ You get: searchable audit trail, tamper-evident hash chain, configurable policy 
 - Focus on general scaling problem, not specific projects
 - Shows it uses THEIR hooks (not invasive)
 - "Already running" = proven, not theoretical
-

@@ -25,14 +25,54 @@ function makeRecord(overrides: Partial<AuditRecord> = {}): AuditRecord {
 
 function makeSyntheticRecords(): AuditRecord[] {
   return [
-    makeRecord({ tool: "Read", category: "file_read", result: { status: "success", durationMs: 10 }, timestamp: "2026-01-27T10:00:00.000Z" }),
-    makeRecord({ tool: "Read", category: "file_read", result: { status: "success", durationMs: 20 }, timestamp: "2026-01-27T10:00:30.000Z" }),
-    makeRecord({ tool: "Bash", category: "command", result: { status: "success", durationMs: 50 }, timestamp: "2026-01-27T10:01:00.000Z" }),
-    makeRecord({ tool: "Bash", category: "command", result: { status: "error", errorMessage: "exit 1", durationMs: 5 }, timestamp: "2026-01-27T10:01:30.000Z" }),
-    makeRecord({ tool: "WebFetch", category: "network", result: { status: "blocked" }, timestamp: "2026-01-27T10:02:00.000Z" }),
-    makeRecord({ tool: "Write", category: "file_write", result: { status: "success", durationMs: 15 }, timestamp: "2026-01-27T10:02:30.000Z" }),
-    makeRecord({ tool: "Bash", category: "command", result: { status: "error", errorMessage: "exit 1" }, timestamp: "2026-01-27T10:03:00.000Z" }),
-    makeRecord({ tool: "Bash", category: "command", result: { status: "error", errorMessage: "timeout" }, timestamp: "2026-01-27T10:03:30.000Z" }),
+    makeRecord({
+      tool: "Read",
+      category: "file_read",
+      result: { status: "success", durationMs: 10 },
+      timestamp: "2026-01-27T10:00:00.000Z",
+    }),
+    makeRecord({
+      tool: "Read",
+      category: "file_read",
+      result: { status: "success", durationMs: 20 },
+      timestamp: "2026-01-27T10:00:30.000Z",
+    }),
+    makeRecord({
+      tool: "Bash",
+      category: "command",
+      result: { status: "success", durationMs: 50 },
+      timestamp: "2026-01-27T10:01:00.000Z",
+    }),
+    makeRecord({
+      tool: "Bash",
+      category: "command",
+      result: { status: "error", errorMessage: "exit 1", durationMs: 5 },
+      timestamp: "2026-01-27T10:01:30.000Z",
+    }),
+    makeRecord({
+      tool: "WebFetch",
+      category: "network",
+      result: { status: "blocked" },
+      timestamp: "2026-01-27T10:02:00.000Z",
+    }),
+    makeRecord({
+      tool: "Write",
+      category: "file_write",
+      result: { status: "success", durationMs: 15 },
+      timestamp: "2026-01-27T10:02:30.000Z",
+    }),
+    makeRecord({
+      tool: "Bash",
+      category: "command",
+      result: { status: "error", errorMessage: "exit 1" },
+      timestamp: "2026-01-27T10:03:00.000Z",
+    }),
+    makeRecord({
+      tool: "Bash",
+      category: "command",
+      result: { status: "error", errorMessage: "timeout" },
+      timestamp: "2026-01-27T10:03:30.000Z",
+    }),
   ];
 }
 
