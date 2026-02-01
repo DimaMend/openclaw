@@ -147,7 +147,11 @@ vi.mock("../pi-embedded-helpers.js", async () => {
         return false;
       }
       const lower = msg.toLowerCase();
-      return lower.includes("overloaded_error") || lower.includes("503");
+      return (
+        lower.includes("overloaded_error") ||
+        lower.includes("503") ||
+        lower.includes("service unavailable")
+      );
     },
   };
 });
@@ -326,9 +330,7 @@ describe("overflow compaction in run loop", () => {
   it("returns error if compaction fails on 503/overloaded error", async () => {
     const overloadedError = new Error("503 Service Unavailable: overloaded_error");
 
-    mockedRunEmbeddedAttempt.mockResolvedValue(
-      makeAttemptResult({ promptError: overloadedError }),
-    );
+    mockedRunEmbeddedAttempt.mockResolvedValue(makeAttemptResult({ promptError: overloadedError }));
 
     mockedCompactDirect.mockResolvedValueOnce({
       ok: false,
