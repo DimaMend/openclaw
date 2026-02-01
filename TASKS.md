@@ -9,7 +9,10 @@
     - [x] Convert `src/cli/program/command-registry.ts` to use lazy imports
     - [x] Isolate `status` command dependencies
 - [x] Optimize build-time penalties <!-- id: 2 -->
-- [ ] Streamline subcommand registration <!-- id: 3 -->
-- [ ] Reduce global registry imports <!-- id: 4 -->
+- [x] Streamline subcommand registration <!-- id: 3 -->
+- [x] Reduce global registry imports <!-- id: 4 -->
 - [x] Test and validate improvements <!-- id: 5 -->
-- [ ] Iterate on instrumentation <!-- id: 6 -->
+- [x] Iterate on instrumentation <!-- id: 6 -->
+    - [x] Add boot timing logs behind `OPENCLAW_DEBUG_BOOT`
+    - [x] Measure cost of `registerProgramCommands`
+    - [x] Measure cost of plugin loading in fallback path

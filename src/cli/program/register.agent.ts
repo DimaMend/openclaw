@@ -6,7 +6,6 @@ import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
 import { hasExplicitOptions } from "../command-options.js";
 import { formatHelpExamples } from "../help-format.js";
-import { createDefaultDeps } from "../deps.js";
 import { runCommandWithRuntime } from "../cli-utils.js";
 import { collectOption } from "./helpers.js";
 
@@ -67,6 +66,7 @@ ${theme.muted("Docs:")} ${formatDocsLink("/cli/agent", "docs.openclaw.ai/cli/age
       const verboseLevel = typeof opts.verbose === "string" ? opts.verbose.toLowerCase() : "";
       setVerbose(verboseLevel === "on");
       // Build default deps (keeps parity with other commands; future-proofing).
+      const { createDefaultDeps } = await import("../deps.js");
       const deps = createDefaultDeps();
       await runCommandWithRuntime(defaultRuntime, async () => {
         const { agentCliCommand } = await import("../../commands/agent-via-gateway.js");

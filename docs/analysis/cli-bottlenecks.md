@@ -22,13 +22,42 @@ A targeted exploration of the startup path revealed specific culprits:
 ## Progress
 
 - [x] **Benchmark Baseline**: Established baseline latency for `version` (3.26s), `help` (5.10s), and `status` (9.48s). See `benchmarks.md`.
-- [x] **Import Analysis**: Identified `src/cli/program/command-registry.ts` as the root cause of eager loading, specifically the top-level imports of `registerStatusHealthSessionsCommands` which pulls in the plugin system.
+- [x] **Import Analysis**: Identified `src/cli/program/command-registry.ts` as the root cause of eager loading.
 - [x] **Lazy Registry Refactor**: Decouple routing metadata from command implementation imports (Completed).
 - [x] **Async Program Build**: Propagate async requirements up to `buildProgram()` to support lazy loading (Completed).
 - [x] **Build Optimization**: Address the `pnpm tsgo` overhead in `scripts/run-node.mjs` (Optimized file scanning and added direct binary invocation).
-- [x] **Registry Import Fix**: Removed eager import of `memory-cli` in `command-registry.ts` which was invalidating the lazy loading strategy (Completed).
-- [x] **Verification**: Validated significant performance improvements: `--version` (-0.7s), `help` (-1.5s, 30% faster), `status` (-3.7s, 40% faster).
+- [x] **Registry Import Fix**: Removed eager import of `memory-cli` in `command-registry.ts` (Completed).
+- [x] **Deep Dependency Fix (Iteration 2)**: Removed eager import of `deps.ts` (channel stack) from `register.agent.ts` and `register.message.ts`.
+- [x] **Verification**: Validated significant performance improvements: `--version` reduced to 2.14s (was 2.45s), RSS reduced to ~308MB.
 - [x] **Regression Script**: Added `scripts/benchmark-cli-load.sh` to automate performance testing.
+
+## Iteration 2: Deep Dependency Analysis (2026-02-01)
+
+Despite previous optimizations, `openclaw --version` remained slower than expected (~2.45s).
+
+### Findings
+1.  **Hidden Eager Imports**: While the *registry* was lazy (dynamic imports inside `register()` functions), the **registration modules themselves** (`src/cli/program/register.*.ts`) were still being imported sequentially by `registerProgramCommands`.
+2.  **The Culprit**: `src/cli/program/register.agent.ts` and `src/cli/program/message/helpers.ts` imported `createDefaultDeps` from `src/cli/deps.ts` at the top level.
+3.  **The Impact**: `src/cli/deps.ts` imports the entire channel delivery stack (`channels/web`, `discord/send`, `slack/send`, etc.). This meant that simply *building* the commander program (to show help or version) triggered the loading of all channel libraries (Discord.js, Puppeteer config, etc.).
+
+### Fix
+Refactored `register.agent.ts` and `src/cli/program/message/helpers.ts` to use dynamic imports for `deps.ts` only within the command's `.action()` handler.
+
+```typescript
+// Before (eager)
+import { createDefaultDeps } from "../deps.js";
+// ...
+const deps = createDefaultDeps();
+
+// After (lazy)
+// ...
+const { createDefaultDeps } = await import("../deps.js");
+const deps = createDefaultDeps();
+```
+
+### Results
+- **Time**: `--version` dropped from 2.45s to 2.14s (~13% improvement).
+- **Memory**: RSS dropped from 380MB to 308MB (~19% reduction), confirming significantly fewer modules are loaded.
 
 ## Architecture: Lazy Command Registry
 To address the eager import issues, we will refactor `src/cli/program/command-registry.ts` to separate **routing metadata** from **command registration logic**.

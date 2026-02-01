@@ -199,7 +199,11 @@ export async function registerProgramCommands(
   ctx: ProgramContext,
   argv: string[] = process.argv,
 ) {
+  const debugBoot = process.env.OPENCLAW_DEBUG_BOOT === "1";
   for (const entry of commandRegistry) {
+    if (debugBoot) {
+      console.timeLog("boot", `registering ${entry.id}`);
+    }
     await entry.register({ program, ctx, argv });
   }
 }

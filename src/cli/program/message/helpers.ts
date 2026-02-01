@@ -2,7 +2,6 @@ import type { Command } from "commander";
 import { danger, setVerbose } from "../../../globals.js";
 import { CHANNEL_TARGET_DESCRIPTION } from "../../../infra/outbound/channel-target.js";
 import { defaultRuntime } from "../../../runtime.js";
-import { createDefaultDeps } from "../../deps.js";
 import { runCommandWithRuntime } from "../../cli-utils.js";
 import { ensurePluginRegistryLoaded } from "../../plugin-registry.js";
 
@@ -33,6 +32,7 @@ export function createMessageCliHelpers(
   const runMessageAction = async (action: string, opts: Record<string, unknown>) => {
     setVerbose(Boolean(opts.verbose));
     ensurePluginRegistryLoaded();
+    const { createDefaultDeps } = await import("../../deps.js");
     const deps = createDefaultDeps();
     await runCommandWithRuntime(
       defaultRuntime,

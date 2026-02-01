@@ -7,19 +7,9 @@ import {
 } from "@clack/prompts";
 
 import { stylePromptHint, stylePromptMessage, stylePromptTitle } from "../terminal/prompt-style.js";
+import { CONFIGURE_WIZARD_SECTIONS, type WizardSection } from "./configure.constants.js";
 
-export const CONFIGURE_WIZARD_SECTIONS = [
-  "workspace",
-  "model",
-  "web",
-  "gateway",
-  "daemon",
-  "channels",
-  "skills",
-  "health",
-] as const;
-
-export type WizardSection = (typeof CONFIGURE_WIZARD_SECTIONS)[number];
+export { CONFIGURE_WIZARD_SECTIONS, type WizardSection };
 
 export type ChannelsWizardMode = "configure" | "remove";
 
