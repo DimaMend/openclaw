@@ -106,6 +106,8 @@ export type TelegramAccountConfig = {
   /** Network transport overrides for Telegram. */
   network?: TelegramNetworkConfig;
   proxy?: string;
+  /** Local Telegram Bot API server URL (e.g., http://localhost:8081). */
+  localApiServer?: string;
   webhookUrl?: string;
   webhookSecret?: string;
   webhookPath?: string;
