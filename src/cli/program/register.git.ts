@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { gitStatusCommand } from "../../commands/git.js";
 import { defaultRuntime } from "../../runtime.js";
+import { defaultRuntime } from "../../runtime.js";
 import { theme } from "../../terminal/theme.js";
 
 export function registerGitCommand(program: Command) {
