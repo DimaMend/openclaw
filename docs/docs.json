@@ -963,6 +963,7 @@
           "gateway/gateway-lock",
           "environment",
           "gateway/configuration",
+          "gateway/guardrails",
           "gateway/multiple-gateways",
           "gateway/configuration-examples",
           "gateway/authentication",
