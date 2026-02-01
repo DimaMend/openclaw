@@ -17,10 +17,7 @@ import {
   migratePasswordToHashed,
 } from "../src/gateway/auth-password.ts";
 
-import {
-  authorizeGatewayConnect,
-  resolveGatewayAuth,
-} from "../src/gateway/auth.ts";
+import { authorizeGatewayConnect, resolveGatewayAuth } from "../src/gateway/auth.ts";
 
 console.log("\n🔒 OpenClaw Security Test Suite\n");
 console.log("═".repeat(60));
@@ -51,9 +48,7 @@ void test("Rate Limiting - blocks after 5 failures", () => {
   assert.ok(result.reason?.includes("Too many failed"));
   assert.ok(result.remainingSeconds > 0);
 
-  console.log(
-    `✅ IP blocked after 5 failures (${result.remainingSeconds}s remaining)`,
-  );
+  console.log(`✅ IP blocked after 5 failures (${result.remainingSeconds}s remaining)`);
 });
 
 void test("Rate Limiting - resets after success", () => {
@@ -98,11 +93,7 @@ void test("Password Hashing - generates valid hash", async () => {
   const hashed = await hashPassword(plain);
 
   assert.ok(hashed.includes(":"), "Hash should contain separator");
-  assert.strictEqual(
-    hashed.split(":").length,
-    2,
-    "Hash should have salt:key format",
-  );
+  assert.strictEqual(hashed.split(":").length, 2, "Hash should have salt:key format");
   assert.notStrictEqual(hashed, plain, "Hash should differ from plaintext");
 
   console.log("✅ Password hashing generates valid hash");
@@ -151,11 +142,7 @@ void test("Password Hashing - migration is idempotent", async () => {
   const hashed1 = await migratePasswordToHashed(plain);
   const hashed2 = await migratePasswordToHashed(hashed1);
 
-  assert.strictEqual(
-    hashed1,
-    hashed2,
-    "Should not re-hash already hashed password",
-  );
+  assert.strictEqual(hashed1, hashed2, "Should not re-hash already hashed password");
   assert.strictEqual(isHashedPassword(hashed1), true);
 
   console.log("✅ Password migration is idempotent");
@@ -198,13 +185,9 @@ void test("Auth Integration - rate limiting blocks auth attempts", async () => {
   });
 
   assert.strictEqual(result.ok, false);
-  assert.ok(
-    result.reason?.includes("Too many") || result.reason === "rate_limited",
-  );
+  assert.ok(result.reason?.includes("Too many") || result.reason === "rate_limited");
 
-  console.log(
-    "✅ Rate limiting blocks auth attempts (even with correct credentials)",
-  );
+  console.log("✅ Rate limiting blocks auth attempts (even with correct credentials)");
 });
 
 void test("Auth Integration - hashed password authentication", async () => {
@@ -317,9 +300,7 @@ void test("Performance - rate limit check is fast", () => {
   const opsPerSec = Math.round(iterations / (duration / 1000));
 
   assert.ok(duration < 1000, "10k checks should take < 1 second");
-  console.log(
-    `✅ Rate limit performance: ${opsPerSec.toLocaleString()} ops/sec`,
-  );
+  console.log(`✅ Rate limit performance: ${opsPerSec.toLocaleString()} ops/sec`);
 });
 
 void test("Performance - password hashing is appropriately slow", async () => {
