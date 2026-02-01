@@ -15,6 +15,10 @@ import {
   validateSkillsStatusParams,
   validateSkillsUpdateParams,
 } from "../protocol/index.js";
+import {
+  scanSkillsForSecurity,
+  generateAttestation,
+} from "../../security/index.js";
 
 function listWorkspaceDirs(cfg: OpenClawConfig): string[] {
   const dirs = new Set<string>();
@@ -194,5 +198,66 @@ export const skillsHandlers: GatewayRequestHandlers = {
     };
     await writeConfigFile(nextConfig);
     respond(true, { ok: true, skillKey: p.skillKey, config: current }, undefined);
+  },
+  "skills.attestation": async ({ params, respond }) => {
+    const p = params as {
+      agentId?: string;
+      includeDetails?: boolean;
+    };
+
+    const cfg = loadConfig();
+    const defaultAgentId = resolveDefaultAgentId(cfg);
+    const agentId = p.agentId || defaultAgentId;
+    const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
+
+    // Load all skills for this agent
+    const entries = loadWorkspaceSkillEntries(workspaceDir, { config: cfg });
+
+    if (entries.length === 0) {
+      respond(true, {
+        version: "1.0.0",
+        timestamp: new Date().toISOString(),
+        agentId,
+        skills: [],
+        overallRiskScore: 0,
+        overallRiskLevel: "SAFE",
+        signature: "",
+        message: "No skills loaded",
+      }, undefined);
+      return;
+    }
+
+    try {
+      // Scan all skills for security issues
+      const report = await scanSkillsForSecurity(entries);
+
+      // Generate signed attestation
+      const attestation = generateAttestation(report, {
+        agentId,
+        secretKey: process.env.OPENCLAW_ATTESTATION_SECRET,
+      });
+
+      // Optionally include full scan details
+      const result = p.includeDetails
+        ? {
+            ...attestation,
+            details: report.skills.map((s) => ({
+              name: s.name,
+              findings: s.scanResult.findings,
+              permissions: s.scanResult.permissions,
+              summary: s.scanResult.summary,
+            })),
+          }
+        : attestation;
+
+      respond(true, result, undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      respond(
+        false,
+        undefined,
+        errorShape(ErrorCodes.UNAVAILABLE, `Security scan failed: ${message}`),
+      );
+    }
   },
 };

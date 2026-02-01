@@ -1,8 +1,14 @@
 import type { Command } from "commander";
+import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { loadWorkspaceSkillEntries } from "../agents/skills.js";
 import { loadConfig } from "../config/config.js";
 import { defaultRuntime } from "../runtime.js";
 import { runSecurityAudit } from "../security/audit.js";
 import { fixSecurityFootguns } from "../security/fix.js";
+import {
+  scanSkillsForSecurity,
+  generateAttestation,
+} from "../security/index.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { isRich, theme } from "../terminal/theme.js";
 import { shortenHomeInString, shortenHomePath } from "../utils.js";
@@ -152,6 +158,116 @@ export function registerSecurityCli(program: Command) {
       render("critical");
       render("warn");
       render("info");
+
+      defaultRuntime.log(lines.join("\n"));
+    });
+
+  security
+    .command("scan")
+    .description("Scan loaded skills for security vulnerabilities")
+    .option("--json", "Print JSON output", false)
+    .option("--details", "Include full findings details", false)
+    .option("--attest", "Generate signed attestation", false)
+    .action(async (opts: { json?: boolean; details?: boolean; attest?: boolean }) => {
+      const cfg = loadConfig();
+      const agentId = resolveDefaultAgentId(cfg);
+      const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
+      const entries = loadWorkspaceSkillEntries(workspaceDir, { config: cfg });
+
+      if (entries.length === 0) {
+        if (opts.json) {
+          defaultRuntime.log(JSON.stringify({ skills: [], message: "No skills loaded" }, null, 2));
+        } else {
+          defaultRuntime.log(theme.muted("No skills loaded"));
+        }
+        return;
+      }
+
+      defaultRuntime.log(theme.muted(`Scanning ${entries.length} skill(s)...`));
+
+      const report = await scanSkillsForSecurity(entries);
+
+      if (opts.attest) {
+        const attestation = generateAttestation(report, {
+          agentId,
+          secretKey: process.env.OPENCLAW_ATTESTATION_SECRET,
+        });
+        defaultRuntime.log(JSON.stringify(attestation, null, 2));
+        return;
+      }
+
+      if (opts.json) {
+        const output = opts.details
+          ? report
+          : {
+              skills: report.skills.map((s) => ({
+                name: s.name,
+                riskScore: s.scanResult.riskScore,
+                riskLevel: s.scanResult.riskLevel,
+                findingsCount: s.scanResult.findings.length,
+              })),
+              overallRiskScore: report.overallRiskScore,
+              overallRiskLevel: report.overallRiskLevel,
+            };
+        defaultRuntime.log(JSON.stringify(output, null, 2));
+        return;
+      }
+
+      // Pretty print
+      const rich = isRich();
+      const lines: string[] = [];
+      lines.push(theme.heading("Skill Security Scan"));
+      lines.push("");
+
+      for (const skill of report.skills) {
+        const result = skill.scanResult;
+        const riskColor =
+          result.riskLevel === "CRITICAL" || result.riskLevel === "HIGH"
+            ? theme.error
+            : result.riskLevel === "MEDIUM"
+              ? theme.warn
+              : theme.success;
+
+        lines.push(
+          `${theme.command(skill.name)} ${riskColor(`[${result.riskLevel}]`)} Score: ${result.riskScore}/100`,
+        );
+
+        if (opts.details && result.findings.length > 0) {
+          for (const finding of result.findings) {
+            const sevColor =
+              finding.severity === "CRITICAL"
+                ? theme.error
+                : finding.severity === "HIGH"
+                  ? theme.error
+                  : finding.severity === "MEDIUM"
+                    ? theme.warn
+                    : theme.muted;
+            lines.push(`  ${sevColor(`[${finding.severity}]`)} ${finding.title}`);
+            lines.push(`    ${theme.muted(finding.file)}:${finding.line}`);
+          }
+        } else if (result.findings.length > 0) {
+          lines.push(
+            `  ${theme.muted(`${result.summary.critical} critical, ${result.summary.high} high, ${result.summary.medium} medium`)}`,
+          );
+        }
+      }
+
+      lines.push("");
+      const overallColor =
+        report.overallRiskLevel === "CRITICAL" || report.overallRiskLevel === "HIGH"
+          ? theme.error
+          : report.overallRiskLevel === "MEDIUM"
+            ? theme.warn
+            : theme.success;
+      lines.push(
+        `${theme.heading("Overall:")} ${overallColor(`[${report.overallRiskLevel}]`)} Score: ${report.overallRiskScore}/100`,
+      );
+
+      if (report.overallRiskLevel !== "SAFE") {
+        lines.push("");
+        lines.push(theme.muted("Run with --details to see all findings"));
+        lines.push(theme.muted("Run with --attest to generate signed attestation"));
+      }
 
       defaultRuntime.log(lines.join("\n"));
     });
