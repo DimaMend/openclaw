@@ -165,8 +165,7 @@ function handlePaste(e: ClipboardEvent, props: ChatProps) {
 function handleDrop(e: DragEvent, props: ChatProps) {
   if (!props.onAttachmentsChange) return;
   const transfer = e.dataTransfer;
-  const hasFiles =
-    Boolean(transfer?.files && transfer.files.length > 0) || hasFileTransfer(e);
+  const hasFiles = Boolean(transfer?.files && transfer.files.length > 0) || hasFileTransfer(e);
   if (!hasFiles) return;
   e.preventDefault();
   e.stopPropagation();
