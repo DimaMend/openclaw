@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import { detectMime } from "../media/mime.js";
 import { type SavedMedia, saveMediaBuffer } from "../media/store.js";
-import { isLocalApiPath, normalizeApiRoot } from "./local-api.js";
+import { isLocalApiPath, normalizeApiRoot, validateLocalApiPath } from "./local-api.js";
 
 const TELEGRAM_API_BASE = "https://api.telegram.org";
 
@@ -34,6 +34,7 @@ export async function downloadTelegramFile(
   info: TelegramFileInfo,
   maxBytes?: number,
   apiBase?: string,
+  localApiDataDir?: string,
 ): Promise<SavedMedia> {
   if (!info.file_path) {
     throw new Error("file_path missing");
@@ -43,7 +44,11 @@ export async function downloadTelegramFile(
   let contentTypeHeader: string | null = null;
 
   if (isLocalApiPath(info.file_path)) {
-    array = await fs.readFile(info.file_path);
+    const validation = validateLocalApiPath(info.file_path, localApiDataDir);
+    if (!validation.valid) {
+      throw new Error(`Invalid local API path: ${validation.reason}`);
+    }
+    array = await fs.readFile(validation.resolved);
   } else {
     const baseUrl = normalizeApiRoot(apiBase) ?? TELEGRAM_API_BASE;
     const url = `${baseUrl}/file/bot${token}/${info.file_path}`;

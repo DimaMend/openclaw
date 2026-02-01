@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { TelegramAccountConfig } from "../config/types.js";
-import { resolveTelegramApiRoot, normalizeApiRoot, isLocalApiPath } from "./local-api.js";
+import {
+  resolveTelegramApiRoot,
+  normalizeApiRoot,
+  isLocalApiPath,
+  validateLocalApiPath,
+} from "./local-api.js";
 
 describe("local-api", () => {
   const originalEnv = process.env.TELEGRAM_LOCAL_API_SERVER;
@@ -156,6 +161,58 @@ describe("local-api", () => {
 
     it("returns false for empty string", () => {
       expect(isLocalApiPath("")).toBe(false);
+    });
+
+    it("returns true for Windows paths with forward slashes", () => {
+      expect(isLocalApiPath("C:/Users/bot/file.pdf")).toBe(true);
+      expect(isLocalApiPath("D:/data/documents/file.pdf")).toBe(true);
+    });
+  });
+
+  describe("validateLocalApiPath", () => {
+    it("returns valid for absolute paths without allowedDir", () => {
+      const result = validateLocalApiPath("/var/lib/telegram/file.pdf", undefined);
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.resolved).toContain("file.pdf");
+      }
+    });
+
+    it("returns invalid for non-absolute paths", () => {
+      const result = validateLocalApiPath("relative/path.pdf", undefined);
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.reason).toBe("Not an absolute path");
+      }
+    });
+
+    it("returns valid for paths within allowedDir", () => {
+      const result = validateLocalApiPath("/var/lib/telegram/photos/file.pdf", "/var/lib/telegram");
+      expect(result.valid).toBe(true);
+    });
+
+    it("returns invalid for paths outside allowedDir", () => {
+      const result = validateLocalApiPath("/etc/passwd", "/var/lib/telegram");
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.reason).toContain("Path outside allowed directory");
+      }
+    });
+
+    it("normalizes path traversal attempts", () => {
+      const result = validateLocalApiPath(
+        "/var/lib/telegram/../../../etc/passwd",
+        "/var/lib/telegram",
+      );
+      expect(result.valid).toBe(false);
+      if (!result.valid) {
+        expect(result.reason).toContain("Path outside allowed directory");
+      }
+    });
+
+    it("allows exact match of allowedDir", () => {
+      const result = validateLocalApiPath("/var/lib/telegram", "/var/lib/telegram");
+      expect(result.valid).toBe(true);
     });
   });
 });

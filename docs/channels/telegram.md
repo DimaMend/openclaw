@@ -447,7 +447,27 @@ When `localApiServer` is configured:
 - The local server must be running and reachable before starting the gateway.
 - File paths returned by a local server are absolute filesystem paths; ensure OpenClaw has read access to those directories.
 - Trailing slashes in the URL are normalized automatically (`http://localhost:8081/` and `http://localhost:8081` both work).
-- Windows paths (e.g., `C:\telegram-bot-api\...`) are also detected as local paths.
+- Windows paths (e.g., `C:\telegram-bot-api\...` or `C:/telegram-bot-api/...`) are also detected as local paths.
+
+### Security: Restricting file access
+
+By default, OpenClaw reads any absolute path returned by the local API server. To restrict file reads to a specific directory (defense in depth), set `localApiDataDir`:
+
+```json5
+{
+  channels: {
+    telegram: {
+      localApiServer: "http://localhost:8081",
+      localApiDataDir: "/var/lib/telegram-bot-api",
+    },
+  },
+}
+```
+
+When `localApiDataDir` is set:
+- File paths must be within that directory (after resolving `..` traversal attempts)
+- Paths outside the allowed directory are rejected with an error
+- This prevents a compromised local API server from reading arbitrary files
 
 ## Reply threading
 
@@ -760,6 +780,7 @@ Provider options:
 - `channels.telegram.botToken`: bot token (BotFather).
 - `channels.telegram.tokenFile`: read token from file path.
 - `channels.telegram.localApiServer`: URL of a self-hosted [Telegram Bot API server](https://github.com/tdlib/telegram-bot-api) (e.g., `http://localhost:8081`). Enables 2GB file uploads and direct local file access. Env: `TELEGRAM_LOCAL_API_SERVER`.
+- `channels.telegram.localApiDataDir`: restrict local API file reads to this directory (security hardening). Paths outside are rejected.
 - `channels.telegram.dmPolicy`: `pairing | allowlist | open | disabled` (default: pairing).
 - `channels.telegram.allowFrom`: DM allowlist (ids/usernames). `open` requires `"*"`.
 - `channels.telegram.groupPolicy`: `open | allowlist | disabled` (default: allowlist).

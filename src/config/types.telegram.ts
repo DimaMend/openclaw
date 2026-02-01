@@ -108,6 +108,8 @@ export type TelegramAccountConfig = {
   proxy?: string;
   /** Local Telegram Bot API server URL (e.g., http://localhost:8081). */
   localApiServer?: string;
+  /** Allowed directory for Local Bot API file reads. If set, file paths must be within this directory. */
+  localApiDataDir?: string;
   webhookUrl?: string;
   webhookSecret?: string;
   webhookPath?: string;

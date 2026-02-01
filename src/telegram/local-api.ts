@@ -1,3 +1,4 @@
+import * as nodePath from "node:path";
 import type { TelegramAccountConfig } from "../config/types.js";
 
 const TELEGRAM_API_BASE = "https://api.telegram.org";
@@ -53,11 +54,38 @@ export function isLocalApiPath(path: string): boolean {
     return true;
   }
 
-  // Windows absolute path (e.g., C:\, D:\)
-  if (/^[A-Z]:\\/i.test(path)) {
+  // Windows absolute path (e.g., C:\, D:\, C:/, D:/)
+  if (/^[A-Z]:[/\\]/i.test(path)) {
     return true;
   }
 
   // NOT supported: UNC paths (\\server\share), file:// URLs
   return false;
+}
+
+export type LocalApiPathValidation =
+  | { valid: true; resolved: string }
+  | { valid: false; reason: string };
+
+export function validateLocalApiPath(
+  filePath: string,
+  allowedDir: string | undefined,
+): LocalApiPathValidation {
+  if (!isLocalApiPath(filePath)) {
+    return { valid: false, reason: "Not an absolute path" };
+  }
+
+  const resolved = nodePath.resolve(filePath);
+
+  if (!allowedDir) {
+    return { valid: true, resolved };
+  }
+
+  const normalizedDir = nodePath.resolve(allowedDir);
+  const sep = nodePath.sep;
+  if (!resolved.startsWith(normalizedDir + sep) && resolved !== normalizedDir) {
+    return { valid: false, reason: `Path outside allowed directory: ${normalizedDir}` };
+  }
+
+  return { valid: true, resolved };
 }

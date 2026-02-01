@@ -20,7 +20,7 @@ import {
   markdownToTelegramHtml,
   renderTelegramHtmlText,
 } from "../format.js";
-import { isLocalApiPath, normalizeApiRoot } from "../local-api.js";
+import { isLocalApiPath, normalizeApiRoot, validateLocalApiPath } from "../local-api.js";
 import { buildInlineKeyboard } from "../send.js";
 import { cacheSticker, getCachedSticker } from "../sticker-cache.js";
 import { resolveTelegramVoiceSend } from "../voice.js";
@@ -296,6 +296,7 @@ export async function resolveMedia(
   token: string,
   proxyFetch?: typeof fetch,
   apiBase?: string,
+  localApiDataDir?: string,
 ): Promise<{
   path: string;
   contentType?: string;
@@ -327,8 +328,12 @@ export async function resolveMedia(
       let buffer: Buffer;
       let contentType: string | undefined;
       if (isLocalApiPath(file.file_path)) {
-        // Local Bot API returns absolute file paths - read directly from filesystem
-        buffer = await fs.readFile(file.file_path);
+        const validation = validateLocalApiPath(file.file_path, localApiDataDir);
+        if (!validation.valid) {
+          logVerbose(`telegram: invalid local API path for sticker: ${validation.reason}`);
+          return null;
+        }
+        buffer = await fs.readFile(validation.resolved);
         const mime = await detectMime({ buffer, filePath: file.file_path });
         contentType = mime ?? undefined;
       } else {
@@ -418,7 +423,11 @@ export async function resolveMedia(
   let buffer: Buffer;
   let contentType: string | undefined;
   if (isLocalApiPath(file.file_path)) {
-    buffer = await fs.readFile(file.file_path);
+    const validation = validateLocalApiPath(file.file_path, localApiDataDir);
+    if (!validation.valid) {
+      throw new Error(`Invalid local API path: ${validation.reason}`);
+    }
+    buffer = await fs.readFile(validation.resolved);
     const mime = await detectMime({ buffer, filePath: file.file_path });
     contentType = mime ?? undefined;
   } else {
