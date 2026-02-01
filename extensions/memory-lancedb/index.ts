@@ -164,19 +164,19 @@ class Embeddings {
       );
     }
 
-     if (provider === "openai") {
-       // Dynamically import OpenAI only when needed
-       try {
-         // eslint-disable-next-line @typescript-eslint/no-require-imports
-         const OpenAI = require("openai").default;
-         this.client = new OpenAI({ apiKey });
-       } catch (err) {
-         throw new Error(
-           `Failed to load OpenAI client. Make sure 'openai' package is installed. Error: ${String(err)}`,
-           { cause: err }
-         );
-       }
-     }
+    if (provider === "openai") {
+      // Dynamically import OpenAI only when needed
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const OpenAI = require("openai").default;
+        this.client = new OpenAI({ apiKey });
+      } catch (err) {
+        throw new Error(
+          `Failed to load OpenAI client. Make sure 'openai' package is installed. Error: ${String(err)}`,
+          { cause: err }
+        );
+      }
+    }
   }
 
   async embed(text: string): Promise<number[]> {
