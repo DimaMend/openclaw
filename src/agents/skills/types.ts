@@ -184,3 +184,35 @@ export type SkillEntryWithPermissions = SkillEntry & {
   permissions?: SkillPermissionManifest;
   permissionValidation?: PermissionValidationResult;
 };
+
+/**
+ * Reason a skill was filtered out or flagged.
+ */
+export type SkillFilterReason =
+  | "no_manifest_denied"
+  | "no_manifest_needs_prompt"
+  | "risk_exceeds_max"
+  | "risk_needs_prompt";
+
+/**
+ * A skill that was filtered out or needs user approval.
+ */
+export type FilteredSkillInfo = {
+  name: string;
+  reason: SkillFilterReason;
+  riskLevel?: PermissionRiskLevel;
+  details?: string;
+};
+
+/**
+ * Result of applying security policy filtering.
+ * Includes allowed skills and info about filtered/pending skills.
+ */
+export type SecurityFilterResult = {
+  /** Skills that passed security policy and can be loaded */
+  allowed: SkillEntryWithPermissions[];
+  /** Skills that were denied by policy */
+  denied: FilteredSkillInfo[];
+  /** Skills that need user confirmation before loading (prompt mode) */
+  needsPrompt: FilteredSkillInfo[];
+};

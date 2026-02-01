@@ -214,21 +214,21 @@ Configure skill loading behavior in `~/.openclaw/openclaw.json`:
 {
   skills: {
     security: {
-      // How to handle skills without manifests
+      // How to handle skills without manifests or above risk threshold
       // "allow" | "warn" | "prompt" | "deny"
       // Default: "warn" (will change to "prompt" in future)
       requireManifest: "warn",
 
-      // Maximum risk level to auto-load
+      // Maximum risk level to auto-load without confirmation
       // "minimal" | "low" | "moderate" | "high" | "critical"
       // Default: "moderate"
       maxAutoLoadRisk: "moderate",
 
-      // Path to file with approved skill hashes
-      // Skills in this file bypass risk checks
+      // Path to file with approved skill names
+      // Skills in this file bypass all security checks
       approvedSkillsFile: "~/.openclaw/approved-skills.txt",
 
-      // Log permission violations at runtime
+      // Log permission warnings at runtime
       // Default: true
       logViolations: true,
     },
@@ -238,14 +238,34 @@ Configure skill loading behavior in `~/.openclaw/openclaw.json`:
 
 ### Manifest Requirement Modes
 
-- **allow**: Load all skills (legacy behavior)
-- **warn**: Load with warning in logs (current default)
-- **prompt**: Require user confirmation for skills without manifests (CLI only)
-- **deny**: Refuse to load skills without manifests
+| Mode | No Manifest | Above Risk Threshold | Behavior |
+|------|-------------|---------------------|----------|
+| **allow** | Load | Load | Log warnings only |
+| **warn** | Load | Load | Log warnings (current default) |
+| **prompt** | Prompt | Prompt | Require user confirmation in CLI |
+| **deny** | Block | Block | Refuse to load |
 
 ### Auto-load Risk Threshold
 
-Skills above `maxAutoLoadRisk` require explicit approval before loading. This prevents accidental loading of high-risk skills.
+The `maxAutoLoadRisk` setting controls which risk levels are auto-loaded:
+
+- Skills at or below the threshold load automatically
+- In **prompt** mode, skills above the threshold require user confirmation
+- In **deny** mode, skills above the threshold are blocked
+- In **allow**/**warn** modes, all skills load but high-risk ones log warnings
+
+### Approved Skills File
+
+Pre-approve specific skills to bypass all security checks:
+
+```bash
+# Add skills to the approved list
+openclaw skills approve my-skill another-skill
+
+# Or manually edit ~/.openclaw/approved-skills.txt
+```
+
+The approved skills file format is one skill name per line (lines starting with `#` are comments).
 
 ## Best Practices
 

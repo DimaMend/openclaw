@@ -15,6 +15,7 @@ import type {
   SkillEntry,
   SkillEntryWithPermissions,
   SkillSnapshot,
+  SecurityFilterResult,
 } from "./types.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { CONFIG_DIR, resolveUserPath } from "../../utils.js";
@@ -44,6 +45,53 @@ function debugSkillCommandOnce(
   }
   skillCommandDebugOnce.add(messageKey);
   skillsLogger.debug(message, meta);
+}
+
+/**
+ * Load approved skill identifiers from a file.
+ * Each line in the file is treated as an approved skill name or hash.
+ * Lines starting with # are comments, empty lines are ignored.
+ */
+function loadApprovedSkills(filePath: string | undefined): Set<string> {
+  const approved = new Set<string>();
+  if (!filePath) {
+    return approved;
+  }
+
+  try {
+    const resolvedPath = resolveUserPath(filePath);
+    if (!fs.existsSync(resolvedPath)) {
+      skillsLogger.debug(`Approved skills file not found: ${resolvedPath}`);
+      return approved;
+    }
+
+    const content = fs.readFileSync(resolvedPath, "utf-8");
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      // Skip empty lines and comments
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue;
+      }
+      approved.add(trimmed);
+    }
+
+    if (approved.size > 0) {
+      skillsLogger.debug(`Loaded ${approved.size} approved skill(s) from ${resolvedPath}`);
+    }
+  } catch (err) {
+    skillsLogger.warn(`Failed to load approved skills file: ${filePath}`, {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  return approved;
+}
+
+/**
+ * Check if a skill is in the approved list.
+ */
+function isSkillApproved(skillName: string, approved: Set<string>): boolean {
+  return approved.has(skillName);
 }
 
 function filterSkillEntries(
@@ -97,84 +145,160 @@ function enrichWithPermissions(entry: SkillEntry): SkillEntryWithPermissions {
  * IMPORTANT: This is an advisory system. Skills declare their intended permissions,
  * but this cannot enforce actual runtime behavior. The goal is transparency and
  * informed consent, not mechanical sandboxing.
+ *
+ * Policy modes:
+ * - "allow": Allow all skills, only log warnings for high-risk skills
+ * - "warn": Allow all skills but log warnings for missing manifests and high-risk skills
+ * - "prompt": Block skills without manifests or above risk threshold until user approves
+ * - "deny": Block skills without manifests or above risk threshold
+ *
+ * @returns SecurityFilterResult with allowed, denied, and needsPrompt skills
  */
 function filterBySecurityPolicy(
   entries: SkillEntryWithPermissions[],
   securityConfig?: SkillsSecurityConfig,
-): SkillEntryWithPermissions[] {
+): SecurityFilterResult {
   const requireManifest = securityConfig?.requireManifest ?? "warn";
   const maxAutoLoadRisk = securityConfig?.maxAutoLoadRisk ?? "moderate";
   const maxRiskIndex = RISK_LEVEL_ORDER.indexOf(maxAutoLoadRisk);
+  const logViolations = securityConfig?.logViolations !== false; // default true
 
-  // Track skills that need attention for logging
+  // Load approved skills file
+  const approvedSkills = loadApprovedSkills(securityConfig?.approvedSkillsFile);
+
+  const result: SecurityFilterResult = {
+    allowed: [],
+    denied: [],
+    needsPrompt: [],
+  };
+
+  // Track for summary logging
   const noManifestSkills: string[] = [];
   const highRiskSkills: Array<{ name: string; level: PermissionRiskLevel }> = [];
-  const deniedSkills: Array<{ name: string; reason: string }> = [];
 
-  const filtered = entries.filter((entry) => {
+  for (const entry of entries) {
     const skillName = entry.skill.name;
     const validation = entry.permissionValidation;
+    const riskLevel = validation?.risk_level ?? "high"; // Skills without validation are high risk
+    const skillRiskIndex = RISK_LEVEL_ORDER.indexOf(riskLevel);
+    const exceedsRiskThreshold = skillRiskIndex > maxRiskIndex;
 
-    // Handle skills without manifests
+    // Check if skill is pre-approved (bypasses all checks)
+    if (isSkillApproved(skillName, approvedSkills)) {
+      skillsLogger.debug(`Skill "${skillName}" is pre-approved, bypassing security checks`);
+      result.allowed.push(entry);
+      continue;
+    }
+
+    // Track skills without manifests
     if (!entry.permissions) {
       noManifestSkills.push(skillName);
-
-      if (requireManifest === "deny") {
-        deniedSkills.push({ name: skillName, reason: "no permission manifest (policy: deny)" });
-        return false;
-      }
-      // "allow", "warn", "prompt" all allow loading (prompt handling is CLI-specific)
-      // The warning is logged below
     }
 
-    // Check risk level against max auto-load threshold
-    if (validation) {
-      const skillRiskIndex = RISK_LEVEL_ORDER.indexOf(validation.risk_level);
-
-      if (skillRiskIndex > maxRiskIndex) {
-        // Log high-risk skills but only deny if explicitly configured
-        highRiskSkills.push({ name: skillName, level: validation.risk_level });
-
-        // For now, we warn but don't block based on risk level alone
-        // Future: "prompt" mode could require approval for high-risk skills
-        skillsLogger.warn(`Skill "${skillName}" has ${validation.risk_level} risk level`, {
-          skillName,
-          riskLevel: validation.risk_level,
-          maxAutoLoad: maxAutoLoadRisk,
-          // Don't log detailed risk factors - they may contain sensitive pattern info
-          riskFactorCount: validation.risk_factors.length,
-        });
-      }
+    // Track high-risk skills
+    if (exceedsRiskThreshold) {
+      highRiskSkills.push({ name: skillName, level: riskLevel });
     }
 
-    return true;
-  });
+    // Apply policy based on mode
+    switch (requireManifest) {
+      case "deny": {
+        // Deny skills without manifests
+        if (!entry.permissions) {
+          result.denied.push({
+            name: skillName,
+            reason: "no_manifest_denied",
+            details: "Skill has no permission manifest (policy: deny)",
+          });
+          if (logViolations) {
+            skillsLogger.info(`Denied skill "${skillName}": no permission manifest (policy: deny)`);
+          }
+          continue;
+        }
+        // Deny skills above risk threshold
+        if (exceedsRiskThreshold) {
+          result.denied.push({
+            name: skillName,
+            reason: "risk_exceeds_max",
+            riskLevel,
+            details: `Skill has ${riskLevel} risk (max: ${maxAutoLoadRisk}, policy: deny)`,
+          });
+          if (logViolations) {
+            skillsLogger.info(
+              `Denied skill "${skillName}": risk level ${riskLevel} exceeds ${maxAutoLoadRisk} (policy: deny)`,
+            );
+          }
+          continue;
+        }
+        // Allow skills that pass checks
+        result.allowed.push(entry);
+        break;
+      }
 
-  // Log summary for skills without manifests
-  if (noManifestSkills.length > 0) {
-    if (requireManifest === "warn") {
-      skillsLogger.warn(
-        `${noManifestSkills.length} skill(s) have no permission manifest: ${noManifestSkills.join(", ")}`,
-        { skills: noManifestSkills },
+      case "prompt": {
+        // Require confirmation for skills without manifests
+        if (!entry.permissions) {
+          result.needsPrompt.push({
+            name: skillName,
+            reason: "no_manifest_needs_prompt",
+            riskLevel,
+            details: "Skill has no permission manifest and requires confirmation",
+          });
+          continue;
+        }
+        // Require confirmation for skills above risk threshold
+        if (exceedsRiskThreshold) {
+          result.needsPrompt.push({
+            name: skillName,
+            reason: "risk_exceeds_max",
+            riskLevel,
+            details: `Skill has ${riskLevel} risk (max auto-load: ${maxAutoLoadRisk})`,
+          });
+          continue;
+        }
+        // Allow skills that pass checks
+        result.allowed.push(entry);
+        break;
+      }
+
+      case "allow":
+      case "warn":
+      default: {
+        // Allow all skills, just log warnings
+        result.allowed.push(entry);
+        break;
+      }
+    }
+  }
+
+  // Log summary for skills without manifests (warn mode only)
+  if (noManifestSkills.length > 0 && requireManifest === "warn" && logViolations) {
+    skillsLogger.warn(
+      `${noManifestSkills.length} skill(s) have no permission manifest: ${noManifestSkills.join(", ")}`,
+      { skills: noManifestSkills },
+    );
+
+    // Show deprecation notice once per session
+    if (!shownDeprecationNotice) {
+      shownDeprecationNotice = true;
+      skillsLogger.info(
+        "Note: A future version of OpenClaw will require explicit approval for skills without " +
+          "permission manifests. Run `openclaw skills audit` to review your skills.",
       );
-
-      // Show deprecation notice once per session
-      if (!shownDeprecationNotice) {
-        shownDeprecationNotice = true;
-        skillsLogger.info(
-          "Note: A future version of OpenClaw will require explicit approval for skills without " +
-            "permission manifests. Run `openclaw skills audit` to review your skills.",
-        );
-      }
     }
   }
 
-  // Log denied skills
-  for (const denied of deniedSkills) {
-    skillsLogger.info(`Skipped skill "${denied.name}": ${denied.reason}`);
+  // Log summary for high-risk skills (warn mode)
+  if (highRiskSkills.length > 0 && requireManifest === "warn" && logViolations) {
+    for (const { name, level } of highRiskSkills) {
+      skillsLogger.warn(
+        `Skill "${name}" has ${level} risk level (above ${maxAutoLoadRisk} threshold)`,
+        { skillName: name, riskLevel: level, maxAutoLoadRisk },
+      );
+    }
   }
 
-  return filtered;
+  return result;
 }
 
 const SKILL_COMMAND_MAX_LENGTH = 32;
@@ -313,6 +437,8 @@ function loadSkillEntries(
  *
  * Note: Permission manifests are advisory declarations. This system provides
  * transparency about what skills claim to need, but cannot enforce runtime behavior.
+ *
+ * For CLI prompting (to handle skills that need approval), use loadSkillsWithSecurityResult instead.
  */
 function loadSkillEntriesWithSecurity(
   workspaceDir: string,
@@ -330,9 +456,73 @@ function loadSkillEntriesWithSecurity(
 
   // Apply security policy filtering
   const securityConfig = opts?.config?.skills?.security;
-  const filtered = filterBySecurityPolicy(enrichedEntries, securityConfig);
+  const filterResult = filterBySecurityPolicy(enrichedEntries, securityConfig);
 
-  return filtered;
+  // Return only allowed skills (needsPrompt skills are filtered out in non-interactive contexts)
+  return filterResult.allowed;
+}
+
+/**
+ * Load skills with full security filter result for CLI prompting.
+ * This allows the CLI to prompt users for skills that need confirmation.
+ */
+export function loadSkillsWithSecurityResult(
+  workspaceDir: string,
+  opts?: {
+    config?: OpenClawConfig;
+    managedSkillsDir?: string;
+    bundledSkillsDir?: string;
+  },
+): SecurityFilterResult {
+  const baseEntries = loadSkillEntries(workspaceDir, opts);
+  const enrichedEntries = baseEntries.map(enrichWithPermissions);
+  const securityConfig = opts?.config?.skills?.security;
+  return filterBySecurityPolicy(enrichedEntries, securityConfig);
+}
+
+/**
+ * Add skills to the approved skills file.
+ * Creates the file if it doesn't exist.
+ */
+export function approveSkills(
+  skillNames: string[],
+  approvedSkillsFile: string,
+): { added: string[]; alreadyApproved: string[] } {
+  const resolvedPath = resolveUserPath(approvedSkillsFile);
+  const existing = loadApprovedSkills(approvedSkillsFile);
+
+  const added: string[] = [];
+  const alreadyApproved: string[] = [];
+
+  for (const name of skillNames) {
+    if (existing.has(name)) {
+      alreadyApproved.push(name);
+    } else {
+      added.push(name);
+      existing.add(name);
+    }
+  }
+
+  if (added.length > 0) {
+    // Ensure directory exists
+    const dir = path.dirname(resolvedPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Write all approved skills (including newly added)
+    const lines = [
+      "# Approved skills - these bypass security risk checks",
+      "# Add skill names (one per line) to approve them",
+      "",
+      ...Array.from(existing).sort(),
+      "",
+    ];
+    fs.writeFileSync(resolvedPath, lines.join("\n"), "utf-8");
+    skillsLogger.info(`Added ${added.length} skill(s) to approved list: ${added.join(", ")}`);
+  }
+
+  return { added, alreadyApproved };
 }
 
 export function buildWorkspaceSkillSnapshot(
@@ -495,12 +685,15 @@ export function filterWorkspaceSkillEntries(
 
   // Apply security policy filtering
   const securityConfig = config?.skills?.security;
-  return filterBySecurityPolicy(
+  const filterResult = filterBySecurityPolicy(
     filtered.map((e) =>
       "permissionValidation" in e ? (e as SkillEntryWithPermissions) : enrichWithPermissions(e),
     ),
     securityConfig,
   );
+
+  // Return only allowed skills (needsPrompt skills are filtered out in non-interactive contexts)
+  return filterResult.allowed;
 }
 
 export function buildWorkspaceSkillCommandSpecs(

@@ -1,7 +1,9 @@
 import type { Command } from "commander";
+import { confirm, isCancel, multiselect } from "@clack/prompts";
 import fs from "node:fs";
 import path from "node:path";
 import type {
+  FilteredSkillInfo,
   PermissionRiskLevel,
   SkillEntryWithPermissions,
   SkillPermissionManifest,
@@ -13,12 +15,17 @@ import {
   type SkillStatusReport,
 } from "../agents/skills-status.js";
 import { formatPermissionManifest, formatValidationResult } from "../agents/skills/permissions.js";
-import { loadWorkspaceSkillEntries } from "../agents/skills/workspace.js";
+import {
+  approveSkills,
+  loadSkillsWithSecurityResult,
+  loadWorkspaceSkillEntries,
+} from "../agents/skills/workspace.js";
 import { loadConfig } from "../config/config.js";
 import { defaultRuntime } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { renderTable } from "../terminal/table.js";
 import { theme } from "../terminal/theme.js";
+import { CONFIG_DIR } from "../utils.js";
 import { shortenHomePath } from "../utils.js";
 import { formatCliCommand } from "./command-format.js";
 
@@ -600,6 +607,201 @@ ${JSON.stringify(template, null, 2)}
 }
 
 /**
+ * Format skill info for prompting.
+ */
+function formatSkillForPrompt(skill: FilteredSkillInfo): string {
+  const emoji = RISK_EMOJI[skill.riskLevel ?? "high"];
+  return `${emoji} ${skill.name} - ${skill.details ?? skill.reason}`;
+}
+
+/**
+ * Prompt user to approve skills that need confirmation.
+ * Returns the list of approved skill names.
+ */
+export async function promptForSkillApproval(
+  needsPrompt: FilteredSkillInfo[],
+  opts?: {
+    /** If true, automatically approve all without prompting */
+    autoApprove?: boolean;
+    /** If true, automatically deny all without prompting */
+    autoDeny?: boolean;
+  },
+): Promise<string[]> {
+  if (needsPrompt.length === 0) {
+    return [];
+  }
+
+  if (opts?.autoDeny) {
+    defaultRuntime.log(
+      theme.warn(`Skipping ${needsPrompt.length} skill(s) that require approval (--no-prompt)`),
+    );
+    return [];
+  }
+
+  if (opts?.autoApprove) {
+    defaultRuntime.log(theme.success(`Auto-approving ${needsPrompt.length} skill(s) (--yes)`));
+    return needsPrompt.map((s) => s.name);
+  }
+
+  // Show what needs approval
+  defaultRuntime.log("");
+  defaultRuntime.log(theme.heading("Skills Requiring Approval"));
+  defaultRuntime.log("");
+  defaultRuntime.log(
+    theme.muted(
+      "The following skills need your approval to load. " +
+        "Review their permissions before approving.",
+    ),
+  );
+  defaultRuntime.log("");
+
+  for (const skill of needsPrompt) {
+    defaultRuntime.log(`  ${formatSkillForPrompt(skill)}`);
+  }
+  defaultRuntime.log("");
+
+  // If only one skill, use simple confirm
+  if (needsPrompt.length === 1) {
+    const skill = needsPrompt[0];
+    const approved = await confirm({
+      message: `Approve ${skill.name}?`,
+    });
+
+    if (isCancel(approved) || !approved) {
+      return [];
+    }
+    return [skill.name];
+  }
+
+  // Multiple skills - use multiselect
+  const selected = await multiselect({
+    message: "Select skills to approve:",
+    options: needsPrompt.map((skill) => ({
+      value: skill.name,
+      label: skill.name,
+      hint: skill.details ?? `${skill.riskLevel ?? "high"} risk`,
+    })),
+    required: false,
+  });
+
+  if (isCancel(selected)) {
+    return [];
+  }
+
+  return selected;
+}
+
+/**
+ * Prompt user to save approved skills for future sessions.
+ */
+export async function promptToSaveApprovedSkills(
+  approvedNames: string[],
+  approvedSkillsFile?: string,
+): Promise<void> {
+  if (approvedNames.length === 0) {
+    return;
+  }
+
+  const filePath = approvedSkillsFile ?? path.join(CONFIG_DIR, "approved-skills.txt");
+
+  const shouldSave = await confirm({
+    message: `Save ${approvedNames.length} approved skill(s) for future sessions?`,
+  });
+
+  if (isCancel(shouldSave) || !shouldSave) {
+    defaultRuntime.log(
+      theme.muted("Skills approved for this session only. You'll be prompted again next time."),
+    );
+    return;
+  }
+
+  const result = approveSkills(approvedNames, filePath);
+  if (result.added.length > 0) {
+    defaultRuntime.log(
+      theme.success(`✓ Added ${result.added.length} skill(s) to ${shortenHomePath(filePath)}`),
+    );
+  }
+  if (result.alreadyApproved.length > 0) {
+    defaultRuntime.log(
+      theme.muted(`  ${result.alreadyApproved.length} skill(s) were already approved`),
+    );
+  }
+}
+
+/**
+ * Interactive skill loading with prompts for skills that need approval.
+ * This is the CLI entry point for loading skills with prompt mode support.
+ */
+export async function loadSkillsInteractive(
+  workspaceDir: string,
+  opts?: {
+    config?: ReturnType<typeof loadConfig>;
+    autoApprove?: boolean;
+    autoDeny?: boolean;
+    saveApproved?: boolean;
+  },
+): Promise<{
+  skills: SkillEntryWithPermissions[];
+  approved: string[];
+  denied: FilteredSkillInfo[];
+}> {
+  const config = opts?.config ?? loadConfig();
+  const securityConfig = config.skills?.security;
+
+  // Get full security filter result
+  const result = loadSkillsWithSecurityResult(workspaceDir, { config });
+
+  // If no skills need prompting, return allowed skills
+  if (result.needsPrompt.length === 0) {
+    return {
+      skills: result.allowed,
+      approved: [],
+      denied: result.denied,
+    };
+  }
+
+  // Prompt for approval
+  const approvedNames = await promptForSkillApproval(result.needsPrompt, {
+    autoApprove: opts?.autoApprove,
+    autoDeny: opts?.autoDeny,
+  });
+
+  // Build final skills list (allowed + approved)
+  const approvedSet = new Set(approvedNames);
+  const additionalSkills: SkillEntryWithPermissions[] = [];
+
+  // We need to get the full entries for approved skills
+  // Load all entries with skipSecurityFilter to get the ones that were pending
+  const allEntries = loadWorkspaceSkillEntries(workspaceDir, {
+    config,
+    skipSecurityFilter: true,
+  });
+
+  for (const entry of allEntries) {
+    if (approvedSet.has(entry.skill.name)) {
+      additionalSkills.push(entry);
+    }
+  }
+
+  // Optionally save approved skills
+  if (opts?.saveApproved !== false && approvedNames.length > 0) {
+    await promptToSaveApprovedSkills(approvedNames, securityConfig?.approvedSkillsFile);
+  }
+
+  // Build denied list (original denied + not-approved from needsPrompt)
+  const finalDenied = [
+    ...result.denied,
+    ...result.needsPrompt.filter((s) => !approvedSet.has(s.name)),
+  ];
+
+  return {
+    skills: [...result.allowed, ...additionalSkills],
+    approved: approvedNames,
+    denied: finalDenied,
+  };
+}
+
+/**
  * Register the skills CLI commands
  */
 export function registerSkillsCli(program: Command) {
@@ -792,6 +994,67 @@ export function registerSkillsCli(program: Command) {
           // Output to stdout
           defaultRuntime.log(template);
         }
+      } catch (err) {
+        defaultRuntime.error(String(err));
+        defaultRuntime.exit(1);
+      }
+    });
+
+  skills
+    .command("approve")
+    .description("Add skills to the approved skills list (bypasses security checks)")
+    .argument("<names...>", "Skill names to approve")
+    .option(
+      "-f, --file <path>",
+      "Path to approved skills file (default: ~/.openclaw/approved-skills.txt)",
+    )
+    .action(async (names, opts) => {
+      try {
+        const config = loadConfig();
+        const approvedFile =
+          opts.file ??
+          config.skills?.security?.approvedSkillsFile ??
+          path.join(CONFIG_DIR, "approved-skills.txt");
+
+        // Verify skills exist
+        const workspaceDir = resolveAgentWorkspaceDir(config, resolveDefaultAgentId(config));
+        const allSkills = loadWorkspaceSkillEntries(workspaceDir, {
+          config,
+          skipSecurityFilter: true,
+        });
+        const skillNames = new Set(allSkills.map((s) => s.skill.name));
+
+        const validNames: string[] = [];
+        const invalidNames: string[] = [];
+
+        for (const name of names) {
+          if (skillNames.has(name)) {
+            validNames.push(name);
+          } else {
+            invalidNames.push(name);
+          }
+        }
+
+        if (invalidNames.length > 0) {
+          defaultRuntime.log(theme.warn(`Unknown skill(s): ${invalidNames.join(", ")}`));
+        }
+
+        if (validNames.length === 0) {
+          defaultRuntime.error("No valid skills to approve.");
+          defaultRuntime.exit(1);
+          return;
+        }
+
+        const result = approveSkills(validNames, approvedFile);
+
+        if (result.added.length > 0) {
+          defaultRuntime.log(theme.success(`✓ Approved: ${result.added.join(", ")}`));
+        }
+        if (result.alreadyApproved.length > 0) {
+          defaultRuntime.log(theme.muted(`Already approved: ${result.alreadyApproved.join(", ")}`));
+        }
+        defaultRuntime.log("");
+        defaultRuntime.log(theme.muted(`Approved skills file: ${shortenHomePath(approvedFile)}`));
       } catch (err) {
         defaultRuntime.error(String(err));
         defaultRuntime.exit(1);
