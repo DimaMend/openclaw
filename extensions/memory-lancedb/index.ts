@@ -10,7 +10,6 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import * as lancedb from "@lancedb/lancedb";
 import { Type } from "@sinclair/typebox";
 import { randomUUID } from "node:crypto";
-import OpenAI from "openai";
 import { stringEnum } from "openclaw/plugin-sdk";
 import {
   MEMORY_CATEGORIES,
@@ -55,16 +54,20 @@ class MemoryDB {
   ) {}
 
   private async ensureInitialized(): Promise<void> {
-    if (this.table) return;
-    if (this.initPromise) return this.initPromise;
+    if (this.table) {
+      return;
+    }
+    if (this.initPromise) {
+      return this.initPromise;
+    }
 
     this.initPromise = this.doInitialize();
     return this.initPromise;
   }
 
-  private async doInitialize(): Promise<void> {
-    const { connect, makeArrowTable } = await import("@lancedb/lancedb");
-    this.db = await connect(this.dbPath);
+   private async doInitialize(): Promise<void> {
+     const { connect } = await import("@lancedb/lancedb");
+     this.db = await connect(this.dbPath);
     const tables = await this.db.tableNames();
 
     if (tables.includes(TABLE_NAME)) {
@@ -167,11 +170,12 @@ class Embeddings {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const OpenAI = require("openai").default;
         this.client = new OpenAI({ apiKey });
-      } catch (err) {
-        throw new Error(
-          `Failed to load OpenAI client. Make sure 'openai' package is installed. Error: ${String(err)}`
-        );
-      }
+       } catch (err) {
+         throw new Error(
+           `Failed to load OpenAI client. Make sure 'openai' package is installed. Error: ${String(err)}`,
+           { cause: err }
+         );
+       }
     }
   }
 
