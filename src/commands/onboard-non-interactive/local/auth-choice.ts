@@ -10,6 +10,7 @@ import { buildTokenProfileId, validateAnthropicSetupToken } from "../../auth-tok
 import { applyGoogleGeminiModelDefault } from "../../google-gemini-model-default.js";
 import {
   applyAuthProfileConfig,
+  applyBasetenConfig,
   applyKimiCodeConfig,
   applyMinimaxApiConfig,
   applyMinimaxConfig,
@@ -22,6 +23,7 @@ import {
   applyXiaomiConfig,
   applyZaiConfig,
   setAnthropicApiKey,
+  setBasetenApiKey,
   setGeminiApiKey,
   setKimiCodingApiKey,
   setMinimaxApiKey,
@@ -370,6 +372,29 @@ export async function applyNonInteractiveAuthChoice(params: {
       mode: "api_key",
     });
     return applyVeniceConfig(nextConfig);
+  }
+
+  if (authChoice === "baseten-api-key") {
+    const resolved = await resolveNonInteractiveApiKey({
+      provider: "baseten",
+      cfg: baseConfig,
+      flagValue: opts.basetenApiKey,
+      flagName: "--baseten-api-key",
+      envVar: "BASETEN_API_KEY",
+      runtime,
+    });
+    if (!resolved) {
+      return null;
+    }
+    if (resolved.source !== "profile") {
+      await setBasetenApiKey(resolved.key);
+    }
+    nextConfig = applyAuthProfileConfig(nextConfig, {
+      profileId: "baseten:default",
+      provider: "baseten",
+      mode: "api_key",
+    });
+    return applyBasetenConfig(nextConfig);
   }
 
   if (

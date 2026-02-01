@@ -82,23 +82,23 @@ config is needed when `BASETEN_API_KEY` is set.
 All models use OpenAI-compatible endpoints. Pricing varies by model; check
 [baseten.co/pricing](https://www.baseten.co/pricing) for current rates.
 
-| Model ID                        | Name              | Context Window | Max Tokens | Reasoning |
-| ------------------------------- | ----------------- | -------------- | ---------- | --------- |
-| `zai-org/GLM-4.6`               | GLM 4.6           | 200k           | 8192       | false     |
-| `zai-org/GLM-4.7`               | GLM 4.7           | 200k           | 8192       | false     |
-| `deepseek-ai/DeepSeek-V3-0324`  | DeepSeek V3 0324  | 128k           | 8192       | true      |
-| `deepseek-ai/DeepSeek-V3.1`     | DeepSeek V3.1     | 128k           | 8192       | true      |
-| `moonshotai/Kimi-K2-0905`       | Kimi K2 0905      | 128k           | 8192       | false     |
-| `moonshotai/Kimi-K2-Thinking`   | Kimi K2 Thinking  | 128k           | 8192       | true      |
+| Model ID                       | Name             | Context Window | Max Tokens | Reasoning |
+| ------------------------------ | ---------------- | -------------- | ---------- | --------- |
+| `zai-org/GLM-4.6`              | GLM 4.6          | 200k           | 8192       | false     |
+| `zai-org/GLM-4.7`              | GLM 4.7          | 200k           | 8192       | false     |
+| `deepseek-ai/DeepSeek-V3-0324` | DeepSeek V3 0324 | 128k           | 8192       | true      |
+| `deepseek-ai/DeepSeek-V3.1`    | DeepSeek V3.1    | 128k           | 8192       | true      |
+| `moonshotai/Kimi-K2-0905`      | Kimi K2 0905     | 128k           | 8192       | false     |
+| `moonshotai/Kimi-K2-Thinking`  | Kimi K2 Thinking | 128k           | 8192       | true      |
 
 ## Which model should I use
 
-| Use Case              | Recommended Model                    | Why                          |
-| --------------------- | ------------------------------------ | ---------------------------- |
-| **General tasks**     | `deepseek-ai/DeepSeek-V3.1`          | Strong reasoning, versatile  |
-| **Coding**            | `deepseek-ai/DeepSeek-V3.1`          | Code-optimized reasoning     |
-| **Multilingual**      | `zai-org/GLM-4.7`                    | Strong multilingual support  |
-| **Complex reasoning** | `moonshotai/Kimi-K2-Thinking`        | Thinking/reasoning model     |
+| Use Case              | Recommended Model             | Why                         |
+| --------------------- | ----------------------------- | --------------------------- |
+| **General tasks**     | `deepseek-ai/DeepSeek-V3.1`   | Strong reasoning, versatile |
+| **Coding**            | `deepseek-ai/DeepSeek-V3.1`   | Code-optimized reasoning    |
+| **Multilingual**      | `zai-org/GLM-4.7`             | Strong multilingual support |
+| **Complex reasoning** | `moonshotai/Kimi-K2-Thinking` | Thinking/reasoning model    |
 
 ## Change default model
 
@@ -115,11 +115,11 @@ openclaw models list | grep baseten
 
 ## Features
 
-| Feature              | Support           |
-| -------------------- | ----------------- |
-| **Streaming**        | Yes               |
-| **Function calling** | Model-dependent   |
-| **Vision**           | No (text only)    |
+| Feature              | Support         |
+| -------------------- | --------------- |
+| **Streaming**        | Yes             |
+| **Function calling** | Model-dependent |
+| **Vision**           | No (text only)  |
 
 ## Troubleshooting
 
