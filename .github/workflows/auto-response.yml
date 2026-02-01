@@ -37,7 +37,7 @@ jobs:
                 label: "r: support",
                 close: true,
                 message:
-                  "Please use our support server https://molt.bot/discord and ask in #help or #users-helping-users to resolve this, or follow the stuck FAQ at https://docs.molt.bot/help/faq#im-stuck-whats-the-fastest-way-to-get-unstuck.",
+                  "Please join our Discord support server at https://discord.gg/openclaw for help from our community team and other users. You can also check our troubleshooting guide at https://docs.openclaw.ai/help/faq.",
               },
               {
                 label: "r: third-party-extension",
