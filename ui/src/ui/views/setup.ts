@@ -13,6 +13,16 @@ export function renderSetup(state: {
   onCancel: () => void;
   onNext: () => void;
   onAnswer: (value: unknown) => void;
+
+  toolsBusy: boolean;
+  toolsError: string | null;
+  toolsMessage: string | null;
+  doctorBusy: boolean;
+  doctorOutput: string | null;
+  doctorError: string | null;
+  onDownloadConfig: () => void;
+  onImportConfig: (file: File) => void;
+  onRunDoctor: () => void;
 }) {
   const step = state.wizardStep;
 
@@ -53,6 +63,48 @@ export function renderSetup(state: {
             </div>
           </div>`
         : html`<div class="card"><div class="muted">Start the wizard to configure OpenClaw.</div></div>`}
+
+      <div class="card">
+        <div class="panel__header" style="padding: 0; margin-bottom: 12px">
+          <div>
+            <div class="h3">Config tools</div>
+            <div class="muted">Export/import config and run doctor.</div>
+          </div>
+          <div class="row">
+            <button class="btn" ?disabled=${!state.connected || state.toolsBusy} @click=${state.onDownloadConfig}>
+              Download openclaw.json
+            </button>
+            <label class="btn btn--secondary" style="cursor:pointer">
+              Import openclaw.json
+              <input
+                type="file"
+                accept="application/json,.json,.json5,text/plain"
+                style="display:none"
+                @change=${(e: Event) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) state.onImportConfig(file);
+                  (e.target as HTMLInputElement).value = "";
+                }}
+              />
+            </label>
+          </div>
+        </div>
+
+        ${state.toolsError ? html`<div class="pill danger">${state.toolsError}</div>` : nothing}
+        ${state.toolsMessage ? html`<div class="pill">${state.toolsMessage}</div>` : nothing}
+
+        <div class="row" style="margin-top: 10px">
+          <button class="btn" ?disabled=${!state.connected || state.doctorBusy} @click=${state.onRunDoctor}>
+            Run doctor (non-interactive)
+          </button>
+        </div>
+
+        ${state.doctorError ? html`<div class="pill danger" style="margin-top: 10px">${state.doctorError}</div>` : nothing}
+
+        ${state.doctorOutput
+          ? html`<pre class="code" style="margin-top: 10px; max-height: 340px; overflow:auto; white-space: pre-wrap">${state.doctorOutput}</pre>`
+          : html`<div class="muted" style="margin-top: 10px">Doctor output will appear here.</div>`}
+      </div>
     </div>
   `;
 }

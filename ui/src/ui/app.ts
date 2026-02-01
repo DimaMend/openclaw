@@ -53,6 +53,7 @@ import {
 } from "./app-lifecycle";
 import { renderApp } from "./app-render";
 import { cancelWizard, nextWizard, startConfigureWizard } from "./app-wizard";
+import { setupDownloadConfig, setupImportConfig, setupRunDoctor } from "./app-setup-tools";
 import {
   exportLogs as exportLogsInternal,
   handleChatScroll as handleChatScrollInternal,
@@ -157,6 +158,13 @@ export class OpenClawApp extends LitElement {
   @state() wizardError: string | null = null;
   @state() wizardDone = false;
   @state() wizardAnswer: unknown = undefined;
+
+  @state() setupToolsBusy = false;
+  @state() setupToolsError: string | null = null;
+  @state() setupToolsMessage: string | null = null;
+  @state() setupDoctorBusy = false;
+  @state() setupDoctorOutput: string | null = null;
+  @state() setupDoctorError: string | null = null;
 
   @state() configLoading = false;
   @state() configRaw = "{\n}\n";
@@ -306,6 +314,18 @@ export class OpenClawApp extends LitElement {
 
   cancelWizard() {
     return cancelWizard(this);
+  }
+
+  setupDownloadConfig() {
+    return setupDownloadConfig(this);
+  }
+
+  setupImportConfig(file: File) {
+    return setupImportConfig(this, file);
+  }
+
+  setupRunDoctor() {
+    return setupRunDoctor(this);
   }
 
   handleChatScroll(event: Event) {

@@ -530,6 +530,17 @@ export function renderApp(state: AppViewState) {
                 onCancel: () => state.cancelWizard(),
                 onNext: () => state.nextWizard(),
                 onAnswer: (value) => (state.wizardAnswer = value),
+
+                // Setup tools
+                toolsBusy: state.setupToolsBusy,
+                toolsError: state.setupToolsError,
+                toolsMessage: state.setupToolsMessage,
+                doctorBusy: state.setupDoctorBusy,
+                doctorOutput: state.setupDoctorOutput,
+                doctorError: state.setupDoctorError,
+                onDownloadConfig: () => state.setupDownloadConfig(),
+                onImportConfig: (file: File) => state.setupImportConfig(file),
+                onRunDoctor: () => state.setupRunDoctor(),
               })
             : nothing
         }
