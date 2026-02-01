@@ -1,6 +1,5 @@
 import type { Command } from "commander";
 import type { GatewayDaemonRuntime } from "../../commands/daemon-runtime.js";
-import { onboardCommand } from "../../commands/onboard.js";
 import type {
   AuthChoice,
   GatewayAuthChoice,
@@ -109,6 +108,7 @@ export function registerOnboardCommand(program: Command) {
         });
         const gatewayPort =
           typeof opts.gatewayPort === "string" ? Number.parseInt(opts.gatewayPort, 10) : undefined;
+        const { onboardCommand } = await import("../../commands/onboard.js");
         await onboardCommand(
           {
             workspace: opts.workspace as string | undefined,

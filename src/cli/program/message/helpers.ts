@@ -1,5 +1,4 @@
 import type { Command } from "commander";
-import { messageCommand } from "../../../commands/message.js";
 import { danger, setVerbose } from "../../../globals.js";
 import { CHANNEL_TARGET_DESCRIPTION } from "../../../infra/outbound/channel-target.js";
 import { defaultRuntime } from "../../../runtime.js";
@@ -38,6 +37,7 @@ export function createMessageCliHelpers(
     await runCommandWithRuntime(
       defaultRuntime,
       async () => {
+        const { messageCommand } = await import("../../../commands/message.js");
         await messageCommand(
           {
             ...(() => {

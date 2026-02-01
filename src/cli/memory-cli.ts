@@ -11,7 +11,7 @@ import { resolveSessionTranscriptsDirForAgent } from "../config/sessions/paths.j
 import { setVerbose } from "../globals.js";
 import { withProgress, withProgressTotals } from "./progress.js";
 import { formatErrorMessage, withManager } from "./cli-utils.js";
-import { getMemorySearchManager, type MemorySearchManagerResult } from "../memory/index.js";
+import type { MemorySearchManagerResult } from "../memory/index.js";
 import { listMemoryFiles, normalizeExtraMemoryPaths } from "../memory/internal.js";
 import { defaultRuntime } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";
@@ -254,6 +254,7 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
   }> = [];
 
   for (const agentId of agentIds) {
+    const { getMemorySearchManager } = await import("../memory/index.js");
     await withManager<MemoryManager>({
       getManager: () => getMemorySearchManager({ cfg, agentId }),
       onMissing: (error) => defaultRuntime.log(error ?? "Memory search disabled."),
@@ -500,6 +501,7 @@ export function registerMemoryCli(program: Command) {
       setVerbose(Boolean(opts.verbose));
       const cfg = loadConfig();
       const agentIds = resolveAgentIds(cfg, opts.agent);
+      const { getMemorySearchManager } = await import("../memory/index.js");
       for (const agentId of agentIds) {
         await withManager<MemoryManager>({
           getManager: () => getMemorySearchManager({ cfg, agentId }),
@@ -635,6 +637,7 @@ export function registerMemoryCli(program: Command) {
       ) => {
         const cfg = loadConfig();
         const agentId = resolveAgent(cfg, opts.agent);
+        const { getMemorySearchManager } = await import("../memory/index.js");
         await withManager<MemoryManager>({
           getManager: () => getMemorySearchManager({ cfg, agentId }),
           onMissing: (error) => defaultRuntime.log(error ?? "Memory search disabled."),

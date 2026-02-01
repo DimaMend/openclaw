@@ -1,9 +1,5 @@
 import type { Command } from "commander";
 
-import { agentsListCommand } from "../../commands/agents.js";
-import { healthCommand } from "../../commands/health.js";
-import { sessionsCommand } from "../../commands/sessions.js";
-import { statusCommand } from "../../commands/status.js";
 import { defaultRuntime } from "../../runtime.js";
 import { getFlagValue, getPositiveIntFlagValue, getVerboseFlag, hasFlag } from "../argv.js";
 import { registerBrowserCli } from "../browser-cli.js";
@@ -48,6 +44,7 @@ const routeHealth: RouteSpec = {
     if (timeoutMs === null) {
       return false;
     }
+    const { healthCommand } = await import("../../commands/health.js");
     await healthCommand({ json, timeoutMs, verbose }, defaultRuntime);
     return true;
   },
@@ -66,6 +63,7 @@ const routeStatus: RouteSpec = {
     if (timeoutMs === null) {
       return false;
     }
+    const { statusCommand } = await import("../../commands/status.js");
     await statusCommand({ json, deep, all, usage, timeoutMs, verbose }, defaultRuntime);
     return true;
   },
@@ -83,6 +81,7 @@ const routeSessions: RouteSpec = {
     if (active === null) {
       return false;
     }
+    const { sessionsCommand } = await import("../../commands/sessions.js");
     await sessionsCommand({ json, store, active }, defaultRuntime);
     return true;
   },
@@ -93,6 +92,7 @@ const routeAgentsList: RouteSpec = {
   run: async (argv) => {
     const json = hasFlag(argv, "--json");
     const bindings = hasFlag(argv, "--bindings");
+    const { agentsListCommand } = await import("../../commands/agents.js");
     await agentsListCommand({ json, bindings }, defaultRuntime);
     return true;
   },

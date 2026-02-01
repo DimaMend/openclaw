@@ -19,6 +19,32 @@ A targeted exploration of the startup path revealed specific culprits:
 2.  **Compromised Fast Path**: `src/cli/route.ts` (the `tryRouteCli` function) imports `findRoutedCommand` from `command-registry.ts`.
     - Impact: The router, intended to be a fast path, incurs the same initialization cost as the full program because it triggers the eager imports in the registry.
 
+## Architecture: Lazy Command Registry
+To address the eager import issues, we will refactor `src/cli/program/command-registry.ts` to separate **routing metadata** from **command registration logic**.
+
+### Key Changes
+1.  **Registry as Data**: The `commandRegistry` should be a lightweight array of objects defining `id`, `routes`, and a `loader` function, rather than importing registration functions directly.
+2.  **Dynamic Import in Loader**: The `register` method will be replaced by a `load()` function that dynamically imports the registration module.
+3.  **Fast Path Router**: `findRoutedCommand` will only iterate over the lightweight metadata (routes) without triggering any side-effect imports.
+
+### Example Structure
+```typescript
+type CommandEntry = {
+  id: string;
+  routes?: RouteSpec[]; // Lightweight matching logic
+  load: () => Promise<{ register: (params: CommandRegisterParams) => void }>;
+};
+
+export const commandRegistry: CommandEntry[] = [
+  {
+    id: "status",
+    routes: [routeStatus],
+    load: async () => import("./register.status-health-sessions.js"),
+  },
+  // ...
+];
+```
+
 ## Recommendations
 1. Ship a fresh `dist/` bundle (or skip the build step) to avoid the repeated pnpm/tsgo invocation and filesystem scan. Alternatively, allow using `bunx tsgo` or a bundled compiler so the runner succeeds without relying on a globally-installed pnpm.
 2. Cache `loadConfig()` and the plugin registry where possible so lazy subcommand registration no longer re-reads disk state for each invocation.

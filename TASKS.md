@@ -4,6 +4,7 @@
     - [x] Run `time openclaw help`
     - [x] Run `time openclaw status`
     - [x] Create `docs/analysis/cli-bottlenecks/benchmarks.md`
+- [x] Analyze import graph to find eager loading culprits <!-- id: 3 -->
 - [ ] Refactor command registry <!-- id: 7 -->
     - [ ] Convert `src/cli/program/command-registry.ts` to use lazy imports
     - [ ] Isolate `status` command dependencies
