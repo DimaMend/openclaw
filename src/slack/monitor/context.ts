@@ -2,7 +2,7 @@ import type { App } from "@slack/bolt";
 import type { HistoryEntry } from "../../auto-reply/reply/history.js";
 import type { OpenClawConfig, SlackReactionNotificationMode } from "../../config/config.js";
 import { resolveSessionKey, type SessionScope } from "../../config/sessions.js";
-import type { DmPolicy, GroupPolicy } from "../../config/types.js";
+import type { DmPolicy, GroupPolicy, ResponseMode } from "../../config/types.js";
 import { logVerbose } from "../../globals.js";
 import { createDedupeCache } from "../../infra/dedupe.js";
 import { getChildLogger } from "../../logging.js";
@@ -71,6 +71,8 @@ export type SlackMonitorContext = {
   groupDmEnabled: boolean;
   groupDmChannels: string[];
   defaultRequireMention: boolean;
+  defaultResponseMode: ResponseMode;
+  relevanceModel: "auto" | string;
   channelsConfig?: Record<
     string,
     {
@@ -143,6 +145,8 @@ export function createSlackMonitorContext(params: {
   groupDmEnabled: boolean;
   groupDmChannels: Array<string | number> | undefined;
   defaultRequireMention?: boolean;
+  defaultResponseMode?: ResponseMode;
+  relevanceModel?: "auto" | string;
   channelsConfig?: SlackMonitorContext["channelsConfig"];
   groupPolicy: SlackMonitorContext["groupPolicy"];
   useAccessGroups: boolean;
@@ -175,6 +179,8 @@ export function createSlackMonitorContext(params: {
   const allowFrom = normalizeAllowList(params.allowFrom);
   const groupDmChannels = normalizeAllowList(params.groupDmChannels);
   const defaultRequireMention = params.defaultRequireMention ?? true;
+  const defaultResponseMode = params.defaultResponseMode ?? "mention";
+  const relevanceModel = params.relevanceModel ?? "auto";
 
   const markMessageSeen = (channelId: string | undefined, ts?: string) => {
     if (!channelId || !ts) {
@@ -405,6 +411,8 @@ export function createSlackMonitorContext(params: {
     groupDmEnabled: params.groupDmEnabled,
     groupDmChannels,
     defaultRequireMention,
+    defaultResponseMode,
+    relevanceModel,
     channelsConfig: params.channelsConfig,
     groupPolicy: params.groupPolicy,
     useAccessGroups: params.useAccessGroups,
