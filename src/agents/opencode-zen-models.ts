@@ -468,8 +468,9 @@ export async function fetchOpencodeZenModels(apiKey?: string): Promise<ModelDefi
     cacheTimestamp = now;
 
     return models;
-  } catch (error) {
-    console.warn(`[opencode-zen] Failed to fetch models, using static fallback: ${String(error)}`);
+  } catch {
+    // Silently fall back to static models on network errors
+    // Caller can implement logging if needed
     return getOpencodeZenStaticFallbackModels();
   }
 }
