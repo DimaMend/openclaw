@@ -7,6 +7,7 @@ const queueEmbeddedPiMessageMock = vi.fn();
 const runEmbeddedPiAgentMock = vi.fn();
 const enqueueFollowupRunMock = vi.fn();
 const getActiveRunThreadContextMock = vi.fn();
+const hasActiveRunThreadContextMock = vi.fn();
 
 vi.mock("../../agents/model-fallback.js", () => ({
   runWithModelFallback: async ({
@@ -30,6 +31,7 @@ vi.mock("../../agents/pi-embedded.js", () => ({
   isEmbeddedPiRunActive: vi.fn().mockReturnValue(true),
   isEmbeddedPiRunStreaming: vi.fn().mockReturnValue(true),
   getActiveRunThreadContext: (...args: unknown[]) => getActiveRunThreadContextMock(...args),
+  hasActiveRunThreadContext: (...args: unknown[]) => hasActiveRunThreadContextMock(...args),
 }));
 
 vi.mock("./queue.js", async () => {
@@ -78,8 +80,10 @@ describe("runReplyAgent steer mode thread routing", () => {
     queueEmbeddedPiMessageMock.mockClear();
     enqueueFollowupRunMock.mockClear();
     getActiveRunThreadContextMock.mockClear();
+    hasActiveRunThreadContextMock.mockClear();
 
-    // Active run is in a different thread (or no thread)
+    // Session is registered with no thread context
+    hasActiveRunThreadContextMock.mockReturnValue(true);
     getActiveRunThreadContextMock.mockReturnValue(undefined);
     // Steer would succeed if attempted
     queueEmbeddedPiMessageMock.mockReturnValue(true);
@@ -133,8 +137,10 @@ describe("runReplyAgent steer mode thread routing", () => {
     queueEmbeddedPiMessageMock.mockClear();
     enqueueFollowupRunMock.mockClear();
     getActiveRunThreadContextMock.mockClear();
+    hasActiveRunThreadContextMock.mockClear();
 
-    // Active run has no thread context
+    // Session is registered with no thread context
+    hasActiveRunThreadContextMock.mockReturnValue(true);
     getActiveRunThreadContextMock.mockReturnValue(undefined);
     // Steer succeeds
     queueEmbeddedPiMessageMock.mockReturnValue(true);
@@ -184,8 +190,10 @@ describe("runReplyAgent steer mode thread routing", () => {
     queueEmbeddedPiMessageMock.mockClear();
     enqueueFollowupRunMock.mockClear();
     getActiveRunThreadContextMock.mockClear();
+    hasActiveRunThreadContextMock.mockClear();
 
-    // Active run has no thread context
+    // Session is registered with no thread context
+    hasActiveRunThreadContextMock.mockReturnValue(true);
     getActiveRunThreadContextMock.mockReturnValue(undefined);
     queueEmbeddedPiMessageMock.mockReturnValue(true);
 
@@ -232,10 +240,12 @@ describe("runReplyAgent steer mode thread routing", () => {
     queueEmbeddedPiMessageMock.mockClear();
     enqueueFollowupRunMock.mockClear();
     getActiveRunThreadContextMock.mockClear();
+    hasActiveRunThreadContextMock.mockClear();
 
     const threadId = "1706742543.891709";
 
-    // Active run is in the same thread as incoming message
+    // Session is registered with thread context
+    hasActiveRunThreadContextMock.mockReturnValue(true);
     getActiveRunThreadContextMock.mockReturnValue(threadId);
     queueEmbeddedPiMessageMock.mockReturnValue(true);
 
@@ -284,8 +294,10 @@ describe("runReplyAgent steer mode thread routing", () => {
     queueEmbeddedPiMessageMock.mockClear();
     enqueueFollowupRunMock.mockClear();
     getActiveRunThreadContextMock.mockClear();
+    hasActiveRunThreadContextMock.mockClear();
 
-    // Active run has numeric thread ID
+    // Session is registered with numeric thread ID
+    hasActiveRunThreadContextMock.mockReturnValue(true);
     getActiveRunThreadContextMock.mockReturnValue(12345);
     queueEmbeddedPiMessageMock.mockReturnValue(true);
 

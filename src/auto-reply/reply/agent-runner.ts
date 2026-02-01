@@ -8,7 +8,11 @@ import { lookupContextTokens } from "../../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../../agents/defaults.js";
 import { resolveModelAuthMode } from "../../agents/model-auth.js";
 import { isCliProvider } from "../../agents/model-selection.js";
-import { getActiveRunThreadContext, queueEmbeddedPiMessage } from "../../agents/pi-embedded.js";
+import {
+  getActiveRunThreadContext,
+  hasActiveRunThreadContext,
+  queueEmbeddedPiMessage,
+} from "../../agents/pi-embedded.js";
 import { hasNonzeroUsage } from "../../agents/usage.js";
 import {
   resolveAgentIdFromSessionKey,
@@ -162,15 +166,18 @@ export async function runReplyAgent(params: {
   // as the active run. Cross-thread steering would route replies to the wrong thread.
   // When thread contexts don't match, we fall through to enqueueFollowupRun which
   // preserves per-message routing.
+  const hasThreadContext = hasActiveRunThreadContext(followupRun.run.sessionId);
   const activeRunThread = getActiveRunThreadContext(followupRun.run.sessionId);
   const incomingThread = followupRun.originatingThreadId;
-  // Normalize to strings for comparison since providers may use string or number IDs
+  // Only allow fast steer if thread context is registered AND threads match.
+  // Normalize to strings for comparison since providers may use string or number IDs.
   const isSameThread =
-    activeRunThread === undefined && incomingThread === undefined
+    hasThreadContext &&
+    (activeRunThread === undefined && incomingThread === undefined
       ? true
       : activeRunThread !== undefined &&
         incomingThread !== undefined &&
-        String(activeRunThread) === String(incomingThread);
+        String(activeRunThread) === String(incomingThread));
   if (shouldSteer && isStreaming && isSameThread) {
     const steered = queueEmbeddedPiMessage(followupRun.run.sessionId, followupRun.prompt);
     if (steered && !shouldFollowup) {

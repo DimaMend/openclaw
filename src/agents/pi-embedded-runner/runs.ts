@@ -67,8 +67,17 @@ export function isEmbeddedPiRunStreaming(sessionId: string): boolean {
 }
 
 /**
+ * Check if thread context is registered for a session.
+ * Returns true if the session has been registered (even if thread is undefined).
+ */
+export function hasActiveRunThreadContext(sessionId: string): boolean {
+  return ACTIVE_RUN_THREAD_CONTEXT.has(sessionId);
+}
+
+/**
  * Get the thread context for an active run.
  * Used to prevent cross-thread steering - only steer if thread IDs match.
+ * Returns undefined both for "no thread" and "not registered" - use hasActiveRunThreadContext() to distinguish.
  */
 export function getActiveRunThreadContext(sessionId: string): string | number | undefined {
   return ACTIVE_RUN_THREAD_CONTEXT.get(sessionId);
