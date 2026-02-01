@@ -118,8 +118,30 @@ function appendFileBlocks(body: string | undefined, blocks: string[]): string {
   return `${base}\n\n${suffix}`.trim();
 }
 
+/** Detect known binary media via magic bytes to prevent text-heuristic misclassification. */
+function hasMagic(buffer: Buffer, ascii: string): boolean {
+  if (buffer.length < ascii.length) return false;
+  for (let i = 0; i < ascii.length; i++) {
+    if (buffer[i] !== ascii.charCodeAt(i)) return false;
+  }
+  return true;
+}
+
+function isKnownBinaryMedia(buffer?: Buffer): boolean {
+  if (!buffer || buffer.length < 4) return false;
+  if (hasMagic(buffer, "OggS")) return true; // OGG/Opus (Telegram voice)
+  if (hasMagic(buffer, "RIFF")) return true; // WAV/AVI
+  if (hasMagic(buffer, "ID3")) return true; // MP3 with ID3 tag
+  if (hasMagic(buffer, "fLaC")) return true; // FLAC
+  if (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0) return true; // MP3 sync
+  return false;
+}
+
 function resolveUtf16Charset(buffer?: Buffer): "utf-16le" | "utf-16be" | undefined {
   if (!buffer || buffer.length < 2) {
+    return undefined;
+  }
+  if (isKnownBinaryMedia(buffer)) {
     return undefined;
   }
   const b0 = buffer[0];
@@ -249,6 +271,10 @@ async function extractFileBlocks(params: {
       if (shouldLogVerbose()) {
         logVerbose(`media: file attachment skipped (buffer): ${String(err)}`);
       }
+      continue;
+    }
+    const buf = bufferResult?.buffer;
+    if (isKnownBinaryMedia(buf)) {
       continue;
     }
     const nameHint = bufferResult?.fileName ?? attachment.path ?? attachment.url;
