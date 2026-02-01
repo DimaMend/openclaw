@@ -270,8 +270,8 @@ Planned event types:
 - **`session:start`**: When a new session begins
 - **`session:end`**: When a session ends
 - **`agent:error`**: When an agent encounters an error
-- **`message:sent`**: When a message is sent
-- **`message:received`**: When a message is received
+
+> **Note:** The previously planned `message:sent` and `message:received` events are superseded by the more precise `agent:turn_start` and `agent:turn_end` events above.
 
 ## Creating Custom Hooks
 

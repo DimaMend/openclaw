@@ -35,11 +35,14 @@ export async function dispatchInboundMessage(params: {
     messagePreview: finalized.RawBody?.slice(0, 100),
   };
 
-  // Trigger turn_start hook
+  // Trigger turn_start hook (fire-and-forget to avoid blocking dispatch)
   const startEvent = createInternalHookEvent("agent", "turn_start", sessionKey, hookContext);
-  await triggerInternalHook(startEvent);
+  triggerInternalHook(startEvent).catch((err) => {
+    console.error("[hooks] turn_start error:", err instanceof Error ? err.message : String(err));
+  });
 
   let result: DispatchFromConfigResult;
+  let success = false;
   try {
     result = await dispatchReplyFromConfig({
       ctx: finalized,
@@ -48,13 +51,16 @@ export async function dispatchInboundMessage(params: {
       replyOptions: params.replyOptions,
       replyResolver: params.replyResolver,
     });
+    success = true;
   } finally {
-    // Trigger turn_end hook (always, even on error)
+    // Trigger turn_end hook (fire-and-forget, always runs)
     const endEvent = createInternalHookEvent("agent", "turn_end", sessionKey, {
       ...hookContext,
-      success: true,
+      success,
     });
-    await triggerInternalHook(endEvent);
+    triggerInternalHook(endEvent).catch((err) => {
+      console.error("[hooks] turn_end error:", err instanceof Error ? err.message : String(err));
+    });
   }
 
   return result;
