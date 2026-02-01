@@ -24,12 +24,15 @@ export function resolveExtraParams(params: {
   const modelParams = modelConfig?.params ? { ...modelConfig.params } : {};
 
   // Also check provider-level providerParams from models.providers config
+  // Model-level params take precedence over provider-level defaults
   const providerConfig = params.cfg?.models?.providers?.[params.provider];
-  if (providerConfig?.providerParams && typeof providerConfig.providerParams === "object") {
-    Object.assign(modelParams, providerConfig.providerParams);
-  }
+  const providerParams =
+    providerConfig?.providerParams && typeof providerConfig.providerParams === "object"
+      ? providerConfig.providerParams
+      : {};
 
-  return Object.keys(modelParams).length > 0 ? modelParams : undefined;
+  const mergedParams = { ...providerParams, ...modelParams };
+  return Object.keys(mergedParams).length > 0 ? mergedParams : undefined;
 }
 
 type CacheControlTtl = "5m" | "1h";
