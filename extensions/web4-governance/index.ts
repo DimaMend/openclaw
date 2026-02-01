@@ -84,6 +84,11 @@ const plugin = {
     // Stash for passing policy evaluations from before_tool_call to after_tool_call
     const policyStash = new Map<string, PolicyEvaluation>();
 
+    // Consistent session key derivation - used by all hooks
+    function deriveSessionKey(ctx: { sessionKey?: string; agentId?: string }): string {
+      return ctx.sessionKey ?? ctx.agentId ?? "default";
+    }
+
     function getOrCreateSession(sessionKey: string): { state: SessionState; audit: AuditChain } {
       let entry = sessions.get(sessionKey);
       if (!entry) {
@@ -193,14 +198,18 @@ const plugin = {
 
     // Pre-action policy gating
     api.on("before_tool_call", (event, ctx) => {
-      if (policyEngine.ruleCount === 0) return;
-
+      const sid = deriveSessionKey(ctx);
       const category = classifyTool(event.toolName);
       const target = extractTarget(event.toolName, event.params);
+
+      // Ensure session exists for this tool call (P0 fix: consistent key derivation)
+      const entry = getOrCreateSession(sid);
+
+      if (policyEngine.ruleCount === 0) return;
+
       const { blocked, evaluation } = policyEngine.shouldBlock(event.toolName, category, target);
 
       // Stash evaluation for after_tool_call to pick up
-      const sid = ctx.sessionKey ?? ctx.agentId ?? "default";
       policyStash.set(sid, evaluation);
 
       if (evaluation.decision === "warn") {
@@ -213,6 +222,31 @@ const plugin = {
         logger.warn(
           `[web4] Policy DENY: ${event.toolName} [${category}] → ${target ?? "(no target)"} — ${evaluation.reason}`,
         );
+
+        // P2 fix: Audit blocked calls (after_tool_call won't fire for blocked tools)
+        const r6 = createR6Request(
+          entry.state.sessionId,
+          ctx.agentId,
+          event.toolName,
+          event.params,
+          entry.state.actionIndex,
+          entry.state.lastR6Id,
+          auditLevel,
+          entry.state.policyEntityId,
+        );
+        r6.rules.constraints = evaluation.constraints;
+        const result = {
+          status: "blocked" as const,
+          errorMessage: evaluation.reason,
+        };
+        r6.result = result;
+        entry.audit.record(r6, result);
+        sessionStore.incrementAction(entry.state, event.toolName, category, r6.id);
+
+        if (auditLevel === "verbose") {
+          logger.info(`[web4] R6 ${r6.id}: ${event.toolName} [${category}] → BLOCKED`);
+        }
+
         return { block: true, blockReason: `[web4-policy] ${evaluation.reason}` };
       }
 
@@ -225,7 +259,7 @@ const plugin = {
     });
 
     api.on("after_tool_call", (event, ctx) => {
-      const sid = ctx.sessionKey ?? ctx.agentId ?? "default";
+      const sid = deriveSessionKey(ctx);
       const entry = sessions.get(sid);
       if (!entry) return;
 

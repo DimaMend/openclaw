@@ -55,7 +55,12 @@ export function matchesTarget(
   if (target === undefined) return false;
   for (const pattern of patterns) {
     if (useRegex) {
-      if (new RegExp(pattern).test(target)) return true;
+      try {
+        if (new RegExp(pattern).test(target)) return true;
+      } catch {
+        // Invalid regex pattern - skip it (logged at config load time)
+        continue;
+      }
     } else {
       if (globToRegex(pattern).test(target)) return true;
     }
