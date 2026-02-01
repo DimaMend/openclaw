@@ -344,6 +344,40 @@ function safeJsonStringify(value: unknown): string {
   }
 }
 
+function truncateLogValue(value: string, maxLength = 2000): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength)}…(len=${value.length})`;
+}
+
+function redactOpenResponsesForLog(value: unknown): unknown {
+  if (typeof value === "string") {
+    return truncateLogValue(value);
+  }
+  if (Array.isArray(value)) {
+    const trimmed = value.slice(0, 50);
+    return trimmed.map((entry) => redactOpenResponsesForLog(entry));
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  const record = value as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(record)) {
+    if (key === "data" && typeof entry === "string") {
+      result[key] = `[base64:${entry.length}]`;
+      continue;
+    }
+    if (key === "content" && Array.isArray(entry)) {
+      result[key] = entry.slice(0, 10).map((item) => redactOpenResponsesForLog(item));
+      continue;
+    }
+    result[key] = redactOpenResponsesForLog(entry);
+  }
+  return result;
+}
+
 export async function handleOpenResponsesHttpRequest(
   req: IncomingMessage,
   res: ServerResponse,
@@ -381,6 +415,14 @@ export async function handleOpenResponsesHttpRequest(
   if (body === undefined) {
     return true;
   }
+  console.log("[openresponses] rawBody.input", {
+    count: Array.isArray((body as { input?: unknown })?.input)
+      ? (body as { input: unknown[] }).input.length
+      : body && (body as { input?: unknown }).input
+        ? 1
+        : 0,
+    preview: redactOpenResponsesForLog((body as { input?: unknown })?.input),
+  });
   const rawToolNames = Array.isArray((body as { tools?: unknown })?.tools)
     ? ((body as { tools: Array<{ function?: { name?: string } }> }).tools || [])
         .map((tool) => tool?.function?.name)
@@ -516,6 +558,12 @@ export async function handleOpenResponsesHttpRequest(
 
   // Build prompt from input
   const prompt = buildAgentPrompt(payload.input);
+  console.log("[openresponses] prompt", {
+    message: prompt.message ? truncateLogValue(prompt.message) : null,
+    extraSystemPrompt: prompt.extraSystemPrompt
+      ? truncateLogValue(prompt.extraSystemPrompt)
+      : null,
+  });
 
   const fileContext = fileContexts.length > 0 ? fileContexts.join("\n\n") : undefined;
   const toolChoiceContext = toolChoicePrompt?.trim();
