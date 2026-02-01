@@ -711,10 +711,18 @@ export const registerTelegramNativeCommands = ({
       }
     }
   } else if (nativeDisabledExplicit) {
+    // When native commands are explicitly disabled, clear both default and group scopes.
+    // Otherwise, previously-registered group-scope commands can remain visible in clients.
     withTelegramApiErrorLogging({
       operation: "setMyCommands",
       runtime,
       fn: () => bot.api.setMyCommands([]),
+    }).catch(() => {});
+
+    withTelegramApiErrorLogging({
+      operation: "setMyCommands(all_group_chats)",
+      runtime,
+      fn: () => bot.api.setMyCommands([], { scope: { type: "all_group_chats" } }),
     }).catch(() => {});
   }
 };

@@ -83,7 +83,7 @@ describe("registerTelegramNativeCommands", () => {
     expect(listSkillCommandsForAgents).toHaveBeenCalledWith({ cfg });
   });
 
-  it("registers bot commands for all_group_chats scope as well as default", () => {
+  it("registers bot commands for both default scope and all_group_chats scope", () => {
     const cfg: OpenClawConfig = {
       agents: {
         list: [{ id: "main", default: true }],
@@ -94,8 +94,11 @@ describe("registerTelegramNativeCommands", () => {
     registerTelegramNativeCommands(params);
 
     const setMyCommands = (params.bot as any).api.setMyCommands as ReturnType<typeof vi.fn>;
-    // Called at least twice: default scope + all_group_chats scope.
-    expect(setMyCommands).toHaveBeenCalled();
+
+    // Expect default-scope registration.
+    expect(setMyCommands.mock.calls.some((call) => call.length === 1)).toBe(true);
+
+    // Expect all_group_chats registration.
     expect(
       setMyCommands.mock.calls.some((call) => call[1]?.scope?.type === "all_group_chats"),
     ).toBe(true);
