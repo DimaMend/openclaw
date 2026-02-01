@@ -2,7 +2,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import type { AuthProfileStore } from "./types.js";
 import { syncExternalCliCredentials } from "./external-cli-sync.js";
 
@@ -26,7 +25,9 @@ describe("syncExternalCliCredentials — Claude CLI", () => {
 
   afterEach(() => {
     process.env.HOME = originalHome;
-    if (originalHome) process.env.USERPROFILE = originalHome;
+    if (originalHome) {
+      process.env.USERPROFILE = originalHome;
+    }
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 

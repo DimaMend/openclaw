@@ -37,10 +37,18 @@ function isExternalProfileFresh(
   now: number,
   provider?: string,
 ): boolean {
-  if (!cred) return false;
-  if (cred.type !== "oauth" && cred.type !== "token") return false;
-  if (provider && cred.provider !== provider) return false;
-  if (typeof cred.expires !== "number") return true;
+  if (!cred) {
+    return false;
+  }
+  if (cred.type !== "oauth" && cred.type !== "token") {
+    return false;
+  }
+  if (provider && cred.provider !== provider) {
+    return false;
+  }
+  if (typeof cred.expires !== "number") {
+    return true;
+  }
   return cred.expires > now + EXTERNAL_CLI_NEAR_EXPIRY_MS;
 }
 
