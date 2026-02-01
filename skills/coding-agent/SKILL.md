@@ -1,7 +1,14 @@
 ---
 name: coding-agent
 description: Run Codex CLI, Claude Code, OpenCode, or Pi Coding Agent via background process for programmatic control.
-metadata: {"openclaw":{"emoji":"🧩","requires":{"anyBins":["claude","codex","opencode","pi","copilot"]}}}
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "🧩",
+        "requires": { "anyBins": ["claude", "codex", "opencode", "pi", "copilot"] },
+      },
+  }
 ---
 
 # Coding Agent (bash-first)
@@ -200,6 +207,7 @@ bash pty:true workdir:~/project background:true command:"copilot --allow-all-too
 ```
 
 Tips:
+
 - Keep prompts specific about files and expected outputs (tests, diffs, commands).
 - Use background mode (still with `pty:true` for coding agents) unless you truly need a foreground TTY; monitor with `process action:log`.
 - If Copilot asks a question, reply with `process action:write` to keep it moving.
