@@ -451,17 +451,20 @@ export async function runEmbeddedAttempt(
 
       // Add client tools (OpenResponses hosted tools) to customTools
       let clientToolCallDetected: { name: string; params: Record<string, unknown> } | null = null;
+      const rawClientTools = params.clientTools ?? [];
+      console.log("[openresponses] params.clientTools", {
+        count: rawClientTools.length,
+        names: rawClientTools.map((tool) => tool?.function?.name).filter(Boolean),
+      });
       const clientToolDefs = params.clientTools
         ? toClientToolDefinitions(params.clientTools, (toolName, toolParams) => {
             clientToolCallDetected = { name: toolName, params: toolParams };
           })
         : [];
-      logDebug(
-        `[openresponses] clientToolDefs=${clientToolDefs.length} names=${clientToolDefs
-          .map((tool) => tool?.name)
-          .filter(Boolean)
-          .join(",")}`,
-      );
+      console.log("[openresponses] clientToolDefs", {
+        count: clientToolDefs.length,
+        names: clientToolDefs.map((tool) => tool?.name).filter(Boolean),
+      });
 
       const allCustomTools = [...customTools, ...clientToolDefs];
 
