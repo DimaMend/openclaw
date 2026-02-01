@@ -1,0 +1,8 @@
+{
+  "id": "grayswan",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

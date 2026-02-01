@@ -1,0 +1,13 @@
+{
+  "name": "@openclaw/plugin-grayswan",
+  "version": "0.0.1",
+  "description": "Gray Swan Guardrails plugin for OpenClaw",
+  "type": "module",
+  "main": "index.ts",
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "devDependencies": {
+    "openclaw": "workspace:*"
+  }
+}

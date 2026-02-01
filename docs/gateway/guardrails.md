@@ -21,56 +21,72 @@ They are configured in `openclaw.json` under `guardrails`. See [/gateway/configu
 
 OpenClaw evaluates stages in this order:
 
-1. `beforeRequest` — inspect and optionally modify the user prompt and message history before the model call.
-2. `beforeToolCall` — inspect and optionally modify tool call arguments before a tool executes.
-3. `afterToolCall` — inspect and optionally modify tool results before they go back to the model.
-4. `afterResponse` — inspect and optionally modify the assistant response before it is returned.
+1. `before_request` — inspect and optionally modify the user prompt and message history before the model call.
+2. `before_tool_call` — inspect and optionally modify tool call arguments before a tool executes.
+3. `after_tool_call` — inspect and optionally modify tool results before they go back to the model.
+4. `after_response` — inspect and optionally modify the assistant response before it is returned.
 
-Within a stage, guardrails run by descending `priority` (default `0`).
-If any guardrail **blocks**, later guardrails do not run for that stage.
+Within a stage, hooks run by descending `priority` (default `0`).
+If any hook **blocks**, later hooks do not run for that stage.
 
-## Guardrail interface
+## Plugin hook interface
 
-Guardrails register with the in process registry and implement stage handlers:
+Guardrails are implemented using the plugin hook system. Plugins can register handlers for guardrail stages via `api.on()`:
 
 ```ts
-type Guardrail = {
-  id: string;
-  priority?: number;
-  beforeRequest?: (input, context) => GuardrailPromptDecision | void;
-  beforeToolCall?: (input, context) => GuardrailToolCallDecision | void;
-  afterToolCall?: (input, context) => GuardrailToolResultDecision | void;
-  afterResponse?: (input, context) => GuardrailOutputDecision | void;
+// Example plugin registering guardrail hooks
+export default {
+  id: "my-guardrail",
+  register(api) {
+    api.on("before_request", async (event, ctx) => {
+      // event: { prompt, messages, systemPrompt? }
+      // Return to block or modify:
+      // { block: true, blockResponse: "..." }
+      // { prompt: "modified", messages: [...] }
+    }, { priority: 50 });
+
+    api.on("before_tool_call", async (event, ctx) => {
+      // event: { toolName, toolCallId, params, messages, systemPrompt? }
+      // Return to block or modify:
+      // { block: true, blockReason: "...", toolResult?: {...} }
+      // { params: { modified: true } }
+    }, { priority: 50 });
+
+    api.on("after_tool_call", async (event, ctx) => {
+      // event: { toolName, toolCallId, params, result, messages, systemPrompt? }
+      // Return to block or modify:
+      // { block: true, result: {...} }
+      // { result: modifiedResult }
+    }, { priority: 50 });
+
+    api.on("after_response", async (event, ctx) => {
+      // event: { assistantTexts, messages, lastAssistant? }
+      // Return to block or modify:
+      // { block: true, blockResponse: "..." }
+      // { assistantTexts: ["modified"] }
+    }, { priority: 50 });
+  }
 };
 ```
 
-Each handler can return a decision with an `action`:
+Each handler can return a result with:
 
-- `allow`: keep the payload unchanged.
-- `modify`: rewrite the payload and keep going.
-- `block`: stop the stage and return a guardrail response.
-
-The payloads that can be modified:
-
-- `beforeRequest`: `prompt` and `messages`.
-- `beforeToolCall`: tool `params`, or return a `toolResult` to skip execution.
-- `afterToolCall`: the `toolResult` before it is sent back to the model.
-- `afterResponse`: `assistantTexts` before the response is returned.
+- `block: true` to stop processing and return a guardrail response
+- Modified fields (`prompt`, `messages`, `params`, `result`, `assistantTexts`) to rewrite the payload
+- Nothing (or `undefined`) to allow the payload unchanged
 
 ### Stage payloads
 
-OpenClaw always sends **messages** to Gray Swan, never the `text` field.
+Each stage receives a different view of the conversation:
 
-Each stage uses a different view of the conversation:
-
-- `beforeRequest`: history + the current **user** prompt
-- `beforeToolCall`: history + a synthetic **assistant** message that summarizes the tool call
-- `afterToolCall`: history + a synthetic **tool** message that contains the tool result text
-- `afterResponse`: history + the final **assistant** response text
-
-History is included by default (`includeHistory: true`).
+- `before_request`: history + the current **user** prompt
+- `before_tool_call`: history + a synthetic **assistant** message that summarizes the tool call
+- `after_tool_call`: history + a synthetic **tool** message that contains the tool result text
+- `after_response`: history + the final **assistant** response text
 
 ## Gray Swan configuration
+
+Gray Swan guardrails are implemented as a bundled plugin that registers handlers for all four stages.
 
 Basic example:
 
@@ -125,12 +141,12 @@ Each stage can be configured with:
 
 When Gray Swan flags a violation and `mode: "block"`:
 
-- `beforeRequest` blocks the model call and returns a guardrail response.
-- `beforeToolCall` blocks the tool call and returns a synthetic tool result with a guardrail warning.
-- `afterToolCall` mutates the tool result before the model sees it:
+- `before_request` blocks the model call and returns a guardrail response.
+- `before_tool_call` blocks the tool call and returns a synthetic tool result with a guardrail warning.
+- `after_tool_call` mutates the tool result before the model sees it:
   - `blockMode: "append"` adds a warning to the tool result content
   - `blockMode: "replace"` replaces the tool result with a guardrail warning
-- `afterResponse` replaces the assistant response (or appends a warning if `blockMode: "append"`).
+- `after_response` replaces the assistant response (or appends a warning if `blockMode: "append"`).
 
 If `mode: "monitor"`, OpenClaw only logs the evaluation and leaves the payload unchanged.
 

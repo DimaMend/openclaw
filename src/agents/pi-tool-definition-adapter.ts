@@ -6,22 +6,33 @@ import type {
 } from "@mariozechner/pi-agent-core";
 import type { ToolDefinition } from "@mariozechner/pi-coding-agent";
 import type { ClientToolDefinition } from "./pi-embedded-runner/run/params.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { logDebug, logError } from "../logger.js";
 import { normalizeToolName } from "./tool-policy.js";
 import { jsonResult } from "./tools/common.js";
-import {
-  applyToolCallGuardrails,
-  applyToolResultGuardrails,
-  type GuardrailContext,
-} from "./guardrails.js";
+import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
+import type { PluginHookToolContext } from "../plugins/types.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: TypeBox schema type from pi-agent-core uses a different module instance.
 type AnyAgentTool = AgentTool<any, unknown>;
 
-type ToolGuardrailOptions = {
-  context: GuardrailContext;
+export type ToolHookOptions = {
+  context: ToolHookContext;
   getMessages: () => AgentMessage[];
   systemPrompt?: string;
+};
+
+export type ToolHookContext = {
+  agentId?: string;
+  sessionId: string;
+  sessionKey?: string;
+  runId: string;
+  provider: string;
+  modelId: string;
+  workspaceDir: string;
+  messageProvider?: string;
+  messageChannel?: string;
+  config?: OpenClawConfig;
 };
 
 function describeToolExecutionError(err: unknown): {
@@ -37,12 +48,12 @@ function describeToolExecutionError(err: unknown): {
 
 export function toToolDefinitions(
   tools: AnyAgentTool[],
-  options?: { guardrails?: ToolGuardrailOptions },
+  options?: { guardrails?: ToolHookOptions },
 ): ToolDefinition[] {
   return tools.map((tool) => {
     const name = tool.name || "tool";
     const normalizedName = normalizeToolName(name);
-    const guardrails = options?.guardrails;
+    const hookOptions = options?.guardrails;
     return {
       name,
       label: tool.label ?? name,
@@ -58,70 +69,94 @@ export function toToolDefinitions(
       ): Promise<AgentToolResult<unknown>> => {
         // KNOWN: pi-coding-agent `ToolDefinition.execute` has a different signature/order
         // than pi-agent-core `AgentTool.execute`. This adapter keeps our existing tools intact.
+        const hookRunner = getGlobalHookRunner();
         let effectiveParams = params;
-        if (guardrails) {
-          const toolOutcome = await applyToolCallGuardrails({
-            input: {
+
+        // Build tool context for hooks
+        const toolContext: PluginHookToolContext | undefined = hookOptions
+          ? {
+              agentId: hookOptions.context.agentId,
+              sessionKey: hookOptions.context.sessionKey,
+              sessionId: hookOptions.context.sessionId,
+              runId: hookOptions.context.runId,
+              provider: hookOptions.context.provider,
+              modelId: hookOptions.context.modelId,
+              workspaceDir: hookOptions.context.workspaceDir,
+              messageProvider: hookOptions.context.messageProvider,
+              messageChannel: hookOptions.context.messageChannel,
+              config: hookOptions.context.config,
+              toolName: normalizedName,
+            }
+          : undefined;
+
+        // Run before_tool_call hooks
+        if (hookRunner?.hasHooks("before_tool_call") && hookOptions && toolContext) {
+          const hookResult = await hookRunner.runBeforeToolCall(
+            {
               toolName: normalizedName,
               toolCallId: String(toolCallId ?? ""),
-              params: effectiveParams,
-              messages: guardrails.getMessages(),
-              systemPrompt: guardrails.systemPrompt,
+              params: effectiveParams as Record<string, unknown>,
+              messages: hookOptions.getMessages(),
+              systemPrompt: hookOptions.systemPrompt,
             },
-            context: guardrails.context,
-          });
-          if (toolOutcome.blocked) {
+            toolContext,
+          );
+          if (hookResult?.block) {
             return (
-              toolOutcome.toolResult ??
+              hookResult.toolResult ??
               jsonResult({
                 status: "blocked",
                 tool: normalizedName,
-                message: toolOutcome.response ?? "Tool call blocked by guardrail policy.",
-                guardrail: toolOutcome.guardrailId,
-                reason: toolOutcome.reason,
+                message: hookResult.blockReason ?? "Tool call blocked by policy.",
               })
             );
           }
-          effectiveParams = toolOutcome.params;
+          if (hookResult?.params) {
+            effectiveParams = hookResult.params;
+          }
         }
+
         try {
-          const result = await tool.execute(toolCallId, effectiveParams, signal, onUpdate);
-          if (guardrails) {
-            const outcome = await applyToolResultGuardrails({
-              input: {
+          let result = await tool.execute(toolCallId, effectiveParams, signal, onUpdate);
+
+          // Run after_tool_call hooks
+          if (hookRunner?.hasHooks("after_tool_call") && hookOptions && toolContext) {
+            const hookResult = await hookRunner.runAfterToolCall(
+              {
                 toolName: normalizedName,
                 toolCallId: String(toolCallId ?? ""),
-                params: effectiveParams,
+                params: effectiveParams as Record<string, unknown>,
                 result,
-                messages: guardrails.getMessages(),
-                systemPrompt: guardrails.systemPrompt,
+                messages: hookOptions.getMessages(),
+                systemPrompt: hookOptions.systemPrompt,
               },
-              context: guardrails.context,
-            });
-            if (outcome.blocked) {
+              toolContext,
+            );
+            if (hookResult?.block) {
               return (
-                outcome.toolResult ??
+                hookResult.result ??
                 jsonResult({
                   status: "blocked",
                   tool: normalizedName,
-                  message: outcome.response ?? "Tool result blocked by guardrail policy.",
-                  guardrail: outcome.guardrailId,
-                  reason: outcome.reason,
+                  message: hookResult.blockReason ?? "Tool result blocked by policy.",
                 })
               );
             }
-            return outcome.result;
+            if (hookResult?.result) {
+              result = hookResult.result;
+            }
           }
+
           return result;
         } catch (err) {
           if (signal?.aborted) {
             throw err;
           }
-          const name =
+          const errName =
             err && typeof err === "object" && "name" in err
               ? String((err as { name?: unknown }).name)
               : "";
-          if (name === "AbortError") {
+          if (errName === "AbortError") {
             throw err;
           }
           const described = describeToolExecutionError(err);
@@ -129,38 +164,41 @@ export function toToolDefinitions(
             logDebug(`tools: ${normalizedName} failed stack:\n${described.stack}`);
           }
           logError(`[tools] ${normalizedName} failed: ${described.message}`);
-          const errorResult = jsonResult({
+          let errorResult = jsonResult({
             status: "error",
             tool: normalizedName,
             error: described.message,
           });
-          if (!guardrails) {
-            return errorResult;
-          }
-          const outcome = await applyToolResultGuardrails({
-            input: {
-              toolName: normalizedName,
-              toolCallId: String(toolCallId ?? ""),
-              params: effectiveParams,
-              result: errorResult,
-              messages: guardrails.getMessages(),
-              systemPrompt: guardrails.systemPrompt,
-            },
-            context: guardrails.context,
-          });
-          if (outcome.blocked) {
-            return (
-              outcome.toolResult ??
-              jsonResult({
-                status: "blocked",
-                tool: normalizedName,
-                message: outcome.response ?? "Tool result blocked by guardrail policy.",
-                guardrail: outcome.guardrailId,
-                reason: outcome.reason,
-              })
+
+          // Run after_tool_call hooks even for errors
+          if (hookRunner?.hasHooks("after_tool_call") && hookOptions && toolContext) {
+            const hookResult = await hookRunner.runAfterToolCall(
+              {
+                toolName: normalizedName,
+                toolCallId: String(toolCallId ?? ""),
+                params: effectiveParams as Record<string, unknown>,
+                result: errorResult,
+                messages: hookOptions.getMessages(),
+                systemPrompt: hookOptions.systemPrompt,
+              },
+              toolContext,
             );
+            if (hookResult?.block) {
+              return (
+                hookResult.result ??
+                jsonResult({
+                  status: "blocked",
+                  tool: normalizedName,
+                  message: hookResult.blockReason ?? "Tool result blocked by policy.",
+                })
+              );
+            }
+            if (hookResult?.result) {
+              errorResult = hookResult.result;
+            }
           }
-          return outcome.result;
+
+          return errorResult;
         }
       },
     } satisfies ToolDefinition;
@@ -172,12 +210,12 @@ export function toToolDefinitions(
 export function toClientToolDefinitions(
   tools: ClientToolDefinition[],
   onClientToolCall?: (toolName: string, params: Record<string, unknown>) => void,
-  options?: { guardrails?: ToolGuardrailOptions },
+  options?: { guardrails?: ToolHookOptions },
 ): ToolDefinition[] {
   return tools.map((tool) => {
     const func = tool.function;
     const normalizedName = normalizeToolName(func.name);
-    const guardrails = options?.guardrails;
+    const hookOptions = options?.guardrails;
     return {
       name: func.name,
       label: func.name,
@@ -190,69 +228,94 @@ export function toClientToolDefinitions(
         _ctx,
         _signal,
       ): Promise<AgentToolResult<unknown>> => {
+        const hookRunner = getGlobalHookRunner();
         let effectiveParams = params;
-        if (guardrails) {
-          const toolOutcome = await applyToolCallGuardrails({
-            input: {
+
+        // Build tool context for hooks
+        const toolContext: PluginHookToolContext | undefined = hookOptions
+          ? {
+              agentId: hookOptions.context.agentId,
+              sessionKey: hookOptions.context.sessionKey,
+              sessionId: hookOptions.context.sessionId,
+              runId: hookOptions.context.runId,
+              provider: hookOptions.context.provider,
+              modelId: hookOptions.context.modelId,
+              workspaceDir: hookOptions.context.workspaceDir,
+              messageProvider: hookOptions.context.messageProvider,
+              messageChannel: hookOptions.context.messageChannel,
+              config: hookOptions.context.config,
+              toolName: normalizedName,
+            }
+          : undefined;
+
+        // Run before_tool_call hooks
+        if (hookRunner?.hasHooks("before_tool_call") && hookOptions && toolContext) {
+          const hookResult = await hookRunner.runBeforeToolCall(
+            {
               toolName: normalizedName,
               toolCallId: String(toolCallId ?? ""),
-              params: effectiveParams,
-              messages: guardrails.getMessages(),
-              systemPrompt: guardrails.systemPrompt,
+              params: effectiveParams as Record<string, unknown>,
+              messages: hookOptions.getMessages(),
+              systemPrompt: hookOptions.systemPrompt,
             },
-            context: guardrails.context,
-          });
-          if (toolOutcome.blocked) {
+            toolContext,
+          );
+          if (hookResult?.block) {
             return (
-              toolOutcome.toolResult ??
+              hookResult.toolResult ??
               jsonResult({
                 status: "blocked",
                 tool: normalizedName,
-                message: toolOutcome.response ?? "Tool call blocked by guardrail policy.",
-                guardrail: toolOutcome.guardrailId,
-                reason: toolOutcome.reason,
+                message: hookResult.blockReason ?? "Tool call blocked by policy.",
               })
             );
           }
-          effectiveParams = toolOutcome.params;
+          if (hookResult?.params) {
+            effectiveParams = hookResult.params;
+          }
         }
+
         // Notify handler that a client tool was called
         if (onClientToolCall) {
           onClientToolCall(func.name, effectiveParams as Record<string, unknown>);
         }
+
         // Return a pending result - the client will execute this tool
-        const result = jsonResult({
+        let result = jsonResult({
           status: "pending",
           tool: func.name,
           message: "Tool execution delegated to client",
         });
-        if (!guardrails) {
-          return result;
-        }
-        const outcome = await applyToolResultGuardrails({
-          input: {
-            toolName: normalizedName,
-            toolCallId: String(toolCallId ?? ""),
-            params: effectiveParams,
-            result,
-            messages: guardrails.getMessages(),
-            systemPrompt: guardrails.systemPrompt,
-          },
-          context: guardrails.context,
-        });
-        if (outcome.blocked) {
-          return (
-            outcome.toolResult ??
-            jsonResult({
-              status: "blocked",
-              tool: normalizedName,
-              message: outcome.response ?? "Tool result blocked by guardrail policy.",
-              guardrail: outcome.guardrailId,
-              reason: outcome.reason,
-            })
+
+        // Run after_tool_call hooks
+        if (hookRunner?.hasHooks("after_tool_call") && hookOptions && toolContext) {
+          const hookResult = await hookRunner.runAfterToolCall(
+            {
+              toolName: normalizedName,
+              toolCallId: String(toolCallId ?? ""),
+              params: effectiveParams as Record<string, unknown>,
+              result,
+              messages: hookOptions.getMessages(),
+              systemPrompt: hookOptions.systemPrompt,
+            },
+            toolContext,
           );
+          if (hookResult?.block) {
+            return (
+              hookResult.result ??
+              jsonResult({
+                status: "blocked",
+                tool: normalizedName,
+                message: hookResult.blockReason ?? "Tool result blocked by policy.",
+              })
+            );
+          }
+          if (hookResult?.result) {
+            result = hookResult.result;
+          }
         }
-        return outcome.result;
+
+        return result;
       },
     } satisfies ToolDefinition;
   });

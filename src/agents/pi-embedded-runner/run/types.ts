@@ -104,7 +104,7 @@ export type EmbeddedRunAttemptResult = {
   clientToolCall?: { name: string; params: Record<string, unknown> };
   guardrailBlock?: {
     stage: "before_request" | "after_response" | "before_tool_call" | "after_tool_call";
-    guardrailId: string;
+    hookId: string;
     reason?: string;
     response?: string;
   };

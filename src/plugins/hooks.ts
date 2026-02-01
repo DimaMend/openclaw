@@ -8,12 +8,17 @@
 import type { PluginRegistry } from "./registry.js";
 import type {
   PluginHookAfterCompactionEvent,
+  PluginHookAfterResponseEvent,
+  PluginHookAfterResponseResult,
   PluginHookAfterToolCallEvent,
+  PluginHookAfterToolCallResult,
   PluginHookAgentContext,
   PluginHookAgentEndEvent,
   PluginHookBeforeAgentStartEvent,
   PluginHookBeforeAgentStartResult,
   PluginHookBeforeCompactionEvent,
+  PluginHookBeforeRequestEvent,
+  PluginHookBeforeRequestResult,
   PluginHookBeforeToolCallEvent,
   PluginHookBeforeToolCallResult,
   PluginHookGatewayContext,
@@ -43,6 +48,10 @@ export type {
   PluginHookAgentEndEvent,
   PluginHookBeforeCompactionEvent,
   PluginHookAfterCompactionEvent,
+  PluginHookBeforeRequestEvent,
+  PluginHookBeforeRequestResult,
+  PluginHookAfterResponseEvent,
+  PluginHookAfterResponseResult,
   PluginHookMessageContext,
   PluginHookMessageReceivedEvent,
   PluginHookMessageSendingEvent,
@@ -52,6 +61,7 @@ export type {
   PluginHookBeforeToolCallEvent,
   PluginHookBeforeToolCallResult,
   PluginHookAfterToolCallEvent,
+  PluginHookAfterToolCallResult,
   PluginHookToolResultPersistContext,
   PluginHookToolResultPersistEvent,
   PluginHookToolResultPersistResult,
@@ -231,6 +241,53 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
   }
 
   // =========================================================================
+  // Request/Response Hooks (Guardrail stages)
+  // =========================================================================
+
+  /**
+   * Run before_request hook.
+   * Allows plugins to inspect, modify, or block the request before the model call.
+   * Runs sequentially.
+   */
+  async function runBeforeRequest(
+    event: PluginHookBeforeRequestEvent,
+    ctx: PluginHookAgentContext,
+  ): Promise<PluginHookBeforeRequestResult | undefined> {
+    return runModifyingHook<"before_request", PluginHookBeforeRequestResult>(
+      "before_request",
+      event,
+      ctx,
+      (acc, next) => ({
+        prompt: next.prompt ?? acc?.prompt,
+        messages: next.messages ?? acc?.messages,
+        block: next.block ?? acc?.block,
+        blockResponse: next.blockResponse ?? acc?.blockResponse,
+      }),
+    );
+  }
+
+  /**
+   * Run after_response hook.
+   * Allows plugins to inspect, modify, or block the assistant response.
+   * Runs sequentially.
+   */
+  async function runAfterResponse(
+    event: PluginHookAfterResponseEvent,
+    ctx: PluginHookAgentContext,
+  ): Promise<PluginHookAfterResponseResult | undefined> {
+    return runModifyingHook<"after_response", PluginHookAfterResponseResult>(
+      "after_response",
+      event,
+      ctx,
+      (acc, next) => ({
+        assistantTexts: next.assistantTexts ?? acc?.assistantTexts,
+        block: next.block ?? acc?.block,
+        blockResponse: next.blockResponse ?? acc?.blockResponse,
+      }),
+    );
+  }
+
+  // =========================================================================
   // Message Hooks
   // =========================================================================
 
@@ -282,8 +339,8 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
 
   /**
    * Run before_tool_call hook.
-   * Allows plugins to modify or block tool calls.
-   * Runs sequentially.
+   * Allows plugins to modify, block, or skip tool calls.
+   * Runs sequentially. If block is set, can return a toolResult to skip execution.
    */
   async function runBeforeToolCall(
     event: PluginHookBeforeToolCallEvent,
@@ -297,19 +354,30 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
         params: next.params ?? acc?.params,
         block: next.block ?? acc?.block,
         blockReason: next.blockReason ?? acc?.blockReason,
+        toolResult: next.toolResult ?? acc?.toolResult,
       }),
     );
   }
 
   /**
    * Run after_tool_call hook.
-   * Runs in parallel (fire-and-forget).
+   * Allows plugins to modify or block tool results before they go back to the model.
+   * Runs sequentially.
    */
   async function runAfterToolCall(
     event: PluginHookAfterToolCallEvent,
     ctx: PluginHookToolContext,
-  ): Promise<void> {
-    return runVoidHook("after_tool_call", event, ctx);
+  ): Promise<PluginHookAfterToolCallResult | undefined> {
+    return runModifyingHook<"after_tool_call", PluginHookAfterToolCallResult>(
+      "after_tool_call",
+      event,
+      ctx,
+      (acc, next) => ({
+        result: next.result ?? acc?.result,
+        block: next.block ?? acc?.block,
+        blockReason: next.blockReason ?? acc?.blockReason,
+      }),
+    );
   }
 
   /**
@@ -445,6 +513,9 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
     runAgentEnd,
     runBeforeCompaction,
     runAfterCompaction,
+    // Request/Response hooks (guardrail stages)
+    runBeforeRequest,
+    runAfterResponse,
     // Message hooks
     runMessageReceived,
     runMessageSending,

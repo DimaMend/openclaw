@@ -88,12 +88,15 @@ import { buildTtsSystemPromptHint } from "../../../tts/tts.js";
 import { isTimeoutError } from "../../failover-error.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
-import {
-  applyOutputGuardrails,
-  applyPromptGuardrails,
-  type GuardrailBlock,
-  type GuardrailContext,
-} from "../../guardrails.js";
+import type { ToolHookContext } from "../../pi-tool-definition-adapter.js";
+
+// Block information for guardrail/hook violations
+type HookBlock = {
+  stage: "before_request" | "after_response" | "before_tool_call" | "after_tool_call";
+  hookId: string;
+  reason?: string;
+  response?: string;
+};
 import type { EmbeddedRunAttemptParams, EmbeddedRunAttemptResult } from "./types.js";
 import { detectAndLoadPromptImages } from "./images.js";
 
@@ -400,14 +403,13 @@ export async function runEmbeddedAttempt(
       tools,
     });
     const systemPrompt = createSystemPromptOverride(appendPrompt);
-    const guardrailContext: GuardrailContext = {
+    const toolHookContext: ToolHookContext = {
       agentId: sessionAgentId,
       sessionId: params.sessionId,
       sessionKey: params.sessionKey,
       runId: params.runId,
       provider: params.provider,
       modelId: params.modelId,
-      modelApi: params.model.api,
       workspaceDir: effectiveWorkspace,
       messageProvider: params.messageProvider,
       messageChannel: params.messageChannel,
@@ -462,15 +464,15 @@ export async function runEmbeddedAttempt(
         model: params.model,
       });
 
-      const guardrailTooling = {
-        context: guardrailContext,
+      const toolHookOptions = {
+        context: toolHookContext,
         getMessages: () => sessionManager?.buildSessionContext().messages ?? [],
         systemPrompt: appendPrompt,
       };
       const { builtInTools, customTools } = splitSdkTools({
         tools,
         sandboxEnabled: !!sandbox?.enabled,
-        guardrails: guardrailTooling,
+        guardrails: toolHookOptions,
       });
 
       // Add client tools (OpenResponses hosted tools) to customTools
@@ -481,7 +483,7 @@ export async function runEmbeddedAttempt(
             (toolName, toolParams) => {
               clientToolCallDetected = { name: toolName, params: toolParams };
             },
-            { guardrails: guardrailTooling },
+            { guardrails: toolHookOptions },
           )
         : [];
 
@@ -713,7 +715,7 @@ export async function runEmbeddedAttempt(
 
       let messagesSnapshot: AgentMessage[] = [];
       let lastAssistant: AssistantMessage | undefined;
-      let guardrailBlock: GuardrailBlock | undefined;
+      let guardrailBlock: HookBlock | undefined;
       let sessionIdUsed = activeSession.sessionId;
       const onAbort = () => {
         const reason = params.abortSignal ? getAbortReason(params.abortSignal) : undefined;
@@ -780,58 +782,74 @@ export async function runEmbeddedAttempt(
           );
         }
 
-        const guardrailPromptOutcome = await applyPromptGuardrails({
-          input: {
-            prompt: effectivePrompt,
-            messages: activeSession.messages,
-            systemPrompt: appendPrompt,
-          },
-          context: guardrailContext,
-        });
-        if (guardrailPromptOutcome.blocked) {
-          guardrailBlock = guardrailPromptOutcome;
-          if (sessionManager) {
-            const guardrailResponse =
-              guardrailBlock.response?.trim() || "Request blocked by guardrail policy.";
-            const trimmedPrompt = effectivePrompt.trim();
-            const now = Date.now();
-            if (trimmedPrompt) {
+        // Run before_request hooks for guardrail-style inspection/modification/blocking
+        if (hookRunner?.hasHooks("before_request")) {
+          const hookResult = await hookRunner.runBeforeRequest(
+            {
+              prompt: effectivePrompt,
+              messages: activeSession.messages,
+              systemPrompt: appendPrompt,
+            },
+            {
+              agentId: sessionAgentId,
+              sessionKey: params.sessionKey,
+              workspaceDir: params.workspaceDir,
+              messageProvider: params.messageProvider ?? undefined,
+            },
+          );
+          if (hookResult?.block) {
+            guardrailBlock = {
+              stage: "before_request",
+              hookId: "before_request_hook",
+              response: hookResult.blockResponse,
+            };
+            if (sessionManager) {
+              const blockResponse = guardrailBlock.response?.trim() || "Request blocked by policy.";
+              const trimmedPrompt = effectivePrompt.trim();
+              const now = Date.now();
+              if (trimmedPrompt) {
+                sessionManager.appendMessage({
+                  role: "user",
+                  content: [{ type: "text", text: trimmedPrompt }],
+                  timestamp: now,
+                });
+              }
               sessionManager.appendMessage({
-                role: "user",
-                content: [{ type: "text", text: trimmedPrompt }],
+                role: "assistant",
+                content: [{ type: "text", text: blockResponse }],
+                api: params.model.api,
+                provider: params.model.provider,
+                model: params.model.id,
+                usage: {
+                  input: 0,
+                  output: 0,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  totalTokens: 0,
+                  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+                },
+                stopReason: "stop",
                 timestamp: now,
               });
+              const sessionContext = sessionManager.buildSessionContext();
+              activeSession.agent.replaceMessages(sessionContext.messages);
             }
-            sessionManager.appendMessage({
-              role: "assistant",
-              content: [{ type: "text", text: guardrailResponse }],
-              api: params.model.api,
-              provider: params.model.provider,
-              model: params.model.id,
-              usage: {
-                input: 0,
-                output: 0,
-                cacheRead: 0,
-                cacheWrite: 0,
-                totalTokens: 0,
-                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-              },
-              stopReason: "stop",
-              timestamp: now,
-            });
-            const sessionContext = sessionManager.buildSessionContext();
-            activeSession.agent.replaceMessages(sessionContext.messages);
+          } else {
+            // Apply modifications if provided
+            if (hookResult?.prompt !== undefined) {
+              effectivePrompt = hookResult.prompt;
+            }
+            if (hookResult?.messages) {
+              activeSession.agent.replaceMessages(hookResult.messages);
+            }
           }
-        } else {
-          effectivePrompt = guardrailPromptOutcome.prompt;
-          activeSession.agent.replaceMessages(guardrailPromptOutcome.messages);
         }
 
         log.debug(`embedded run prompt start: runId=${params.runId} sessionId=${params.sessionId}`);
         cacheTrace?.recordStage("prompt:before", {
           prompt: effectivePrompt,
           messages: activeSession.messages,
-          guardrailBlocked: guardrailBlock?.guardrailId,
+          guardrailBlocked: guardrailBlock?.hookId,
         });
 
         if (!guardrailBlock) {
@@ -897,7 +915,7 @@ export async function runEmbeddedAttempt(
           }
         } else {
           log.debug(
-            `embedded run guardrail blocked: runId=${params.runId} sessionId=${params.sessionId} guardrail=${guardrailBlock.guardrailId}`,
+            `embedded run hook blocked: runId=${params.runId} sessionId=${params.sessionId} hook=${guardrailBlock.hookId}`,
           );
         }
 
@@ -927,25 +945,29 @@ export async function runEmbeddedAttempt(
           .toReversed()
           .find((m) => m.role === "assistant") as AssistantMessage | undefined;
 
-        if (!guardrailBlock) {
-          const outputGuardrailOutcome = await applyOutputGuardrails({
-            input: {
+        // Run after_response hooks for guardrail-style inspection/modification/blocking
+        if (!guardrailBlock && hookRunner?.hasHooks("after_response")) {
+          const hookResult = await hookRunner.runAfterResponse(
+            {
               assistantTexts,
               messages: messagesSnapshot,
               lastAssistant,
             },
-            context: guardrailContext,
-          });
-          if (outputGuardrailOutcome.blocked) {
-            guardrailBlock = outputGuardrailOutcome;
-          } else {
-            if (outputGuardrailOutcome.assistantTexts !== assistantTexts) {
-              assistantTexts.splice(
-                0,
-                assistantTexts.length,
-                ...outputGuardrailOutcome.assistantTexts,
-              );
-            }
+            {
+              agentId: sessionAgentId,
+              sessionKey: params.sessionKey,
+              workspaceDir: params.workspaceDir,
+              messageProvider: params.messageProvider ?? undefined,
+            },
+          );
+          if (hookResult?.block) {
+            guardrailBlock = {
+              stage: "after_response",
+              hookId: "after_response_hook",
+              response: hookResult.blockResponse,
+            };
+          } else if (hookResult?.assistantTexts) {
+            assistantTexts.splice(0, assistantTexts.length, ...hookResult.assistantTexts);
           }
         }
 

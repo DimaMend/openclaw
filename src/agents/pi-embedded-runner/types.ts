@@ -25,7 +25,7 @@ export type EmbeddedPiRunMeta = {
   };
   guardrailBlock?: {
     stage: "before_request" | "after_response" | "before_tool_call" | "after_tool_call";
-    guardrailId: string;
+    hookId: string;
     reason?: string;
   };
   /** Stop reason for the agent run (e.g., "completed", "tool_calls"). */

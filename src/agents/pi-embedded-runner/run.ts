@@ -419,7 +419,7 @@ export async function runEmbeddedPiAgent(
           const guardrailBlockSummary = guardrailBlock
             ? {
                 stage: guardrailBlock.stage,
-                guardrailId: guardrailBlock.guardrailId,
+                hookId: guardrailBlock.hookId,
                 reason: guardrailBlock.reason,
               }
             : undefined;
@@ -458,7 +458,7 @@ export async function runEmbeddedPiAgent(
             };
 
             log.debug(
-              `embedded run guardrail: runId=${params.runId} sessionId=${params.sessionId} durationMs=${Date.now() - started} stage=${guardrailBlock.stage} guardrail=${guardrailBlock.guardrailId}`,
+              `embedded run hook block: runId=${params.runId} sessionId=${params.sessionId} durationMs=${Date.now() - started} stage=${guardrailBlock.stage} hook=${guardrailBlock.hookId}`,
             );
 
             if (!isBeforeRequest && lastProfileId) {
