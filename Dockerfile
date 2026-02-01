@@ -55,11 +55,10 @@ if [ -n "$WORK_DIR" ]; then
   chown -R node:node "$WORK_DIR"
 fi
 
-# Bootstrap minimal config if missing
-if [ ! -f "$STATE_DIR/openclaw.json" ]; then
-  echo '{"gateway":{"mode":"local","bind":"lan"}}' > "$STATE_DIR/openclaw.json"
-  chown node:node "$STATE_DIR/openclaw.json"
-fi
+# Ensure config exists with required gateway settings
+# Always write mode+bind so deploys with stale volumes pick up changes
+echo '{"gateway":{"mode":"local","bind":"lan"}}' > "$STATE_DIR/openclaw.json"
+chown node:node "$STATE_DIR/openclaw.json"
 
 # Drop to node user and exec CMD
 exec gosu node "$@"
