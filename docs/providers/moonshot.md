@@ -159,4 +159,4 @@ Note: Moonshot and Kimi Code are separate providers. Keys are not interchangeabl
 - Override pricing and context metadata in `models.providers` if needed.
 - If Moonshot publishes different context limits for a model, adjust
   `contextWindow` accordingly.
-- The global endpoint is `https://api.moonshot.ai/v1`. Use this for all regions.
+- Use `https://api.moonshot.ai/v1` for the international endpoint, and `https://api.moonshot.cn/v1` for the China endpoint.
