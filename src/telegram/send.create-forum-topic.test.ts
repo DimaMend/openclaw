@@ -43,7 +43,7 @@ describe("createForumTopicTelegram", () => {
     };
     createForumTopicMock.mockResolvedValue(mockResult);
 
-    const result = await createForumTopicTelegram("123", "Test Topic", {
+    const result = await createForumTopicTelegram(" telegram:123  ", "Test Topic", {
       api: mockApi,
       token: "tok",
     });
