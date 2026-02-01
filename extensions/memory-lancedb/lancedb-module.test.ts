@@ -41,12 +41,11 @@ describeLanceDB("@lancedb/lancedb native module", () => {
       expect(lancedb).toBeDefined();
       expect(lancedb.default || lancedb).toBeTruthy();
     } catch (error) {
-      const err = error as Error;
       throw new Error(
         `Failed to import @lancedb/lancedb. ` +
         `This indicates the native module compilation failed or the binary is missing from the image. ` +
-        `Error: ${err.message}`,
-        { cause: err }
+        `Error: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error }
       );
     }
   });

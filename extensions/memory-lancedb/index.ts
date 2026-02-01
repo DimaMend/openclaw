@@ -170,10 +170,10 @@ class Embeddings {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const OpenAI = require("openai").default;
         this.client = new OpenAI({ apiKey });
-      } catch (err) {
+      } catch (error) {
         throw new Error(
-          `Failed to load OpenAI client. Make sure 'openai' package is installed. Error: ${String(err)}`,
-          { cause: err }
+          `Failed to load OpenAI client. Make sure 'openai' package is installed. Error: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error }
         );
       }
     }
