@@ -17,6 +17,7 @@ Docs: https://docs.openclaw.ai
 - Auto-reply: avoid referencing workspace files in /new greeting prompt. (#5706) Thanks @bravostation.
 - Process: resolve Windows `spawn()` failures for npm-family CLIs by appending `.cmd` when needed. (#5815) Thanks @thejhinvirtuoso.
 - Docs: update MiniMax OAuth setup commands; Extensions: use OpenClaw plugin SDK for MiniMax OAuth. (#5402) Thanks @Maosghoul.
+- Web UI: prevent drag-and-drop images from opening in a new tab; treat as attachments. (#6525)
 - Discord: resolve PluralKit proxied senders for allowlists and labels. (#5838) Thanks @thewilloftheshadow.
 - Telegram: restore draft streaming partials. (#5543) Thanks @obviyus.
 - Docker: use container port for gateway command instead of host port. (#5110) Thanks @mise42.
