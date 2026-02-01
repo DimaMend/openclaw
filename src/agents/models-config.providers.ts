@@ -65,6 +65,16 @@ const QWEN_PORTAL_DEFAULT_COST = {
   cacheWrite: 0,
 };
 
+const CHUTES_BASE_URL = "https://llm.chutes.ai/v1";
+const CHUTES_OAUTH_PLACEHOLDER = "chutes-oauth";
+const CHUTES_DEFAULT_MAX_TOKENS = 8192;
+const CHUTES_DEFAULT_COST = {
+  input: 0,
+  output: 0,
+  cacheRead: 0,
+  cacheWrite: 0,
+};
+
 const OLLAMA_BASE_URL = "http://127.0.0.1:11434/v1";
 const OLLAMA_API_BASE_URL = "http://127.0.0.1:11434";
 const OLLAMA_DEFAULT_CONTEXT_WINDOW = 128000;
@@ -394,6 +404,56 @@ async function buildOllamaProvider(): Promise<ProviderConfig> {
   };
 }
 
+function chutesModel(
+  id: string,
+  name: string,
+  contextWindow: number,
+  reasoning: boolean,
+): ModelDefinitionConfig {
+  return {
+    id,
+    name,
+    reasoning,
+    input: ["text"],
+    cost: CHUTES_DEFAULT_COST,
+    contextWindow,
+    maxTokens: CHUTES_DEFAULT_MAX_TOKENS,
+  };
+}
+
+function buildChutesProvider(): ProviderConfig {
+  return {
+    baseUrl: CHUTES_BASE_URL,
+    api: "openai-completions",
+    models: [
+      chutesModel("deepseek-ai/DeepSeek-V3-0324", "DeepSeek V3", 164000, false),
+      chutesModel("deepseek-ai/DeepSeek-V3.1", "DeepSeek V3.1", 164000, false),
+      chutesModel("deepseek-ai/DeepSeek-R1", "DeepSeek R1", 164000, true),
+      chutesModel("deepseek-ai/DeepSeek-R1-0528", "DeepSeek R1 0528", 164000, true),
+      chutesModel("deepseek-ai/DeepSeek-V3.2-TEE", "DeepSeek V3.2 TEE", 164000, false),
+      chutesModel("deepseek-ai/DeepSeek-V3-0324-TEE", "DeepSeek V3 TEE", 164000, false),
+      chutesModel("Qwen/Qwen3-235B-A22B", "Qwen3 235B", 131000, false),
+      chutesModel("Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8", "Qwen3 Coder 480B", 131000, false),
+      chutesModel("Qwen/Qwen3-235B-A22B-Instruct-2507-TEE", "Qwen3 235B TEE", 131000, false),
+      chutesModel("moonshotai/Kimi-K2-Instruct", "Kimi K2", 131000, false),
+      chutesModel("moonshotai/Kimi-K2.5-TEE", "Kimi K2.5 TEE", 131000, false),
+      chutesModel(
+        "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
+        "Llama 4 Maverick",
+        131000,
+        false,
+      ),
+      chutesModel("MiniMaxAI/MiniMax-M2", "MiniMax M2", 197000, false),
+      chutesModel("mistralai/Devstral-Small-2507", "Devstral Small", 131000, false),
+      chutesModel("zai-org/GLM-4.7", "GLM 4.7", 131000, false),
+      chutesModel("nvidia/Llama-3.1-Nemotron-Ultra-253B-v1", "Nemotron Ultra 253B", 131000, true),
+      chutesModel("microsoft/MAI-DS-R1-FP8", "MAI DS R1", 164000, true),
+      chutesModel("tngtech/DeepSeek-TNG-R1T2-Chimera", "TNG R1T2 Chimera", 164000, true),
+      chutesModel("openai/gpt-oss-120b-TEE", "GPT OSS 120B TEE", 131000, false),
+    ],
+  };
+}
+
 export async function resolveImplicitProviders(params: {
   agentDir: string;
 }): Promise<ModelsConfig["providers"]> {
@@ -451,6 +511,17 @@ export async function resolveImplicitProviders(params: {
     resolveApiKeyFromProfiles({ provider: "xiaomi", store: authStore });
   if (xiaomiKey) {
     providers.xiaomi = { ...buildXiaomiProvider(), apiKey: xiaomiKey };
+  }
+
+  // Chutes provider - supports both API key and OAuth
+  const chutesKey =
+    resolveEnvApiKeyVarName("chutes") ??
+    resolveApiKeyFromProfiles({ provider: "chutes", store: authStore });
+  const chutesOauthProfiles = listProfilesForProvider(authStore, "chutes");
+  if (chutesKey) {
+    providers.chutes = { ...buildChutesProvider(), apiKey: chutesKey };
+  } else if (chutesOauthProfiles.length > 0) {
+    providers.chutes = { ...buildChutesProvider(), apiKey: CHUTES_OAUTH_PLACEHOLDER };
   }
 
   // Ollama provider - only add if explicitly configured
