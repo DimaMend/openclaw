@@ -4,7 +4,7 @@
 
 import { LitElement, html, css, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { t, getLocale, setLocale, type Locale } from "./i18n/index.js";
+import { t, getLocale, type Locale } from "./i18n/index.js";
 import { onboardSocket, type PromptMessage, type CompleteMessage } from "./services/websocket.js";
 
 // Import views
@@ -190,10 +190,10 @@ export class OnboardApp extends LitElement {
     }
   }
 
-  private handleRetry(): void {
+  private handleRetry = (): void => {
     this.viewState = "connecting";
     onboardSocket.connect();
-  }
+  };
 
   override render(): TemplateResult {
     return html`

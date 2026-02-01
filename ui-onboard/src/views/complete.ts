@@ -251,14 +251,14 @@ export class OnboardComplete extends LocalizedElement {
     this.dispatchEvent(new CustomEvent("close"));
   }
 
-  private handleShutdown(): void {
+  private handleShutdown = (): void => {
     this.isShuttingDown = true;
     onboardSocket.requestShutdown();
-  }
+  };
 
-  private openDashboard(): void {
+  private openDashboard = (): void => {
     window.open("http://127.0.0.1:18789", "_blank");
-  }
+  };
 
   override render() {
     return html`

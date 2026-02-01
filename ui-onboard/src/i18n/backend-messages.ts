@@ -471,7 +471,9 @@ openclaw security audit --fix
  * Returns the original message if no translation is found.
  */
 export function translateBackendMessage(message: string): string {
-  if (!message) return message;
+  if (!message) {
+    return message;
+  }
 
   const locale = getLocale();
   const trimmedMessage = message.trim();
@@ -601,10 +603,14 @@ export function translateBackendMessage(message: string): string {
  * Translate option labels in select/multiselect prompts.
  */
 export function translateOptionLabel(label: string): string {
-  if (!label) return label;
+  if (!label) {
+    return label;
+  }
 
   const locale = getLocale();
-  if (locale !== "zh") return label;
+  if (locale !== "zh") {
+    return label;
+  }
 
   // Direct label translations
   const labelTranslations: Record<string, string> = {
@@ -739,10 +745,14 @@ export function translateOptionLabel(label: string): string {
  * Translate hint text.
  */
 export function translateHint(hint: string): string {
-  if (!hint) return hint;
+  if (!hint) {
+    return hint;
+  }
 
   const locale = getLocale();
-  if (locale !== "zh") return hint;
+  if (locale !== "zh") {
+    return hint;
+  }
 
   const hintTranslations: Record<string, string> = {
     // General hints

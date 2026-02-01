@@ -52,15 +52,15 @@ export class OnboardWebSocket {
 
     this.ws = new WebSocket(url);
 
-    this.ws.onopen = () => {
+    this.ws.addEventListener("open", () => {
       console.log("[onboard-ws] Connected");
       this.reconnectAttempts = 0;
       this.connectHandlers.forEach((handler) => handler());
-    };
+    });
 
-    this.ws.onmessage = (event) => {
+    this.ws.addEventListener("message", (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data as string) as Record<string, unknown>;
         
         // Check for shutdown acknowledgement
         if (data.type === "shutdown_ack") {
@@ -80,17 +80,17 @@ export class OnboardWebSocket {
       } catch (error) {
         console.error("[onboard-ws] Failed to parse message:", error);
       }
-    };
+    });
 
-    this.ws.onclose = () => {
+    this.ws.addEventListener("close", () => {
       console.log("[onboard-ws] Disconnected");
       this.disconnectHandlers.forEach((handler) => handler());
       this.attemptReconnect();
-    };
+    });
 
-    this.ws.onerror = (error) => {
+    this.ws.addEventListener("error", (error) => {
       console.error("[onboard-ws] Error:", error);
-    };
+    });
   }
 
   private attemptReconnect(): void {

@@ -55,7 +55,9 @@ export async function startOnboardWebServer(options: ServerOptions): Promise<voi
   // Shutdown function to close the server
   let shutdownRequested = false;
   const requestShutdown = () => {
-    if (shutdownRequested) return;
+    if (shutdownRequested) {
+      return;
+    }
     shutdownRequested = true;
     runtime.log("\n[onboard-web] Shutdown requested, closing server...");
     for (const ws of connections) {
@@ -168,7 +170,7 @@ export async function startOnboardWebServer(options: ServerOptions): Promise<voi
 async function handleHttpRequest(
   req: IncomingMessage,
   res: ServerResponse,
-  runtime: RuntimeEnv,
+  _runtime: RuntimeEnv,
 ): Promise<void> {
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
   let pathname = url.pathname;

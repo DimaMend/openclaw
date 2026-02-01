@@ -81,9 +81,9 @@ export class OnboardNote extends LocalizedElement {
   @property({ type: String }) message = "";
   @property({ type: String }) title?: string;
 
-  private handleContinue(): void {
+  private handleContinue = (): void => {
     this.dispatchEvent(new CustomEvent("continue"));
-  }
+  };
 
   private isLongContent(): boolean {
     // Check if content has many lines (like channel status)
