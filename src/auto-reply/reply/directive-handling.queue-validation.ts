@@ -4,6 +4,7 @@ import type { ReplyPayload } from "../types.js";
 import type { InlineDirectives } from "./directive-handling.parse.js";
 import { withOptions } from "./directive-handling.shared.js";
 import { resolveQueueSettings } from "./queue.js";
+import { getFollowupQueueDepth } from "./queue.js";
 
 export function maybeHandleQueueDirective(params: {
   directives: InlineDirectives;
@@ -34,9 +35,25 @@ export function maybeHandleQueueDirective(params: {
       typeof settings.debounceMs === "number" ? `${settings.debounceMs}ms` : "default";
     const capLabel = typeof settings.cap === "number" ? String(settings.cap) : "default";
     const dropLabel = settings.dropPolicy ?? "default";
+
+    const queueKey = params.sessionEntry?.sessionId;
+    const depth = queueKey ? getFollowupQueueDepth(queueKey) : 0;
+    const overrides = Boolean(
+      params.sessionEntry?.queueDebounceMs ??
+      params.sessionEntry?.queueCap ??
+      params.sessionEntry?.queueDrop,
+    );
+
+    const lines = [
+      "🧵 Queue (current session)",
+      `mode=${settings.mode}${overrides ? " (overrides)" : ""}`,
+      `debounce=${debounceLabel} · cap=${capLabel} · drop=${dropLabel}`,
+      `followup_depth=${depth}`,
+    ];
+
     return {
       text: withOptions(
-        `Current queue settings: mode=${settings.mode}, debounce=${debounceLabel}, cap=${capLabel}, drop=${dropLabel}.`,
+        lines.join("\n"),
         "modes steer, followup, collect, steer+backlog, interrupt; debounce:<ms|s|m>, cap:<n>, drop:old|new|summarize",
       ),
     };
