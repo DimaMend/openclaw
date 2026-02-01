@@ -13,6 +13,7 @@ export type AuthChoiceGroupId =
   | "google"
   | "copilot"
   | "openrouter"
+  | "aimlapi"
   | "ai-gateway"
   | "moonshot"
   | "zai"
@@ -91,6 +92,12 @@ const AUTH_CHOICE_GROUP_DEFS: {
     choices: ["openrouter-api-key"],
   },
   {
+    value: "aimlapi",
+    label: "Aimlapi",
+    hint: "API key",
+    choices: ["aimlapi-api-key"],
+  },
+  {
     value: "ai-gateway",
     label: "Vercel AI Gateway",
     hint: "API key",
@@ -142,6 +149,10 @@ export function buildAuthChoiceOptions(params: {
   options.push({ value: "chutes", label: "Chutes (OAuth)" });
   options.push({ value: "openai-api-key", label: "OpenAI API key" });
   options.push({ value: "openrouter-api-key", label: "OpenRouter API key" });
+  options.push({
+    value: "aimlapi-api-key",
+    label: "Aimlapi API key",
+  });
   options.push({
     value: "ai-gateway-api-key",
     label: "Vercel AI Gateway API key",

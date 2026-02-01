@@ -14,6 +14,7 @@ import {
   applyMoonshotConfig,
   applyOpencodeZenConfig,
   applyOpenrouterConfig,
+  applyAimlapiConfig,
   applySyntheticConfig,
   applyVeniceConfig,
   applyVercelAiGatewayConfig,
@@ -35,6 +36,7 @@ import {
 import type { AuthChoice, OnboardOptions } from "../../onboard-types.js";
 import { resolveNonInteractiveApiKey } from "../api-keys.js";
 import { shortenHomePath } from "../../../utils.js";
+import { setAimlapiApiKey } from "../../onboard-auth.credentials.js";
 
 export async function applyNonInteractiveAuthChoice(params: {
   nextConfig: OpenClawConfig;
@@ -233,6 +235,25 @@ export async function applyNonInteractiveAuthChoice(params: {
       mode: "api_key",
     });
     return applyOpenrouterConfig(nextConfig);
+  }
+
+  if (authChoice === "aimlapi-api-key") {
+    const resolved = await resolveNonInteractiveApiKey({
+      provider: "openrouter",
+      cfg: baseConfig,
+      flagValue: opts.openrouterApiKey,
+      flagName: "--aimlapi-api-key",
+      envVar: "AIMLAPI_API_KEY",
+      runtime,
+    });
+    if (!resolved) return null;
+    if (resolved.source !== "profile") await setAimlapiApiKey(resolved.key);
+    nextConfig = applyAuthProfileConfig(nextConfig, {
+      profileId: "aimlapi:default",
+      provider: "aimlapi",
+      mode: "api_key",
+    });
+    return applyAimlapiConfig(nextConfig);
   }
 
   if (authChoice === "ai-gateway-api-key") {
