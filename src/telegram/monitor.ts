@@ -102,25 +102,26 @@ const isNetworkRelatedError = (err: unknown) => {
 };
 
 const isTimeoutAbortError = (err: unknown): boolean => {
-  if (!err || typeof err !== "object") {
-    return false;
-  }
-  const error = err as Error;
-
-  // Check if it's an AbortError
-  if (error.name !== "AbortError" && !error.message?.includes("This operation was aborted")) {
+  if (!(err instanceof Error)) {
     return false;
   }
 
-  // Check if it's likely a timeout (vs intentional abort)
-  const message = error.message?.toLowerCase() || "";
-  const stack = error.stack?.toLowerCase() || "";
-
-  // Look for timeout-related indicators in the error
-  return message.includes("timeout") ||
-    stack.includes("timeout") ||
-    stack.includes("undici") ||
-    stack.includes("getupdates");
+  // Walk the error cause chain looking for timeout-specific error codes
+  let current: any = err;
+  while (current) {
+    const code = current.code;
+    // Check for timeout-specific error codes from undici/Node.js
+    if (
+      code === "ETIMEDOUT" ||
+      code === "ESOCKETTIMEDOUT" ||
+      code === "UND_ERR_HEADERS_TIMEOUT" ||
+      code === "UND_ERR_BODY_TIMEOUT"
+    ) {
+      return true;
+    }
+    current = current.cause;
+  }
+  return false;
 };
 
 export async function monitorTelegramProvider(opts: MonitorTelegramOpts = {}) {
@@ -208,8 +209,8 @@ export async function monitorTelegramProvider(opts: MonitorTelegramOpts = {}) {
       const isActualAbort = opts.abortSignal?.aborted === true;
 
       if (isActualAbort) {
-        // This is a real abort signal, don't retry
-        return;
+        // Let callers' .catch() handler see the error during shutdown
+        throw err;
       }
 
       const isConflict = isGetUpdatesConflict(err);
@@ -224,8 +225,6 @@ export async function monitorTelegramProvider(opts: MonitorTelegramOpts = {}) {
         throw err;
       }
 
-      restartAttempts += 1;
-
       // Prevent infinite retry loops
       if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
         const errMsg = formatErrorMessage(err);
@@ -234,6 +233,8 @@ export async function monitorTelegramProvider(opts: MonitorTelegramOpts = {}) {
         );
         throw err;
       }
+
+      restartAttempts += 1;
 
       let reason = "network error";
       if (isConflict) reason = "getUpdates conflict";
