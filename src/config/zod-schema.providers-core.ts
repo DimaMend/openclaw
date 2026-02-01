@@ -24,6 +24,8 @@ import {
 
 const ToolPolicyBySenderSchema = z.record(z.string(), ToolPolicySchema).optional();
 
+export const ResponseModeSchema = z.enum(["mention", "auto", "all"]);
+
 const TelegramInlineButtonsScopeSchema = z.enum(["off", "dm", "group", "all", "allowlist"]);
 
 const TelegramCapabilitiesSchema = z.union([
@@ -381,6 +383,7 @@ export const SlackChannelSchema = z
     enabled: z.boolean().optional(),
     allow: z.boolean().optional(),
     requireMention: z.boolean().optional(),
+    responseMode: ResponseModeSchema.optional(),
     tools: ToolPolicySchema,
     toolsBySender: ToolPolicyBySenderSchema,
     allowBots: z.boolean().optional(),
@@ -422,6 +425,8 @@ export const SlackAccountSchema = z
     userTokenReadOnly: z.boolean().optional().default(true),
     allowBots: z.boolean().optional(),
     requireMention: z.boolean().optional(),
+    responseMode: ResponseModeSchema.optional(),
+    relevanceModel: z.union([z.literal("auto"), z.string()]).optional(),
     groupPolicy: GroupPolicySchema.optional().default("allowlist"),
     historyLimit: z.number().int().min(0).optional(),
     dmHistoryLimit: z.number().int().min(0).optional(),
