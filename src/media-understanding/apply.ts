@@ -47,7 +47,11 @@ export type ApplyMediaUnderstandingResult = {
   appliedFile: boolean;
 };
 
-const CAPABILITY_ORDER: MediaUnderstandingCapability[] = ["image", "audio", "video"];
+const CAPABILITY_ORDER: MediaUnderstandingCapability[] = [
+  "image",
+  "audio",
+  "video",
+];
 const EXTRA_TEXT_MIMES = [
   "application/xml",
   "text/xml",
@@ -93,7 +97,10 @@ function resolveFileLimits(cfg: OpenClawConfig) {
   const files = cfg.gateway?.http?.endpoints?.responses?.files;
   return {
     allowUrl: files?.allowUrl ?? true,
-    allowedMimes: normalizeMimeList(files?.allowedMimes, DEFAULT_INPUT_FILE_MIMES),
+    allowedMimes: normalizeMimeList(
+      files?.allowedMimes,
+      DEFAULT_INPUT_FILE_MIMES,
+    ),
     maxBytes: files?.maxBytes ?? DEFAULT_INPUT_FILE_MAX_BYTES,
     maxChars: files?.maxChars ?? DEFAULT_INPUT_FILE_MAX_CHARS,
     maxRedirects: files?.maxRedirects ?? DEFAULT_INPUT_MAX_REDIRECTS,
@@ -101,7 +108,8 @@ function resolveFileLimits(cfg: OpenClawConfig) {
     pdf: {
       maxPages: files?.pdf?.maxPages ?? DEFAULT_INPUT_PDF_MAX_PAGES,
       maxPixels: files?.pdf?.maxPixels ?? DEFAULT_INPUT_PDF_MAX_PIXELS,
-      minTextChars: files?.pdf?.minTextChars ?? DEFAULT_INPUT_PDF_MIN_TEXT_CHARS,
+      minTextChars:
+        files?.pdf?.minTextChars ?? DEFAULT_INPUT_PDF_MIN_TEXT_CHARS,
     },
   };
 }
@@ -118,7 +126,9 @@ function appendFileBlocks(body: string | undefined, blocks: string[]): string {
   return `${base}\n\n${suffix}`.trim();
 }
 
-function resolveUtf16Charset(buffer?: Buffer): "utf-16le" | "utf-16be" | undefined {
+function resolveUtf16Charset(
+  buffer?: Buffer,
+): "utf-16le" | "utf-16be" | undefined {
   if (!buffer || buffer.length < 2) {
     return undefined;
   }
@@ -156,7 +166,12 @@ function looksLikeUtf8Text(buffer?: Buffer): boolean {
       other += 1;
       continue;
     }
-    if (byte === 9 || byte === 10 || byte === 13 || (byte >= 32 && byte <= 126)) {
+    if (
+      byte === 9 ||
+      byte === 10 ||
+      byte === 13 ||
+      (byte >= 32 && byte <= 126)
+    ) {
       printable += 1;
     } else {
       other += 1;
@@ -227,14 +242,20 @@ async function extractFileBlocks(params: {
     if (!attachment) {
       continue;
     }
-    const forcedTextMime = resolveTextMimeFromName(attachment.path ?? attachment.url ?? "");
-    const kind = forcedTextMime ? "document" : resolveAttachmentKind(attachment);
+    const forcedTextMime = resolveTextMimeFromName(
+      attachment.path ?? attachment.url ?? "",
+    );
+    const kind = forcedTextMime
+      ? "document"
+      : resolveAttachmentKind(attachment);
     if (!forcedTextMime && (kind === "image" || kind === "video")) {
       continue;
     }
     if (!limits.allowUrl && attachment.url && !attachment.path) {
       if (shouldLogVerbose()) {
-        logVerbose(`media: file attachment skipped (url disabled) index=${attachment.index}`);
+        logVerbose(
+          `media: file attachment skipped (url disabled) index=${attachment.index}`,
+        );
       }
       continue;
     }
@@ -251,17 +272,24 @@ async function extractFileBlocks(params: {
       }
       continue;
     }
-    const nameHint = bufferResult?.fileName ?? attachment.path ?? attachment.url;
-    const forcedTextMimeResolved = forcedTextMime ?? resolveTextMimeFromName(nameHint ?? "");
-    const utf16Charset = resolveUtf16Charset(bufferResult?.buffer);
-    const textSample = decodeTextSample(bufferResult?.buffer);
-    const textLike = Boolean(utf16Charset) || looksLikeUtf8Text(bufferResult?.buffer);
-    if (!forcedTextMimeResolved && kind === "audio" && !textLike) {
+    const nameHint =
+      bufferResult?.fileName ?? attachment.path ?? attachment.url;
+    const forcedTextMimeResolved =
+      forcedTextMime ?? resolveTextMimeFromName(nameHint ?? "");
+    if (!forcedTextMimeResolved && kind === "audio") {
       continue;
     }
-    const guessedDelimited = textLike ? guessDelimitedMime(textSample) : undefined;
+    const utf16Charset = resolveUtf16Charset(bufferResult?.buffer);
+    const textSample = decodeTextSample(bufferResult?.buffer);
+    const textLike =
+      Boolean(utf16Charset) || looksLikeUtf8Text(bufferResult?.buffer);
+    const guessedDelimited = textLike
+      ? guessDelimitedMime(textSample)
+      : undefined;
     const textHint =
-      forcedTextMimeResolved ?? guessedDelimited ?? (textLike ? "text/plain" : undefined);
+      forcedTextMimeResolved ??
+      guessedDelimited ??
+      (textLike ? "text/plain" : undefined);
     const rawMime = bufferResult?.mime ?? attachment.mime;
     const mimeType = textHint ?? normalizeMimeType(rawMime);
     // Log when MIME type is overridden from non-text to text for auditability
@@ -272,7 +300,9 @@ async function extractFileBlocks(params: {
     }
     if (!mimeType) {
       if (shouldLogVerbose()) {
-        logVerbose(`media: file attachment skipped (unknown mime) index=${attachment.index}`);
+        logVerbose(
+          `media: file attachment skipped (unknown mime) index=${attachment.index}`,
+        );
       }
       continue;
     }
@@ -293,7 +323,9 @@ async function extractFileBlocks(params: {
     }
     let extracted: Awaited<ReturnType<typeof extractFileContentFromSource>>;
     try {
-      const mediaType = utf16Charset ? `${mimeType}; charset=${utf16Charset}` : mimeType;
+      const mediaType = utf16Charset
+        ? `${mimeType}; charset=${utf16Charset}`
+        : mimeType;
       extracted = await extractFileContentFromSource({
         source: {
           type: "base64",
@@ -316,7 +348,8 @@ async function extractFileBlocks(params: {
     let blockText = text;
     if (!blockText) {
       if (extracted?.images && extracted.images.length > 0) {
-        blockText = "[PDF content rendered to images; images not forwarded to model]";
+        blockText =
+          "[PDF content rendered to images; images not forwarded to model]";
       } else {
         blockText = "[No extractable text]";
       }
@@ -386,12 +419,17 @@ export async function applyMediaUnderstanding(params: {
     }
 
     if (decisions.length > 0) {
-      ctx.MediaUnderstandingDecisions = [...(ctx.MediaUnderstandingDecisions ?? []), ...decisions];
+      ctx.MediaUnderstandingDecisions = [
+        ...(ctx.MediaUnderstandingDecisions ?? []),
+        ...decisions,
+      ];
     }
 
     if (outputs.length > 0) {
       ctx.Body = formatMediaUnderstandingBody({ body: ctx.Body, outputs });
-      const audioOutputs = outputs.filter((output) => output.kind === "audio.transcription");
+      const audioOutputs = outputs.filter(
+        (output) => output.kind === "audio.transcription",
+      );
       if (audioOutputs.length > 0) {
         const transcript = formatAudioTranscripts(audioOutputs);
         ctx.Transcript = transcript;
@@ -421,9 +459,15 @@ export async function applyMediaUnderstanding(params: {
     return {
       outputs,
       decisions,
-      appliedImage: outputs.some((output) => output.kind === "image.description"),
-      appliedAudio: outputs.some((output) => output.kind === "audio.transcription"),
-      appliedVideo: outputs.some((output) => output.kind === "video.description"),
+      appliedImage: outputs.some(
+        (output) => output.kind === "image.description",
+      ),
+      appliedAudio: outputs.some(
+        (output) => output.kind === "audio.transcription",
+      ),
+      appliedVideo: outputs.some(
+        (output) => output.kind === "video.description",
+      ),
       appliedFile: fileBlocks.length > 0,
     };
   } finally {
