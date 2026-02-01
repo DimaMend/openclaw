@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../config/config.js";
 import { createSlackActions } from "./slack.actions.js";
 
@@ -9,6 +9,10 @@ vi.mock("../../agents/tools/slack-actions.js", () => ({
 }));
 
 describe("slack actions adapter", () => {
+  beforeEach(() => {
+    handleSlackAction.mockClear();
+  });
+
   it("forwards threadId for read", async () => {
     const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
     const actions = createSlackActions("slack");
@@ -48,7 +52,6 @@ describe("slack actions adapter", () => {
   });
 
   it("handles thread-reply action", async () => {
-    handleSlackAction.mockClear();
     const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
     const actions = createSlackActions("slack");
 
@@ -72,7 +75,7 @@ describe("slack actions adapter", () => {
     });
   });
 
-  it("thread-reply throws without threadId", async () => {
+  it("thread-reply throws without thread identifier", async () => {
     const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
     const actions = createSlackActions("slack");
 
@@ -86,6 +89,6 @@ describe("slack actions adapter", () => {
           message: "Missing thread",
         },
       }),
-    ).rejects.toThrow(/threadId/);
+    ).rejects.toThrow(/thread-reply requires/);
   });
 });
