@@ -12,6 +12,7 @@ import {
 import { normalizeMessage, normalizeRoleForGrouping } from "../chat/message-normalizer";
 import { renderModelPickerDialog } from "../components/model-picker-dialog";
 import { icons } from "../icons";
+import { formatProviderName } from "../utils/provider-format";
 import { renderMarkdownSidebar } from "./markdown-sidebar";
 import "../components/resizable-divider";
 
@@ -184,22 +185,6 @@ function renderAttachmentPreview(props: ChatProps) {
       )}
     </div>
   `;
-}
-
-function formatProviderName(provider: string): string {
-  const names: Record<string, string> = {
-    openai: "OpenAI",
-    anthropic: "Anthropic",
-    google: "Google",
-    "google-antigravity": "Google AG",
-    "github-copilot": "GitHub Copilot",
-    deepseek: "DeepSeek",
-    groq: "Groq",
-    mistral: "Mistral",
-    zai: "Z.AI",
-    other: "Other",
-  };
-  return names[provider.toLowerCase()] || provider;
 }
 
 function renderModelSelector(props: ChatProps) {

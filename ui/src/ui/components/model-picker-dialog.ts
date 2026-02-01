@@ -1,6 +1,7 @@
 import { html, nothing } from "lit";
 import type { ModelEntry } from "../controllers/models";
 import { icons } from "../icons";
+import { formatProviderName } from "../utils/provider-format";
 
 export type { ModelEntry } from "../controllers/models";
 
@@ -24,23 +25,6 @@ function groupModelsByProvider(models: ModelEntry[]): ModelsByProvider {
     grouped.get(provider)!.push(model);
   }
   return grouped;
-}
-
-function formatProviderName(provider: string): string {
-  const names: Record<string, string> = {
-    openai: "OpenAI",
-    anthropic: "Anthropic",
-    google: "Google",
-    "google-antigravity": "Google AG",
-    "github-copilot": "GitHub Copilot",
-    deepseek: "DeepSeek",
-    groq: "Groq",
-    mistral: "Mistral",
-    zai: "Z.AI",
-    xai: "xAI",
-    other: "Other",
-  };
-  return names[provider.toLowerCase()] || provider;
 }
 
 function formatContextWindow(contextWindow: number | undefined): string {
@@ -70,8 +54,18 @@ function getProviderIcon(provider: string): string {
   return providerIcons[provider.toLowerCase()] || "🤖";
 }
 
+// Track active escape listener to prevent duplicates
+let activeEscapeHandler: ((e: KeyboardEvent) => void) | null = null;
+
 export function renderModelPickerDialog(props: ModelPickerDialogProps) {
-  if (!props.open) return nothing;
+  if (!props.open) {
+    // Clean up any lingering listener when dialog closes
+    if (activeEscapeHandler) {
+      document.removeEventListener("keydown", activeEscapeHandler);
+      activeEscapeHandler = null;
+    }
+    return nothing;
+  }
 
   const grouped = groupModelsByProvider(props.models);
   const providers = Array.from(grouped.keys()).sort((a, b) => {
@@ -82,44 +76,41 @@ export function renderModelPickerDialog(props: ModelPickerDialogProps) {
     return formatProviderName(a).localeCompare(formatProviderName(b));
   });
 
-  const handleBackdropClick = (e: Event) => {
-    if ((e.target as HTMLElement).classList.contains("model-picker-backdrop")) {
-      props.onClose();
+  // Create close handler that cleans up listener
+  const handleClose = () => {
+    if (activeEscapeHandler) {
+      document.removeEventListener("keydown", activeEscapeHandler);
+      activeEscapeHandler = null;
     }
-  };
-
-  // Use a single cleanup function that removes listener on ANY close
-  const escapeHandler = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      props.onClose();
-    }
-  };
-
-  // Add listener immediately
-  document.addEventListener("keydown", escapeHandler);
-
-  // Wrap onClose to ensure cleanup happens on any close method
-  const handleCloseWithCleanup = () => {
-    document.removeEventListener("keydown", escapeHandler);
     props.onClose();
   };
 
-  const handleBackdropClickWithCleanup = (e: Event) => {
+  // Set up escape key handler if not already active
+  if (!activeEscapeHandler) {
+    activeEscapeHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+    document.addEventListener("keydown", activeEscapeHandler);
+
+    // Focus dialog on initial open only (when handler is first set up)
+    requestAnimationFrame(() => {
+      const dialog = document.querySelector(".model-picker-dialog") as HTMLElement;
+      dialog?.focus();
+    });
+  }
+
+  const handleBackdropClick = (e: Event) => {
     if ((e.target as HTMLElement).classList.contains("model-picker-backdrop")) {
-      handleCloseWithCleanup();
+      handleClose();
     }
   };
-
-  // Focus dialog on next tick for accessibility
-  setTimeout(() => {
-    const dialog = document.querySelector(".model-picker-dialog") as HTMLElement;
-    dialog?.focus();
-  }, 0);
 
   return html`
     <div
       class="model-picker-backdrop"
-      @click=${handleBackdropClickWithCleanup}
+      @click=${handleBackdropClick}
     >
       <div
         class="model-picker-dialog"
@@ -132,7 +123,7 @@ export function renderModelPickerDialog(props: ModelPickerDialogProps) {
           <h2 id="model-picker-title" class="model-picker-title">Select Model</h2>
           <button
             class="model-picker-close"
-            @click=${handleCloseWithCleanup}
+            @click=${handleClose}
             aria-label="Close"
             type="button"
           >
@@ -162,7 +153,7 @@ export function renderModelPickerDialog(props: ModelPickerDialogProps) {
                         class="model-picker-model ${isSelected ? "model-picker-model--selected" : ""}"
                         @click=${() => {
                           props.onSelect(model.id);
-                          handleCloseWithCleanup();
+                          handleClose();
                         }}
                         type="button"
                       >
