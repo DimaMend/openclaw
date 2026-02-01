@@ -42,8 +42,9 @@ function sanitizeModelOutput(text: string): string {
   // Remove "Thought:" blocks (Grok, older reasoning models)
   out = out.replace(/(^|\n)\s*Thoughts?:[\s\S]*?(?=\n\s*\n|$)/gi, "$1");
 
-  // Remove "Thinking..." markers - fixed to handle space before ellipsis
-  out = out.replace(/Thinking(?:\s*\.{3})?\s*/gi, "");
+  // Remove "Thinking..." or "Thinking:" markers only
+  // Only match when followed by ellipsis or colon to avoid breaking normal text
+  out = out.replace(/(^|\n)\s*Thinking\s*(?:\.{3}|:)/gi, "");
 
   // Remove bracketed reasoning like [Thinking...], [thinking], etc.
   // Includes the brackets themselves

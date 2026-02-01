@@ -16,8 +16,9 @@ function sanitizeModelOutput(text) {
   // 2. Remove "Thought:" blocks (Grok, older reasoning models)
   out = out.replace(/(^|\n)\s*Thoughts?:[\s\S]*?(?=\n\s*\n|$)/gi, "$1");
 
-  // 3. Remove "Thinking..." markers - fixed to handle space before ellipsis
-  out = out.replace(/Thinking(?:\s*\.{3})?\s*/gi, "");
+  // 3. Remove "Thinking..." or "Thinking:" markers only
+  // Only match when followed by ellipsis or colon to avoid breaking normal text
+  out = out.replace(/(^|\n)\s*Thinking\s*(?:\.{3}|:)/gi, "");
 
   // 4. Remove bracketed reasoning like [Thinking...], [thinking], etc.
   // Match with surrounding spaces but replace with single space
@@ -91,6 +92,11 @@ To send a Discord message:
 3. Send the message`,
     expected:
       "To send a Discord message:\n1. Create a REST client\n2. Use the API endpoint\n3. Send the message",
+  },
+  {
+    name: "Protects legitimate 'thinking' in sentences",
+    input: "Thinking outside the box is important. The solution works.",
+    expected: "Thinking outside the box is important. The solution works.",
   },
 ];
 
