@@ -20,8 +20,8 @@ export function createTypingCallbacks(params: {
 
   const onIdle = stop
     ? () => {
-      void stop().catch((err) => (params.onStopError ?? params.onStartError)(err));
-    }
+        void stop().catch((err) => (params.onStopError ?? params.onStartError)(err));
+      }
     : undefined;
 
   return { onReplyStart, onIdle };
@@ -169,7 +169,7 @@ export function createTypingAdapter(params: {
   return {
     channel: params.channel,
     startTyping: params.startTyping,
-    stopTyping: params.stopTyping ?? (async () => { }),
+    stopTyping: params.stopTyping ?? (async () => {}),
     supportsExplicitStop: !!params.stopTyping,
   };
 }
