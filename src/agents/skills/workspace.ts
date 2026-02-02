@@ -23,12 +23,8 @@ import {
   resolveSkillInvocationPolicy,
 } from "./frontmatter.js";
 import { resolvePluginSkillDirs } from "./plugin-skills.js";
+import { SkillSemanticIndex, resolveEmbedFn, type SemanticSkillConfig } from "./semantic-index.js";
 import { serializeByKey } from "./serialize.js";
-import {
-  SkillSemanticIndex,
-  resolveEmbedFn,
-  type SemanticSkillConfig,
-} from "./semantic-index.js";
 
 const fsp = fs.promises;
 const skillsLogger = createSubsystemLogger("skills");
@@ -53,12 +49,12 @@ async function getOrCreateSemanticIndex(
   }
 
   // Create a simple hash of skill names to detect changes
-  const entriesHash = entries.map((e) => e.skill.name).sort().join(",");
-  
-  if (
-    cachedSemanticIndex &&
-    cachedIndexHash === entriesHash
-  ) {
+  const entriesHash = entries
+    .map((e) => e.skill.name)
+    .sort()
+    .join(",");
+
+  if (cachedSemanticIndex && cachedIndexHash === entriesHash) {
     skillsLogger.debug("Using cached semantic skill index");
     return cachedSemanticIndex;
   }
@@ -66,20 +62,16 @@ async function getOrCreateSemanticIndex(
   // Resolve embedding function from config
   const provider = dynamicConfig.embeddingProvider ?? "openai";
   const apiKey = resolveEmbeddingApiKey(provider, config);
-  
+
   if (!apiKey) {
     skillsLogger.warn(
       `No API key found for embedding provider "${provider}". ` +
-      "Falling back to full skill loading."
+        "Falling back to full skill loading.",
     );
     return null;
   }
 
-  const embedFn = resolveEmbedFn(
-    provider,
-    apiKey,
-    dynamicConfig.embeddingModel
-  );
+  const embedFn = resolveEmbedFn(provider, apiKey, dynamicConfig.embeddingModel);
 
   // Build new index
   const semanticConfig: Partial<SemanticSkillConfig> = {
@@ -90,20 +82,19 @@ async function getOrCreateSemanticIndex(
   };
 
   const index = new SkillSemanticIndex(semanticConfig);
-  
+
   try {
     await index.buildIndex(entries, embedFn);
     cachedSemanticIndex = index;
     cachedIndexHash = entriesHash;
     skillsLogger.info(
       `Built semantic index for ${entries.length} skills ` +
-      `(provider: ${provider}, topK: ${semanticConfig.topK})`
+        `(provider: ${provider}, topK: ${semanticConfig.topK})`,
     );
     return index;
   } catch (error) {
     skillsLogger.error(
-      "Failed to build semantic skill index:",
-      error instanceof Error ? error.message : String(error)
+      `Failed to build semantic skill index: ${error instanceof Error ? error.message : String(error)}`,
     );
     return null;
   }
@@ -112,10 +103,7 @@ async function getOrCreateSemanticIndex(
 /**
  * Resolve API key for embedding provider from config or environment.
  */
-function resolveEmbeddingApiKey(
-  provider: string,
-  config?: OpenClawConfig
-): string | undefined {
+function resolveEmbeddingApiKey(provider: string, config?: OpenClawConfig): string | undefined {
   // First check environment variables
   const envKeys: Record<string, string> = {
     openai: "OPENAI_API_KEY",
@@ -138,17 +126,13 @@ function resolveEmbeddingApiKey(
  * Format a lightweight skill directory for the prompt.
  * Only includes skill names and one-line descriptions.
  */
-function formatSkillDirectory(
-  directory: Array<{ name: string; description: string }>
-): string {
+function formatSkillDirectory(directory: Array<{ name: string; description: string }>): string {
   if (directory.length === 0) {
     return "";
   }
 
-  const lines = directory.map(
-    (s) => `- ${s.name}: ${s.description.slice(0, 100)}`
-  );
-  
+  const lines = directory.map((s) => `- ${s.name}: ${s.description.slice(0, 100)}`);
+
   return [
     "## Available Skills (lightweight directory)",
     "The following skills are installed but not fully loaded.",
@@ -384,7 +368,7 @@ export function buildWorkspaceSkillsPrompt(
 
 /**
  * Build workspace skills prompt with context-aware dynamic loading.
- * 
+ *
  * When `skills.dynamicLoading.enabled` is true and a userMessage is provided,
  * this function will:
  * 1. Build a semantic index of all skills
@@ -392,14 +376,14 @@ export function buildWorkspaceSkillsPrompt(
  * 3. Return a prompt containing:
  *    - Full documentation for relevant skills only
  *    - A lightweight directory of all other skills
- * 
+ *
  * This dramatically reduces token usage while maintaining skill awareness.
- * 
+ *
  * Falls back to full loading if:
  * - dynamicLoading is disabled
  * - userMessage is not provided
  * - Semantic search fails
- * 
+ *
  * @param workspaceDir - Workspace directory path
  * @param opts - Options including config and optional userMessage
  * @returns Skills prompt string
@@ -443,7 +427,7 @@ export async function buildWorkspaceSkillsPromptAsync(
 
   // Try to get or create semantic index
   const semanticIndex = await getOrCreateSemanticIndex(promptEntries, opts?.config);
-  
+
   if (!semanticIndex) {
     // Fall back to full loading on index creation failure
     skillsLogger.debug("Semantic index unavailable, falling back to full loading");
@@ -457,27 +441,19 @@ export async function buildWorkspaceSkillsPromptAsync(
     // Resolve embedding function for search
     const provider = dynamicConfig.embeddingProvider ?? "openai";
     const apiKey = resolveEmbeddingApiKey(provider, opts?.config);
-    
+
     if (!apiKey) {
       throw new Error(`No API key for provider ${provider}`);
     }
 
-    const embedFn = resolveEmbedFn(
-      provider,
-      apiKey,
-      dynamicConfig.embeddingModel
-    );
+    const embedFn = resolveEmbedFn(provider, apiKey, dynamicConfig.embeddingModel);
 
     // Search for relevant skills
-    const relevantEntries = await semanticIndex.search(
-      userMessage,
-      embedFn,
-      dynamicConfig.topK
-    );
+    const relevantEntries = await semanticIndex.search(userMessage, embedFn, dynamicConfig.topK);
 
     // Get lightweight directory of all skills
     const directory = semanticIndex.getSkillDirectory();
-    
+
     // Filter directory to exclude skills that are fully loaded
     const loadedNames = new Set(relevantEntries.map((e) => e.skill.name));
     const unloadedDirectory = directory.filter((d) => !loadedNames.has(d.name));
@@ -485,7 +461,7 @@ export async function buildWorkspaceSkillsPromptAsync(
     // Build the combined prompt
     const parts: string[] = [];
     const remoteNote = opts?.eligibility?.remote?.note?.trim();
-    
+
     if (remoteNote) {
       parts.push(remoteNote);
     }
@@ -502,18 +478,17 @@ export async function buildWorkspaceSkillsPromptAsync(
     }
 
     const prompt = parts.filter(Boolean).join("\n\n");
-    
+
     skillsLogger.debug(
       `Dynamic skill loading: ${relevantEntries.length} loaded, ` +
-      `${unloadedDirectory.length} in directory`
+        `${unloadedDirectory.length} in directory`,
     );
 
     return prompt;
   } catch (error) {
     // Fall back to full loading on search failure
     skillsLogger.error(
-      "Semantic skill search failed, falling back to full loading:",
-      error instanceof Error ? error.message : String(error)
+      `Semantic skill search failed, falling back to full loading: ${error instanceof Error ? error.message : String(error)}`,
     );
     const remoteNote = opts?.eligibility?.remote?.note?.trim();
     return [remoteNote, formatSkillsForPrompt(promptEntries.map((entry) => entry.skill))]

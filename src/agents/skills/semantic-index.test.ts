@@ -3,13 +3,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { SkillEntry } from "./types.js";
 import {
   SkillSemanticIndex,
   createOpenAIEmbedFn,
   createVoyageEmbedFn,
   resolveEmbedFn,
 } from "./semantic-index.js";
-import type { SkillEntry } from "./types.js";
 
 // Mock fetch for embedding API tests
 const mockFetch = vi.fn();
@@ -19,7 +19,7 @@ global.fetch = mockFetch;
 function createMockSkillEntry(
   name: string,
   description: string,
-  triggers: string[] = []
+  triggers: string[] = [],
 ): SkillEntry {
   return {
     skill: {
@@ -47,9 +47,7 @@ function createMockEmbedFn(dimension = 1536) {
   return vi.fn().mockImplementation(async (text: string) => {
     // Create a deterministic but unique embedding based on text
     const hash = text.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const embedding = Array.from({ length: dimension }, (_, i) =>
-      Math.sin(hash + i) * 0.5 + 0.5
-    );
+    const embedding = Array.from({ length: dimension }, (_, i) => Math.sin(hash + i) * 0.5 + 0.5);
     return embedding;
   });
 }
@@ -104,7 +102,7 @@ describe("SkillSemanticIndex", () => {
       expect(embedFn).toHaveBeenCalledTimes(3);
     });
 
-    it("skips skills without description or triggers", async () => {
+    it("uses skill name as fallback when no description", async () => {
       const index = new SkillSemanticIndex({ enabled: true });
       const embedFn = createMockEmbedFn();
 
@@ -126,13 +124,20 @@ describe("SkillSemanticIndex", () => {
       await index.buildIndex(entries, embedFn);
       const stats = index.getStats();
 
-      expect(stats.totalSkills).toBe(1);
-      expect(embedFn).toHaveBeenCalledTimes(1);
+      // Both skills indexed - empty-skill uses its name as fallback
+      expect(stats.totalSkills).toBe(2);
+      expect(embedFn).toHaveBeenCalledTimes(2);
+
+      // Verify the empty skill was indexed with its name
+      const directory = index.getSkillDirectory();
+      const emptySkill = directory.find((s) => s.name === "empty-skill");
+      expect(emptySkill?.description).toBe("empty-skill");
     });
 
     it("handles embedding errors gracefully", async () => {
       const index = new SkillSemanticIndex({ enabled: true });
-      const embedFn = vi.fn()
+      const embedFn = vi
+        .fn()
         .mockResolvedValueOnce([0.1, 0.2, 0.3])
         .mockRejectedValueOnce(new Error("API error"))
         .mockResolvedValueOnce([0.4, 0.5, 0.6]);
@@ -223,7 +228,7 @@ describe("SkillSemanticIndex", () => {
 
       const embedFn = createMockEmbedFn();
       const entries = Array.from({ length: 10 }, (_, i) =>
-        createMockSkillEntry(`skill${i}`, `Description ${i}`)
+        createMockSkillEntry(`skill${i}`, `Description ${i}`),
       );
 
       await index.buildIndex(entries, embedFn);
@@ -286,10 +291,7 @@ describe("SkillSemanticIndex", () => {
       const embedFn = createMockEmbedFn(3);
 
       // Index a skill to get access to the similarity calculation indirectly
-      await index.buildIndex(
-        [createMockSkillEntry("test", "test description")],
-        embedFn
-      );
+      await index.buildIndex([createMockSkillEntry("test", "test description")], embedFn);
 
       // Search with the same embedding should give high similarity
       const results = await index.search("test description", embedFn);
@@ -325,7 +327,7 @@ describe("Embedding Provider Functions", () => {
             "Content-Type": "application/json",
             Authorization: "Bearer test-api-key",
           }),
-        })
+        }),
       );
 
       expect(result).toEqual([0.1, 0.2, 0.3]);
@@ -340,7 +342,7 @@ describe("Embedding Provider Functions", () => {
       const embedFn = createOpenAIEmbedFn("test-api-key");
 
       await expect(embedFn("test text")).rejects.toThrow(
-        "OpenAI embedding failed: Rate limit exceeded"
+        "OpenAI embedding failed: Rate limit exceeded",
       );
     });
   });
@@ -364,7 +366,7 @@ describe("Embedding Provider Functions", () => {
           headers: expect.objectContaining({
             Authorization: "Bearer voyage-api-key",
           }),
-        })
+        }),
       );
 
       expect(result).toEqual([0.4, 0.5, 0.6]);
@@ -389,9 +391,7 @@ describe("Embedding Provider Functions", () => {
     });
 
     it("throws for unknown provider", () => {
-      expect(() => resolveEmbedFn("unknown", "key")).toThrow(
-        "Unknown embedding provider: unknown"
-      );
+      expect(() => resolveEmbedFn("unknown", "key")).toThrow("Unknown embedding provider: unknown");
     });
 
     it("is case-insensitive", () => {
@@ -413,11 +413,7 @@ describe("Dynamic Skill Loading Integration", () => {
 
     // Create 15 mock skills
     const entries = Array.from({ length: 15 }, (_, i) =>
-      createMockSkillEntry(
-        `skill-${i}`,
-        `This is skill number ${i} for testing`,
-        [`trigger-${i}`]
-      )
+      createMockSkillEntry(`skill-${i}`, `This is skill number ${i} for testing`, [`trigger-${i}`]),
     );
 
     await index.buildIndex(entries, embedFn);

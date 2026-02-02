@@ -1,9 +1,9 @@
 /**
  * Semantic skill indexing for context-aware dynamic skill loading.
- * 
+ *
  * Reduces token consumption by loading only relevant skills based on semantic
  * search against user messages, rather than loading ALL skills into context.
- * 
+ *
  * @module agents/skills/semantic-index
  */
 
@@ -61,16 +61,16 @@ export class SkillSemanticIndex {
 
   /**
    * Build index from skill entries.
-   * 
+   *
    * @param entries - Skill entries to index
    * @param embedFn - Function to generate embeddings
    */
   async buildIndex(
     entries: SkillEntry[],
-    embedFn: (text: string) => Promise<number[]>
+    embedFn: (text: string) => Promise<number[]>,
   ): Promise<void> {
     logger.info(`Building semantic skill index for ${entries.length} skills...`);
-    
+
     const start = Date.now();
     let indexed = 0;
 
@@ -78,17 +78,17 @@ export class SkillSemanticIndex {
       try {
         const description = this.extractDescription(entry);
         const triggers = this.extractTriggers(entry);
-        
+
         // Combine description + triggers for embedding
         const text = [description, ...triggers].filter(Boolean).join(" ");
-        
+
         if (!text.trim()) {
           logger.debug(`Skipping skill ${entry.skill.name} (no description/triggers)`);
           continue;
         }
 
         const embedding = await embedFn(text);
-        
+
         this.index.set(entry.skill.name, {
           name: entry.skill.name,
           description,
@@ -97,25 +97,22 @@ export class SkillSemanticIndex {
           filePath: entry.skill.filePath,
           entry,
         });
-        
+
         indexed++;
       } catch (error) {
         logger.error(
-          `Failed to index skill ${entry.skill.name}:`,
-          error instanceof Error ? error.message : String(error)
+          `Failed to index skill ${entry.skill.name}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
 
     const duration = Date.now() - start;
-    logger.info(
-      `Indexed ${indexed}/${entries.length} skills in ${duration}ms`
-    );
+    logger.info(`Indexed ${indexed}/${entries.length} skills in ${duration}ms`);
   }
 
   /**
    * Search for relevant skills based on user message.
-   * 
+   *
    * @param query - User message to search against
    * @param embedFn - Function to generate query embedding
    * @param topK - Number of results to return (overrides config)
@@ -124,7 +121,7 @@ export class SkillSemanticIndex {
   async search(
     query: string,
     embedFn: (text: string) => Promise<number[]>,
-    topK?: number
+    topK?: number,
   ): Promise<SkillEntry[]> {
     if (this.index.size === 0) {
       logger.warn("Skill index is empty, returning no results");
@@ -133,7 +130,7 @@ export class SkillSemanticIndex {
 
     const k = topK ?? this.config.topK;
     const queryEmbedding = await embedFn(query);
-    
+
     // Calculate cosine similarity for all skills
     const scores = Array.from(this.index.values()).map((indexed) => ({
       entry: indexed.entry,
@@ -149,7 +146,7 @@ export class SkillSemanticIndex {
 
     logger.debug(
       `Found ${relevant.length} relevant skills for query (threshold: ${this.config.minScore})`,
-      { topSkills: relevant.slice(0, 3).map((s) => `${s.name} (${s.score.toFixed(3)})`) }
+      { topSkills: relevant.slice(0, 3).map((s) => `${s.name} (${s.score.toFixed(3)})`) },
     );
 
     return relevant.map((s) => s.entry);
@@ -225,7 +222,10 @@ export class SkillSemanticIndex {
         return JSON.parse(raw);
       } catch {
         // Fall back to comma-separated
-        return raw.split(",").map((t) => t.trim()).filter(Boolean);
+        return raw
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
       }
     }
 
@@ -248,14 +248,14 @@ export class SkillSemanticIndex {
 
 /**
  * Create an embedding function using OpenAI's API.
- * 
+ *
  * @param apiKey - OpenAI API key
  * @param model - Embedding model name (default: "text-embedding-3-small")
  * @returns Embedding function
  */
 export function createOpenAIEmbedFn(
   apiKey: string,
-  model = "text-embedding-3-small"
+  model = "text-embedding-3-small",
 ): (text: string) => Promise<number[]> {
   return async (text: string): Promise<number[]> => {
     const response = await fetch("https://api.openai.com/v1/embeddings", {
@@ -285,14 +285,14 @@ export function createOpenAIEmbedFn(
 /**
  * Create an embedding function using Anthropic's API (via Voyage AI).
  * Note: Anthropic uses Voyage AI for embeddings.
- * 
+ *
  * @param apiKey - Voyage AI API key
  * @param model - Embedding model name (default: "voyage-3-lite")
  * @returns Embedding function
  */
 export function createVoyageEmbedFn(
   apiKey: string,
-  model = "voyage-3-lite"
+  model = "voyage-3-lite",
 ): (text: string) => Promise<number[]> {
   return async (text: string): Promise<number[]> => {
     const response = await fetch("https://api.voyageai.com/v1/embeddings", {
@@ -321,7 +321,7 @@ export function createVoyageEmbedFn(
 
 /**
  * Resolve embed function from configuration.
- * 
+ *
  * @param provider - Provider name ("openai" | "voyage" | "anthropic")
  * @param apiKey - API key for the provider
  * @param model - Optional model name override
@@ -330,7 +330,7 @@ export function createVoyageEmbedFn(
 export function resolveEmbedFn(
   provider: string,
   apiKey: string,
-  model?: string
+  model?: string,
 ): (text: string) => Promise<number[]> {
   switch (provider.toLowerCase()) {
     case "openai":
@@ -341,7 +341,7 @@ export function resolveEmbedFn(
     default:
       throw new Error(
         `Unknown embedding provider: ${provider}. ` +
-        "Supported providers: openai, voyage, anthropic"
+          "Supported providers: openai, voyage, anthropic",
       );
   }
 }
@@ -354,6 +354,6 @@ export async function defaultEmbedFn(text: string): Promise<number[]> {
   // TODO: Implement with @mariozechner/pi-ai embeddings
   throw new Error(
     "Semantic skill indexing requires an embedding function. " +
-    "Configure skills.dynamicLoading.embeddingProvider in config."
+      "Configure skills.dynamicLoading.embeddingProvider in config.",
   );
 }
