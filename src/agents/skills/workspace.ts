@@ -32,7 +32,6 @@ const skillCommandDebugOnce = new Set<string>();
 
 // Cached semantic index for dynamic skill loading
 let cachedSemanticIndex: SkillSemanticIndex | null = null;
-let cachedIndexWorkspace: string | null = null;
 let cachedIndexHash: string | null = null;
 
 /**
@@ -48,9 +47,12 @@ async function getOrCreateSemanticIndex(
     return null;
   }
 
-  // Create a simple hash of skill names to detect changes
+  // Create a hash of skill names and mtimes to detect changes (including content)
   const entriesHash = entries
-    .map((e) => e.skill.name)
+    .map((e) => {
+      const stat = fs.statSync(e.skill.filePath);
+      return `${e.skill.name}:${stat.mtimeMs}`;
+    })
     .sort()
     .join(",");
 
@@ -503,7 +505,6 @@ export async function buildWorkspaceSkillsPromptAsync(
  */
 export function clearSemanticIndexCache(): void {
   cachedSemanticIndex = null;
-  cachedIndexWorkspace = null;
   cachedIndexHash = null;
   skillsLogger.debug("Semantic skill index cache cleared");
 }

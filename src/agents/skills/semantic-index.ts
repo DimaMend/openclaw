@@ -215,8 +215,15 @@ export class SkillSemanticIndex {
     }
 
     // Parse trigger phrases from frontmatter
-    // Format: triggers: ["phrase 1", "phrase 2"]
+    // Format: triggers: ["phrase 1", "phrase 2"] or triggers: "phrase 1, phrase 2"
     const raw = entry.frontmatter.triggers;
+
+    // Handle array format (YAML parses arrays directly)
+    if (Array.isArray(raw)) {
+      return raw.filter((t): t is string => typeof t === "string");
+    }
+
+    // Handle string format (JSON or comma-separated)
     if (typeof raw === "string") {
       try {
         return JSON.parse(raw);
@@ -278,6 +285,9 @@ export function createOpenAIEmbedFn(
     const data = (await response.json()) as {
       data: Array<{ embedding: number[] }>;
     };
+    if (!data.data?.[0]?.embedding) {
+      throw new Error("No embedding returned from OpenAI API");
+    }
     return data.data[0].embedding;
   };
 }
@@ -315,6 +325,9 @@ export function createVoyageEmbedFn(
     const data = (await response.json()) as {
       data: Array<{ embedding: number[] }>;
     };
+    if (!data.data?.[0]?.embedding) {
+      throw new Error("No embedding returned from Voyage AI API");
+    }
     return data.data[0].embedding;
   };
 }
