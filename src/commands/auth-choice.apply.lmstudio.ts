@@ -30,7 +30,13 @@ function normalizeLmStudioBaseUrl(raw: string): string | null {
     return null;
   }
   const hasUrlScheme = hasScheme(trimmed);
-  const hostInput = hasUrlScheme ? trimmed : trimmed.split("/")[0];
+  const hostInput = (() => {
+    try {
+      return hasUrlScheme ? new URL(trimmed).hostname : new URL(`http://${trimmed}`).hostname;
+    } catch {
+      return trimmed.split("/")[0] ?? trimmed;
+    }
+  })();
   const defaultScheme = isLoopbackHost(hostInput) ? "http" : "https";
   const withScheme = hasUrlScheme ? trimmed : `${defaultScheme}://${trimmed}`;
 
@@ -78,7 +84,10 @@ export async function applyAuthChoiceLmStudio(
     validate: (value) =>
       normalizeLmStudioBaseUrl(String(value ?? "")) ? undefined : "Enter a valid host:port or URL",
   });
-  const normalizedBaseUrl = normalizeLmStudioBaseUrl(String(baseUrlInput)) as string;
+  const normalizedBaseUrl = normalizeLmStudioBaseUrl(String(baseUrlInput));
+  if (!normalizedBaseUrl) {
+    throw new Error("Invalid LM Studio base URL");
+  }
 
   const configuredRaw =
     typeof params.config.agents?.defaults?.model === "string"
@@ -98,7 +107,10 @@ export async function applyAuthChoiceLmStudio(
     validate: (value) =>
       normalizeLmStudioModelId(String(value ?? "")) ? undefined : "Enter a model id",
   });
-  const modelId = normalizeLmStudioModelId(String(modelInput)) as string;
+  const modelId = normalizeLmStudioModelId(String(modelInput));
+  if (!modelId) {
+    throw new Error("Invalid LM Studio model id");
+  }
   const modelRef = `lmstudio/${modelId}`;
 
   const existingModels = Array.isArray(existingProvider?.models) ? existingProvider.models : [];
@@ -124,7 +136,7 @@ export async function applyAuthChoiceLmStudio(
       models: resolvedModels,
     }),
     baseUrl: normalizedBaseUrl,
-    apiKey: existingProvider?.apiKey ?? "lmstudio",
+    apiKey: existingProvider?.apiKey,
     api: existingProvider?.api ?? DEFAULT_LMSTUDIO_API,
     models: resolvedModels,
   };
