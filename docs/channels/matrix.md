@@ -195,15 +195,15 @@ When the bot receives a message in a thread, it gets minimal thread awareness:
 - `MessageThreadId` - The thread root event ID (for replying in thread)
 - `ThreadLabel` - Display label like `"Matrix thread #room-name"`
 
-For full thread context, agents can use the **read-thread** tool to fetch the complete thread on-demand.
+For full thread context, agents can use the **thread-read** tool to fetch the complete thread on-demand.
 
-#### read-thread tool
+#### thread-read tool
 
-The `read-thread` action fetches the full thread history including all media:
+The `thread-read` action fetches the full thread history including all media:
 
 ```json
 {
-  "action": "read-thread",
+  "action": "thread-read",
   "roomId": "!abc123:server.org",
   "threadId": "$thread_root_event_id",
   "limit": 50
