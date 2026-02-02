@@ -30,9 +30,46 @@ OpenClaw evaluates stages in this order:
 Within a stage, hooks run by descending `priority` (default `0`).
 If any hook **blocks**, later hooks do not run for that stage.
 
-## Plugin hook interface
+## Writing a guardrail plugin
 
-Guardrails are implemented using the plugin hook system. Plugins can register handlers for guardrail stages via `api.on()`:
+Most guardrail plugins should use the `createGuardrailPlugin<TConfig>()` helper, which wires all four stages and handles common behaviors like `block`, `monitor`, and history inclusion.
+
+```ts
+import {
+  createGuardrailPlugin,
+  type GuardrailEvaluationContext,
+  type GuardrailEvaluation,
+} from "openclaw/plugin-sdk";
+
+type MyGuardrailConfig = {
+  failOpen?: boolean;
+  stages?: {
+    beforeRequest?: { enabled?: boolean; mode?: "block" | "monitor" };
+    afterResponse?: { enabled?: boolean; mode?: "block" | "monitor" };
+  };
+};
+
+export default createGuardrailPlugin<MyGuardrailConfig>({
+  id: "my-guardrail",
+  name: "My Guardrail",
+  async evaluate(
+    ctx: GuardrailEvaluationContext,
+    _config: MyGuardrailConfig,
+  ): Promise<GuardrailEvaluation | null> {
+    if (ctx.content.includes("unsafe")) {
+      return { safe: false, reason: "unsafe content" };
+    }
+    return { safe: true };
+  },
+  formatViolationMessage(evaluation, location) {
+    return `Blocked ${location}: ${evaluation.reason ?? "unsafe content"}.`;
+  },
+});
+```
+
+## Advanced manual hooks
+
+If you need full control, you can register raw hook handlers via `api.on()`:
 
 ```ts
 // Example plugin registering guardrail hooks
