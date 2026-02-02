@@ -5,12 +5,11 @@
  * and injects relevant context into the agent's working memory.
  */
 
-import axios from "axios";
 import {
   type ContextFragment,
   type PreAnswerHook,
   type PreAnswerHookParams,
-} from "./agent-hooks-types.js";
+} from "../agent-hooks-types.js";
 
 /**
  * Check if text appears to be a question
@@ -56,93 +55,68 @@ function isQuestion(text: string): boolean {
 }
 
 /**
- * Get Memory Gateway URL from mcporter config
- */
-function getMemoryGatewayUrl(): string | null {
-  try {
-    const configPath = process.env.HOME + "/clawd/config/mcporter.json";
-    const fs = require("fs");
-    const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-
-    // Find memory-gateway MCP server
-    for (const entry of Object.entries<any>(config.mcpServers ?? {})) {
-      const [id, server] = entry;
-      if (id === "memory-gateway" || server.transport?.type === "sse") {
-        return server.transport?.url || null;
-      }
-    }
-  } catch {
-    // Config doesn't exist or can't be read
-  }
-
-  // Try environment variable
-  return process.env.MEMORY_GATEWAY_URL || null;
-}
-
-/**
- * Search memory gateway via HTTP
+ * Search memory gateway via mcporter CLI
  */
 async function searchMemoryGateway(
   query: string,
   options: { limit?: number; minScore?: number } = {},
 ): Promise<Array<{ content: string; path: string; score: number; lines: string }>> {
-  const gatewayUrl = getMemoryGatewayUrl();
+  const { spawn } = await import("child_process");
 
-  if (!gatewayUrl) {
-    console.warn("[memory-search-hook] Memory Gateway URL not found");
-    return [];
-  }
+  const limit = options.limit ?? 10;
+  const limitArg = `limit:${limit}`;
 
-  try {
-    const response = await axios.post(
-      `${gatewayUrl}/tools/call`,
-      {
-        name: "memory-gateway.search",
-        arguments: {
-          query,
-          limit: options.limit ?? 10,
-        },
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        timeout: 5000, // 5 second timeout for memory search
-      },
-    );
+  return new Promise((resolve) => {
+    const child = spawn("mcporter", ["call", "memory-gateway.search", `query=${query}`, limitArg], {
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 5000,
+    });
 
-    if (response.data?.result?.content) {
-      const content = response.data.result.content;
-      if (Array.isArray(content)) {
-        // Parse tool result content array
-        for (const item of content) {
-          if (item.type === "text") {
-            try {
-              const data = JSON.parse(item.text);
-              if (Array.isArray(data.results)) {
-                return data.results.map((r: any) => ({
-                  content: r.snippet || "",
-                  path: r.path || "",
-                  score: r.score || 0,
-                  lines: `${r.startLine}-${r.endLine}`,
-                }));
-              }
-            } catch {
-              // Not JSON, skip
-            }
-          }
-        }
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    child.on("close", (code) => {
+      if (code !== 0 || !stdout) {
+        // console.warn("[memory-search-hook] Mcporter call failed:", code, stderr);
+        resolve([]);
+        return;
       }
-    }
 
-    return [];
-  } catch (error) {
-    console.warn(
-      "[memory-search-hook] Memory search failed:",
-      error instanceof Error ? error.message : String(error),
-    );
-    return [];
-  }
+      try {
+        const data = JSON.parse(stdout);
+        if (data.results && Array.isArray(data.results)) {
+          const results = data.results.map((r: any) => ({
+            content: r.payload?.content || r.payload?.snippet || "",
+            path: r.payload?.path || "",
+            score: r.score || 0,
+            lines: "", // mcporter doesn't return line numbers
+          }));
+          resolve(results.filter((r) => r.content.length > 0));
+        } else {
+          resolve([]);
+        }
+      } catch (error) {
+        console.warn(
+          "[memory-search-hook] Failed to parse mcporter output:",
+          error instanceof Error ? error.message : String(error),
+        );
+        resolve([]);
+      }
+    });
+
+    child.on("error", (error) => {
+      console.warn("[memory-search-hook] Mcporter spawn error:", error.message);
+      resolve([]);
+    });
+  });
 }
 
 /**

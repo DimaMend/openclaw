@@ -5,9 +5,9 @@
  * context retrieval from external systems (memory search, RAG, database, etc.)
  */
 
-import type { AgentConfig } from "./agent-scope.js";
-import type { SessionEntry } from "../config/sessions.js";
 import type { TemplateContext } from "../auto-reply/templating.js";
+import type { SessionEntry } from "../config/sessions.js";
+import type { ResolvedAgentConfig } from "./agent-scope.js";
 
 /**
  * Context fragment to inject into the prompt
@@ -42,7 +42,7 @@ export interface PreAnswerHookParams {
   /** Agent session entry */
   sessionEntry?: SessionEntry;
   /** Agent configuration */
-  agentConfig?: AgentConfig;
+  agentConfig?: ResolvedAgentConfig;
   /** Context from the message */
   sessionCtx: TemplateContext;
   /** Whether this is a heartbeat */
