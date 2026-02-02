@@ -1,9 +1,9 @@
 ---
-summary: "Guardrail stages, plugin configuration, and available guardrail plugins (Gray Swan, Llama Guard, GPT-OSS-Safeguard)"
+summary: "Guardrail stages, plugin configuration, and available guardrail plugins (Gray Swan, GPT-OSS-Safeguard)"
 read_when:
   - Adding or tuning LLM guardrails
   - Investigating guardrail blocks
-  - Configuring Gray Swan, Llama Guard, or GPT-OSS-Safeguard
+  - Configuring Gray Swan or GPT-OSS-Safeguard
 title: "Guardrails"
 ---
 
@@ -133,42 +133,6 @@ Notes:
 - `policyId` maps to `policy_id` in `/cygnal/monitor` requests.
 - `categories` and `reasoningMode` are forwarded as `categories` and `reasoning_mode`.
 
-### Llama Guard
-
-Llama Guard guardrails use local inference via Ollama or any OpenAI-compatible endpoint (e.g., OpenRouter) to run [Llama Guard 3 8B](https://github.com/meta-llama/PurpleLlama).
-
-Configuration example:
-
-```json
-{
-  "plugins": {
-    "entries": {
-      "llamaguard": {
-        "enabled": true,
-        "config": {
-          "provider": "ollama",
-          "model": "llama-guard3:8b",
-          "timeoutMs": 30000,
-          "failOpen": true,
-          "stages": {
-            "beforeRequest": { "enabled": true, "mode": "block" },
-            "afterResponse": { "enabled": true, "mode": "monitor" }
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-Notes:
-
-- Requires Ollama with the model pulled: `ollama pull llama-guard3:8b`
-- Local inference adds ~100-500ms latency per check
-- Uses the built-in model provider system (supports any provider configured in `auth.profiles`)
-- Includes all 14 default Llama Guard 3 safety categories (S1-S14)
-- Custom categories can be configured via the `categories` array
-
 ### GPT-OSS-Safeguard
 
 GPT-OSS-Safeguard guardrails use local inference via Ollama or any OpenAI-compatible endpoint (e.g., OpenRouter) to run GPT-OSS-Safeguard models.
@@ -210,7 +174,7 @@ Notes:
   - `binary`: Returns `0` (safe) or `1` (violation)
   - `json`: Returns `{"violation": 0|1, "policy_category": "..."}`
   - `rich`: Returns JSON with additional `confidence` and `rationale` fields
-- `maxTokens`: Default `500` (higher than Llama Guard to accommodate reasoning output)
+- `maxTokens`: Default `500` (higher than most guardrails to accommodate reasoning output)
 
 ## Per-stage options
 
@@ -227,7 +191,7 @@ Each stage can be configured with:
 - `blockOnMutation`: default `true` only for `afterToolCall`
 - `blockOnIpi`: default `true` only for `afterToolCall`
 
-**Llama Guard** and **GPT-OSS-Safeguard** share common options:
+**GPT-OSS-Safeguard** options:
 
 - `provider`: Model provider (e.g., `ollama`, `openrouter`)
 - `model`: Model identifier
