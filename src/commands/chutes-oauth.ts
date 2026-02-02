@@ -10,6 +10,7 @@ import {
   generateChutesPkce,
   parseOAuthCallbackInput,
 } from "../agents/chutes-oauth.js";
+import { ensureOpenClawModelsJson } from "../agents/models-config.js";
 
 type OAuthPrompt = {
   message: string;
@@ -196,4 +197,8 @@ export async function loginChutes(params: {
     codeVerifier: verifier,
     fetchFn: params.fetchFn,
   });
+}
+
+export async function updateChutesModels(params: { agentDir?: string } = {}): Promise<void> {
+  await ensureOpenClawModelsJson(undefined, params.agentDir);
 }
