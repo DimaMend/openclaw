@@ -49,8 +49,8 @@ importers:
         specifier: 0.50.9
         version: 0.50.9(ws@8.19.0)(zod@4.3.6)
       '@mariozechner/pi-ai':
-        specifier: 0.50.9
-        version: 0.50.9(ws@8.19.0)(zod@4.3.6)
+        specifier: file:../pi-mono/packages/ai
+        version: file:../pi-mono/packages/ai(ws@8.19.0)(zod@4.3.6)
       '@mariozechner/pi-coding-agent':
         specifier: 0.50.7
         version: 0.50.7(ws@8.19.0)(zod@4.3.6)
@@ -1406,6 +1406,11 @@ packages:
 
   '@mariozechner/pi-ai@0.50.9':
     resolution: {integrity: sha512-a6sLIHLH+wo5zTFoo/0AE/P6GPyJzaXnE86z89t6tINzeSdKMApZZ+B4Cy4U3GpsYfxuZ9gBJlcKbfj+oKP3wg==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+
+  '@mariozechner/pi-ai@file:../pi-mono/packages/ai':
+    resolution: {directory: ../pi-mono/packages/ai, type: directory}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
@@ -6422,6 +6427,30 @@ snapshots:
       - zod
 
   '@mariozechner/pi-ai@0.50.9(ws@8.19.0)(zod@4.3.6)':
+    dependencies:
+      '@anthropic-ai/sdk': 0.71.2(zod@4.3.6)
+      '@aws-sdk/client-bedrock-runtime': 3.980.0
+      '@google/genai': 1.34.0
+      '@mistralai/mistralai': 1.10.0
+      '@sinclair/typebox': 0.34.47
+      ajv: 8.17.1
+      ajv-formats: 3.0.1(ajv@8.17.1)
+      chalk: 5.6.2
+      openai: 6.10.0(ws@8.19.0)(zod@4.3.6)
+      partial-json: 0.1.7
+      proxy-agent: 6.5.0
+      undici: 7.19.2
+      zod-to-json-schema: 3.25.1(zod@4.3.6)
+    transitivePeerDependencies:
+      - '@modelcontextprotocol/sdk'
+      - aws-crt
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+      - ws
+      - zod
+
+  '@mariozechner/pi-ai@file:../pi-mono/packages/ai(ws@8.19.0)(zod@4.3.6)':
     dependencies:
       '@anthropic-ai/sdk': 0.71.2(zod@4.3.6)
       '@aws-sdk/client-bedrock-runtime': 3.980.0

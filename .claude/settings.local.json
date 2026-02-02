@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(openclaw agent:*)",
+      "Bash(openclaw --help:*)",
+      "Bash(openclaw agents list:*)",
+      "Bash(openclaw sessions list:*)",
+      "Bash(openclaw agents:*)",
+      "Bash(openclaw config:*)",
+      "Bash(openclaw models:*)",
+      "Bash(openclaw configure:*)",
+      "Bash(git clone:*)",
+      "Bash(openclaw doctor:*)",
+      "Bash",
+      "Bash(chmod:*)",
+      "Bash(openclaw status:*)",
+      "WebFetch(domain:abacus.ai)",
+      "WebSearch",
+      "WebFetch(domain:platform.openai.com)"
+    ]
+  }
+}

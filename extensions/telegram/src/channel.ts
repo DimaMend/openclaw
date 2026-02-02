@@ -402,22 +402,28 @@ export const telegramPlugin: ChannelPlugin<ResolvedTelegramAccount> = {
           telegramBotLabel = ` (@${username})`;
         }
       } catch (err) {
-        if (getTelegramRuntime().logging.shouldLogVerbose()) {
-          ctx.log?.debug?.(`[${account.accountId}] bot probe failed: ${String(err)}`);
-        }
+        // Log probe failure but continue - monitor will retry with backoff
+        ctx.log?.warn?.(`[${account.accountId}] bot probe failed: ${String(err)}`);
       }
       ctx.log?.info(`[${account.accountId}] starting provider${telegramBotLabel}`);
-      return getTelegramRuntime().channel.telegram.monitorTelegramProvider({
-        token,
-        accountId: account.accountId,
-        config: ctx.cfg,
-        runtime: ctx.runtime,
-        abortSignal: ctx.abortSignal,
-        useWebhook: Boolean(account.config.webhookUrl),
-        webhookUrl: account.config.webhookUrl,
-        webhookSecret: account.config.webhookSecret,
-        webhookPath: account.config.webhookPath,
-      });
+      try {
+        return await getTelegramRuntime().channel.telegram.monitorTelegramProvider({
+          token,
+          accountId: account.accountId,
+          config: ctx.cfg,
+          runtime: ctx.runtime,
+          abortSignal: ctx.abortSignal,
+          useWebhook: Boolean(account.config.webhookUrl),
+          webhookUrl: account.config.webhookUrl,
+          webhookSecret: account.config.webhookSecret,
+          webhookPath: account.config.webhookPath,
+        });
+      } catch (err) {
+        // Ensure any unhandled errors from monitor are logged and don't crash the gateway
+        const errMsg = err instanceof Error ? err.message : String(err);
+        ctx.log?.error?.(`[${account.accountId}] telegram provider failed: ${errMsg}`);
+        throw err;
+      }
     },
     logoutAccount: async ({ accountId, cfg }) => {
       const envToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
