@@ -95,8 +95,9 @@ export class ZaloSessionManager {
 
                     if (event.type === LoginQRCallbackEventType.QRCodeGenerated && event.data) {
                         console.log("\n📱 QR Code Generated!");
-                        if (options?.qrCallback && event.data.qr) {
-                            options.qrCallback(event.data.qr);
+                        const data = event.data as any;
+                        if (options?.qrCallback && data.qr) {
+                            options.qrCallback(data.qr);
                         }
                     }
 
@@ -136,6 +137,7 @@ export class ZaloSessionManager {
                     const serialized = (cookieJar.toJSON()).cookies;
                     if (serialized && Array.isArray(serialized)) {
                         cookies = serialized.map((c: any) => ({
+                            key: c.key,
                             name: c.key,
                             value: c.value,
                             domain: c.domain,
@@ -297,11 +299,11 @@ export class ZaloSessionManager {
                 this.logger.info?.("[zalouser-free] Group access ALLOWED (open mode)");
                 return true;
             } else if (groupAccess === "whitelist") {
-                const allowed = isAllowedUser || isAllowedGroup;
+                const allowed = isAllowedGroup;
                 this.logger.info?.(`[zalouser-free] Group access ${allowed ? 'ALLOWED' : 'DENIED'} (whitelist mode)`);
                 return allowed;
             } else if (groupAccess === "mention") {
-                const mentions = msg.raw.data.mentions || [];
+                const mentions = (msg.raw as any).data?.mentions || [];
                 const session = this.sessions.get(accountId);
                 if (!session) return false;
 
@@ -309,7 +311,7 @@ export class ZaloSessionManager {
                 // Check mentions using 'uid' property as seen in logs
                 const isMentioned = mentions.some((m: any) => String(m.uid) === String(botUserId));
 
-                const allowed = isMentioned || isAllowedUser;
+                const allowed = isMentioned;
                 this.logger.info?.(`[zalouser-free] Group access ${allowed ? 'ALLOWED' : 'DENIED'} (mention mode)`);
                 return allowed;
             }
@@ -449,10 +451,9 @@ export class ZaloSessionManager {
         }
 
         try {
-            // sendTypingEvent(threadId, type?)
-            // type should be ThreadType/DestType logic
-            const destType = (chatType === "group" ? 1 : 0) as any;
-            await session.api.sendTypingEvent(threadId, destType);
+            // sendTypingEvent(threadId, type?, destType?)
+            const type = chatType === "group" ? ThreadType.Group : ThreadType.User;
+            await session.api.sendTypingEvent(threadId, type);
             return { ok: true };
         } catch (err: any) {
             this.logger.error?.("[zalouser-free] sendTypingEvent failed:", err);
