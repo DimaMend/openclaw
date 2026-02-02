@@ -1,11 +1,11 @@
 diff --git a/dist/providers/anthropic.js b/dist/providers/anthropic.js
-index ccc9bfe599a42ba1deb80855e1e5df5a1819f4e8..3aafcac8e5ed0a59e95fbf34cc6d21a87851e3a5 100644
+index ccc9bfe599a42ba1deb80855e1e5df5a1819f4e8..59e583b1803de13df03e6791bf0cae11c0dc22f2 100644
 --- a/dist/providers/anthropic.js
 +++ b/dist/providers/anthropic.js
 @@ -1,4 +1,8 @@
  import Anthropic from "@anthropic-ai/sdk";
 +import { ProxyAgent } from "undici";
-+const _proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
++const _proxyUrl = process.env.HTTPS_PROXY;
 +const _proxyAgent = _proxyUrl ? new ProxyAgent(_proxyUrl) : undefined;
 +const _proxyFetch = _proxyAgent ? (input, init) => fetch(input, { ...init, dispatcher: _proxyAgent }) : undefined;
  import { getEnvApiKey } from "../env-api-keys.js";
