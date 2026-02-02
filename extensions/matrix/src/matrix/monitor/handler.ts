@@ -475,7 +475,11 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
         },
       });
       const envelopeFrom = isDirectMessage ? senderName : (roomName ?? roomId);
-      const textWithId = `${bodyText}\n[matrix event id: ${messageId} room: ${roomId}]`;
+      // Include thread context when message is part of a thread
+      const threadContextNote = threadRootId
+        ? `\n[Thread: use read-thread action with roomId="${roomId}" threadId="${threadRootId}" to fetch full thread context]`
+        : "";
+      const textWithId = `${bodyText}\n[matrix event id: ${messageId} room: ${roomId}]${threadContextNote}`;
       const storePath = core.channel.session.resolveStorePath(cfg.session?.store, {
         agentId: route.agentId,
       });
