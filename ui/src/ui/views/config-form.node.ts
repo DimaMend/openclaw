@@ -320,6 +320,7 @@ function renderTextInput(params: {
   const hint = hintForPath(path, hints);
   const label = hint?.label ?? schema.title ?? humanize(String(path.at(-1)));
   const help = hint?.help ?? schema.description;
+  // Allow explicit hint override, but default to sensitive path detection
   const isSensitive = hint?.sensitive ?? isSensitivePath(path);
   const placeholder =
     hint?.placeholder ??
