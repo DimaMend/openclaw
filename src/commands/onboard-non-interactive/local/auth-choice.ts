@@ -3,12 +3,12 @@ import type { RuntimeEnv } from "../../../runtime.js";
 import type { AuthChoice, OnboardOptions } from "../../onboard-types.js";
 import { upsertAuthProfile } from "../../../agents/auth-profiles.js";
 import { normalizeProviderId } from "../../../agents/model-selection.js";
-import { applyAmazonNovaConfig, setAmazonNovaApiKey } from "../../onboard-auth.js";
 import { parseDurationMs } from "../../../cli/parse-duration.js";
 import { upsertSharedEnvVar } from "../../../infra/env-file.js";
 import { shortenHomePath } from "../../../utils.js";
 import { buildTokenProfileId, validateAnthropicSetupToken } from "../../auth-token.js";
 import { applyGoogleGeminiModelDefault } from "../../google-gemini-model-default.js";
+import { applyAmazonNovaConfig, setAmazonNovaApiKey } from "../../onboard-auth.js";
 import {
   applyAuthProfileConfig,
   applyKimiCodeConfig,
@@ -438,8 +438,12 @@ export async function applyNonInteractiveAuthChoice(params: {
       envVar: "NOVA_API_KEY",
       runtime,
     });
-    if (!resolved) return null;
-    if (resolved.source !== "profile") await setAmazonNovaApiKey(resolved.key);
+    if (!resolved) {
+      return null;
+    }
+    if (resolved.source !== "profile") {
+      await setAmazonNovaApiKey(resolved.key);
+    }
     nextConfig = applyAuthProfileConfig(nextConfig, {
       profileId: "amazon-nova:default",
       provider: "amazon-nova",
