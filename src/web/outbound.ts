@@ -43,8 +43,10 @@ export async function sendMessageWhatsApp(
     const jid = toWhatsappJid(to);
     let mediaBuffer: Buffer | undefined;
     let mediaType: string | undefined;
+    let mediaFileName: string | undefined;
     if (options.mediaUrl) {
       const media = await loadWebMedia(options.mediaUrl);
+      mediaFileName = media.fileName;
       const caption = text || undefined;
       mediaBuffer = media.buffer;
       mediaType = media.contentType;
