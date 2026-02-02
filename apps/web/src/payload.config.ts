@@ -40,6 +40,14 @@ import {
   getActorFollowing
 } from './endpoints/activitypub/inbox'
 
+// Endpoints - Authentication & Email Verification
+import {
+  requestEmailVerification,
+  verifyEmail,
+  requestPasswordReset,
+  resetPassword
+} from './endpoints/auth/email-verification'
+
 // Endpoints - Blockchain (Secure)
 import {
   mintBotNFT,
@@ -119,6 +127,28 @@ export default buildConfig({
       path: '/verify-signature',
       method: 'post',
       handler: verifySignatureEndpoint
+    },
+
+    // Authentication - Email Verification
+    {
+      path: '/auth/request-verification',
+      method: 'post',
+      handler: [authenticate, requestEmailVerification]
+    },
+    {
+      path: '/auth/verify-email',
+      method: 'post',
+      handler: verifyEmail
+    },
+    {
+      path: '/auth/forgot-password',
+      method: 'post',
+      handler: requestPasswordReset
+    },
+    {
+      path: '/auth/reset-password',
+      method: 'post',
+      handler: resetPassword
     },
 
     // Bot Management (with authentication, authorization, and rate limiting)
