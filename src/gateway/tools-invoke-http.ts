@@ -180,6 +180,9 @@ export async function handleToolsInvokeHttpRequest(
   const senderUsername = getHeader(req, "x-openclaw-sender-username")?.trim() || undefined;
   const senderE164 = getHeader(req, "x-openclaw-sender-e164")?.trim() || undefined;
   const intentTokenRaw = getHeader(req, "x-armoriq-intent-token")?.trim() || undefined;
+  const csrgPath = getHeader(req, "x-csrg-path")?.trim() || undefined;
+  const csrgProofRaw = getHeader(req, "x-csrg-proof")?.trim() || undefined;
+  const csrgValueDigest = getHeader(req, "x-csrg-value-digest")?.trim() || undefined;
 
   const {
     agentId,
@@ -326,6 +329,9 @@ export async function handleToolsInvokeHttpRequest(
         senderE164,
         runId,
         intentTokenRaw,
+        csrgPath,
+        csrgProofRaw,
+        csrgValueDigest,
       },
     });
     if (hookOutcome.blocked) {

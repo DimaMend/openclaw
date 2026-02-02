@@ -403,6 +403,9 @@ export type PluginHookToolContext = {
   senderE164?: string;
   runId?: string;
   intentTokenRaw?: string;
+  csrgPath?: string;
+  csrgProofRaw?: string;
+  csrgValueDigest?: string;
 };
 
 // before_tool_call hook

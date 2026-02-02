@@ -14,8 +14,11 @@ the current product framing, and the remaining work to ship a full "intent firew
   plan/token is missing or invalid, or the tool is not in the plan, execution is blocked.
 - **/tools/invoke path**: HTTP invokes can supply `x-armoriq-intent-token`. If missing and the run
   is an auto `http-*` run, the plugin can mint a minimal single-step plan and token for that tool.
-- **Local enforcement**: Enforcement is local to OpenClaw and based on the token + plan; we do not
-  call remote verification per tool call.
+- **CSRG/IAP verification**: If `/tools/invoke` passes a CSRG JWT in `x-armoriq-intent-token`, the
+  plugin verifies each tool call against the IAP backend (`/iap/verify-step`) and optional CSRG
+  proof headers (`x-csrg-path`, `x-csrg-proof`, `x-csrg-value-digest`). Failures are block/deny.
+- **Local enforcement**: When the intent token header contains a JSON plan, enforcement stays local
+  (plan allowlist + expiry checks) and does not call remote verification.
 
 ## Plan Schema (SDK docs)
 
@@ -49,6 +52,10 @@ Notes:
 - **Tool allowlist**: only tool actions in the plan are allowed.
 - **Token expiry**: tool calls are blocked after token expiration.
 - **Intent drift**: tool calls not in the plan are blocked.
+- **CSRG proofs**: when `REQUIRE_CSRG_PROOFS=true`, missing/invalid CSRG proof headers block tool
+  execution for `/tools/invoke`.
+- **IAP verify-step**: when a CSRG JWT is provided, the plugin blocks tool calls if
+  `/iap/verify-step` returns `allowed=false` or errors.
 
 ## Where It Lives (Code)
 
@@ -57,6 +64,8 @@ Notes:
   - plan capture and token issuance (`client.capturePlan`, `client.getIntentToken`)
   - enforcement in `before_tool_call`
   - `/tools/invoke` token header handling
+- `extensions/armoriq/src/iap-verfication.service.ts`
+  - IAP `/iap/verify-step` + CSRG `/verify/action` HTTP helpers
 - `extensions/armoriq/openclaw.plugin.json`
   - config schema for plugin settings
 - Hook context additions:
@@ -142,6 +151,9 @@ plugins:
       iapEndpoint: "https://customer-iap.armoriq.ai"
       proxyEndpoint: "https://customer-proxy.armoriq.ai"
       backendEndpoint: "https://customer-api.armoriq.ai"
+
+      # CSRG/IAP verify-step toggles (env vars)
+      # CSRG_URL, REQUIRE_CSRG_PROOFS, CSRG_VERIFY_ENABLED
 ```
 
 Example config (JSON):
@@ -172,6 +184,38 @@ Notes:
 - If `enabled` is `false`, the plugin does nothing.
 - The plugin will **fail-closed** when the API key or identity is missing.
 - `/tools/invoke` can pass `x-armoriq-intent-token` to skip local planning.
+- `/tools/invoke` can pass CSRG proof headers for per-call verification (see below).
+
+## CSRG Intent Verification (HTTP /tools/invoke)
+
+Use this path when you have a CSRG JWT and per-step Merkle proofs:
+
+Required headers (when `REQUIRE_CSRG_PROOFS=true`):
+
+- `x-armoriq-intent-token`: CSRG JWT string from IAP
+- `x-csrg-path`: Merkle path (example: `/steps/[0]/action`)
+- `x-csrg-proof`: JSON array of proof items
+- `x-csrg-value-digest`: SHA256 of the leaf value (tool action)
+
+Example request (placeholders):
+
+```bash
+curl -sS -X POST "http://gateway-host:18789/tools/invoke" \
+  -H "Authorization: Bearer <gateway-token>" \
+  -H "Content-Type: application/json" \
+  -H "x-armoriq-intent-token: <csrg-jwt>" \
+  -H "x-csrg-path: /steps/[0]/action" \
+  -H "x-csrg-proof: [{\"position\":\"left\",\"sibling_hash\":\"...\"}]" \
+  -H "x-csrg-value-digest: <sha256-hex>" \
+  -d '{"tool":"web_fetch","args":{"url":"https://example.com"}}'
+```
+
+If you disable CSRG checks, set:
+
+```
+CSRG_VERIFY_ENABLED=false
+REQUIRE_CSRG_PROOFS=false
+```
 
 ## Testing (Sanity + Targeted)
 
@@ -188,7 +232,7 @@ Targeted tests:
 
 - ArmorIQ plugin tests:
   ```
-  pnpm vitest run --config vitest.extensions.config.ts extensions/armoriq/index.test.ts
+  pnpm vitest extensions/armoriq/index.test.ts
   ```
 - before_tool_call hook integration (core):
   ```
@@ -317,7 +361,7 @@ Expected tool calls:
 5A) Auto http-\* run (no intent header, single-step plan minted)
 
 ```
-curl -sS -X POST http://127.0.0.1:18789/tools/invoke \
+curl -sS -X POST http://gateway-host:18789/tools/invoke \
   -H "Authorization: Bearer <GATEWAY_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -333,7 +377,7 @@ Expected result:
 5B) Explicit intent token header
 
 ```
-curl -sS -X POST http://127.0.0.1:18789/tools/invoke \
+curl -sS -X POST http://gateway-host:18789/tools/invoke \
   -H "Authorization: Bearer <GATEWAY_TOKEN>" \
   -H "Content-Type: application/json" \
   -H "x-armoriq-intent-token: <JSON_TOKEN_FROM_IAP>" \
@@ -351,7 +395,7 @@ Expected result:
 5C) Fail-closed example (missing plan)
 
 ```
-curl -sS -X POST http://127.0.0.1:18789/tools/invoke \
+curl -sS -X POST http://gateway-host:18789/tools/invoke \
   -H "Authorization: Bearer <GATEWAY_TOKEN>" \
   -H "Content-Type: application/json" \
   -H "x-openclaw-run-id: demo-no-plan" \
@@ -364,6 +408,27 @@ curl -sS -X POST http://127.0.0.1:18789/tools/invoke \
 Expected result:
 
 - Blocked with `ArmorIQ intent plan missing for this run`.
+
+5D) CSRG intent verification (JWT + proofs)
+
+```
+curl -sS -X POST http://gateway-host:18789/tools/invoke \
+  -H "Authorization: Bearer <GATEWAY_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -H "x-armoriq-intent-token: <CSRG_JWT>" \
+  -H "x-csrg-path: /steps/[0]/action" \
+  -H "x-csrg-proof: [{\"position\":\"left\",\"sibling_hash\":\"...\"}]" \
+  -H "x-csrg-value-digest: <SHA256_HEX>" \
+  -d '{
+    "tool": "web_fetch",
+    "args": { "url": "https://example.com" }
+  }'
+```
+
+Expected result:
+
+- Allowed only if `/iap/verify-step` returns `allowed=true`.
+- Blocked if the CSRG proof headers are missing/invalid and `REQUIRE_CSRG_PROOFS=true`.
 
 ## TODO (Engineering)
 

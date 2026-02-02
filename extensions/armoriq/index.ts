@@ -3,6 +3,10 @@ import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { ArmorIQClient } from "@armoriq/sdk";
 import { completeSimple } from "@mariozechner/pi-ai";
+import {
+  IAPVerificationService,
+  type CsrgProofHeaders,
+} from "./src/iap-verfication.service.js";
 
 type ArmorIqConfig = {
   enabled: boolean;
@@ -48,6 +52,9 @@ type ToolContext = {
   model?: Model<Api> | null;
   modelRegistry?: ModelRegistry | null;
   intentTokenRaw?: string;
+  csrgPath?: string;
+  csrgProofRaw?: string;
+  csrgValueDigest?: string;
 };
 
 type IdentityBundle = {
@@ -205,6 +212,54 @@ function resolveRunKey(ctx: ToolContext): string | null {
 
 function normalizeToolName(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function parseCsrgProofHeaders(ctx: ToolContext): {
+  proofs?: CsrgProofHeaders;
+  error?: string;
+} {
+  const path = readString(ctx.csrgPath);
+  const valueDigest = readString(ctx.csrgValueDigest);
+  const proofRaw = readString(ctx.csrgProofRaw);
+  if (!path && !valueDigest && !proofRaw) {
+    return {};
+  }
+
+  let proof: unknown = undefined;
+  if (proofRaw) {
+    try {
+      proof = JSON.parse(proofRaw);
+    } catch {
+      return { error: "ArmorIQ CSRG proof header invalid JSON" };
+    }
+    if (!Array.isArray(proof)) {
+      return { error: "ArmorIQ CSRG proof header must be a JSON array" };
+    }
+  }
+
+  return { proofs: { path, valueDigest, proof } };
+}
+
+function validateCsrgProofHeaders(
+  proofs: CsrgProofHeaders | undefined,
+  required: boolean,
+): string | null {
+  if (!required) {
+    return null;
+  }
+  if (!proofs) {
+    return "ArmorIQ CSRG proof headers missing";
+  }
+  if (!proofs.path) {
+    return "ArmorIQ CSRG path header missing";
+  }
+  if (!proofs.valueDigest) {
+    return "ArmorIQ CSRG value digest header missing";
+  }
+  if (!proofs.proof || !Array.isArray(proofs.proof)) {
+    return "ArmorIQ CSRG proof header missing";
+  }
+  return null;
 }
 
 function extractAllowedActions(plan: Record<string, unknown>): Set<string> {
@@ -543,6 +598,12 @@ export default function register(api: OpenClawPluginApi) {
     return;
   }
 
+  const verificationService = new IAPVerificationService({
+    iapBaseUrl: cfg.backendEndpoint ?? cfg.iapEndpoint,
+    timeoutMs: cfg.timeoutMs,
+    logger: api.logger,
+  });
+
   api.on("before_agent_start", async (event, ctx) => {
     const runKey = resolveRunKey(ctx as ToolContext);
     if (!runKey) {
@@ -612,11 +673,78 @@ export default function register(api: OpenClawPluginApi) {
   });
 
   api.on("before_tool_call", async (event, ctx) => {
+    const normalizedTool = normalizeToolName(event.toolName);
+    const toolCtx = ctx as ToolContext;
+    const intentTokenRaw = readString(toolCtx.intentTokenRaw);
+
+    if (intentTokenRaw) {
+      const parsed = extractPlanFromIntentToken(intentTokenRaw);
+      if (parsed) {
+        if (parsed.expiresAt && Date.now() / 1000 > parsed.expiresAt) {
+          return {
+            block: true,
+            blockReason: "ArmorIQ intent token expired",
+          };
+        }
+        const allowedActions = extractAllowedActions(parsed.plan);
+        if (!allowedActions.has(normalizedTool)) {
+          return {
+            block: true,
+            blockReason: `ArmorIQ intent drift: tool not in plan (${event.toolName})`,
+          };
+        }
+        const step = findPlanStep(parsed.plan, event.toolName);
+        if (step) {
+          const params = isPlainObject(event.params) ? event.params : {};
+          if (!isParamsAllowedByPlan(step, params)) {
+            return {
+              block: true,
+              blockReason: `ArmorIQ intent mismatch: parameters not allowed for ${event.toolName}`,
+            };
+          }
+        }
+        return { params: event.params };
+      }
+
+      const proofParse = parseCsrgProofHeaders(toolCtx);
+      if (proofParse.error) {
+        return { block: true, blockReason: proofParse.error };
+      }
+      const proofError = validateCsrgProofHeaders(
+        proofParse.proofs,
+        verificationService.csrgProofsRequired(),
+      );
+      if (proofError) {
+        return { block: true, blockReason: proofError };
+      }
+
+      try {
+        const verifyResult = await verificationService.verifyStep(
+          intentTokenRaw,
+          proofParse.proofs,
+          event.toolName,
+        );
+        if (!verifyResult.allowed) {
+          return {
+            block: true,
+            blockReason: verifyResult.reason || "ArmorIQ intent verification denied",
+          };
+        }
+        return { params: event.params };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+          block: true,
+          blockReason: `ArmorIQ intent verification failed: ${message}`,
+        };
+      }
+    }
+
     if (!cfg.apiKey) {
       return { block: true, blockReason: "ArmorIQ API key missing" };
     }
 
-    const identity = resolveIdentities(cfg, ctx as ToolContext);
+    const identity = resolveIdentities(cfg, toolCtx);
     if (!identity) {
       return {
         block: true,
@@ -624,8 +752,7 @@ export default function register(api: OpenClawPluginApi) {
       };
     }
 
-    const runKey = resolveRunKey(ctx as ToolContext);
-    const normalizedTool = normalizeToolName(event.toolName);
+    const runKey = resolveRunKey(toolCtx);
     if (!runKey) {
       return {
         block: true,
@@ -634,24 +761,7 @@ export default function register(api: OpenClawPluginApi) {
     }
 
     let cached = planCache.get(runKey);
-    if (!cached && ctx.intentTokenRaw) {
-      const parsed = extractPlanFromIntentToken(ctx.intentTokenRaw);
-      if (!parsed) {
-        return {
-          block: true,
-          blockReason: "ArmorIQ intent token header invalid",
-        };
-      }
-      cached = {
-        token: ctx.intentTokenRaw,
-        plan: parsed.plan,
-        allowedActions: extractAllowedActions(parsed.plan),
-        createdAt: Date.now(),
-        expiresAt: parsed.expiresAt,
-      };
-      planCache.set(runKey, cached);
-    }
-    if (!cached && ctx.runId?.startsWith("http-")) {
+    if (!cached && toolCtx.runId?.startsWith("http-")) {
       const client = getClient(cfg, identity);
       const sanitizedParams = sanitizeParams(event.params ?? {}, cfg);
       const plan = {
@@ -671,14 +781,14 @@ export default function register(api: OpenClawPluginApi) {
           `Authorize tool ${event.toolName}`,
           plan,
           {
-            sessionKey: ctx.sessionKey,
-            messageChannel: ctx.messageChannel,
-            accountId: ctx.accountId,
-            senderId: ctx.senderId,
-            senderName: ctx.senderName,
-            senderUsername: ctx.senderUsername,
-            senderE164: ctx.senderE164,
-            runId: ctx.runId,
+            sessionKey: toolCtx.sessionKey,
+            messageChannel: toolCtx.messageChannel,
+            accountId: toolCtx.accountId,
+            senderId: toolCtx.senderId,
+            senderName: toolCtx.senderName,
+            senderUsername: toolCtx.senderUsername,
+            senderE164: toolCtx.senderE164,
+            runId: toolCtx.runId,
           },
         );
         const token = await client.getIntentToken(planCapture, cfg.policy, cfg.validitySeconds);

@@ -90,6 +90,9 @@ export function toClientToolDefinitions(
     senderE164?: string;
     runId?: string;
     intentTokenRaw?: string;
+    csrgPath?: string;
+    csrgProofRaw?: string;
+    csrgValueDigest?: string;
   },
 ): ToolDefinition[] {
   return tools.map((tool) => {

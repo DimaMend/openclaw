@@ -14,6 +14,9 @@ type HookContext = {
   senderE164?: string;
   runId?: string;
   intentTokenRaw?: string;
+  csrgPath?: string;
+  csrgProofRaw?: string;
+  csrgValueDigest?: string;
 };
 
 type HookOutcome = { blocked: true; reason: string } | { blocked: false; params: unknown };
@@ -56,6 +59,9 @@ export async function runBeforeToolCallHook(args: {
         senderE164: args.ctx?.senderE164,
         runId: args.ctx?.runId,
         intentTokenRaw: args.ctx?.intentTokenRaw,
+        csrgPath: args.ctx?.csrgPath,
+        csrgProofRaw: args.ctx?.csrgProofRaw,
+        csrgValueDigest: args.ctx?.csrgValueDigest,
       },
     );
 
