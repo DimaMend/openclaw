@@ -61,8 +61,8 @@ function extractText(result?: ToolResult): string {
   if (typeof result.message === "string") {
     return result.message;
   }
-  if (result.details && typeof (result.details as any).status === "string") {
-    return `Status: ${(result.details as any).status}`;
+  if (result.details && typeof result.details.status === "string") {
+    return `Status: ${result.details.status}`;
   }
 
   // Last resort: show the raw object so the user sees *something*
