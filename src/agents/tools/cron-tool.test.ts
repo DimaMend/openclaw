@@ -11,6 +11,9 @@ vi.mock("../agent-scope.js", () => ({
 
 import { createCronTool } from "./cron-tool.js";
 
+// Helper to get a future timestamp for tests
+const futureMs = () => Date.now() + 3600000; // 1 hour from now
+
 describe("cron tool", () => {
   beforeEach(() => {
     callGatewayMock.mockReset();
@@ -63,12 +66,13 @@ describe("cron tool", () => {
 
   it("normalizes cron.add job payloads", async () => {
     const tool = createCronTool();
+    const atMs = futureMs();
     await tool.execute("call2", {
       action: "add",
       job: {
         data: {
           name: "wake-up",
-          schedule: { atMs: 123 },
+          schedule: { atMs },
           payload: { kind: "systemEvent", text: "hello" },
         },
       },
@@ -82,7 +86,7 @@ describe("cron tool", () => {
     expect(call.method).toBe("cron.add");
     expect(call.params).toEqual({
       name: "wake-up",
-      schedule: { kind: "at", atMs: 123 },
+      schedule: { kind: "at", atMs },
       sessionTarget: "main",
       wakeMode: "next-heartbeat",
       payload: { kind: "systemEvent", text: "hello" },
@@ -95,7 +99,7 @@ describe("cron tool", () => {
       action: "add",
       job: {
         name: "wake-up",
-        schedule: { atMs: 123 },
+        schedule: { atMs: futureMs() },
         agentId: null,
       },
     });
@@ -126,7 +130,7 @@ describe("cron tool", () => {
       contextMessages: 3,
       job: {
         name: "reminder",
-        schedule: { atMs: 123 },
+        schedule: { atMs: futureMs() },
         payload: { kind: "systemEvent", text: "Reminder: the thing." },
       },
     });
@@ -163,7 +167,7 @@ describe("cron tool", () => {
       contextMessages: 20,
       job: {
         name: "reminder",
-        schedule: { atMs: 123 },
+        schedule: { atMs: futureMs() },
         payload: { kind: "systemEvent", text: "Reminder: the thing." },
       },
     });
@@ -194,7 +198,7 @@ describe("cron tool", () => {
       action: "add",
       job: {
         name: "reminder",
-        schedule: { atMs: 123 },
+        schedule: { atMs: futureMs() },
         payload: { text: "Reminder: the thing." },
       },
     });
@@ -218,7 +222,7 @@ describe("cron tool", () => {
       action: "add",
       job: {
         name: "reminder",
-        schedule: { atMs: 123 },
+        schedule: { atMs: futureMs() },
         agentId: null,
         payload: { kind: "systemEvent", text: "Reminder: the thing." },
       },
