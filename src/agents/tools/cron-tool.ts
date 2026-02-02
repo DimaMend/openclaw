@@ -231,10 +231,15 @@ Use jobId as the canonical identifier; id is accepted for compatibility. Use con
           }
           const job = normalizeCronJobCreate(params.job) ?? params.job;
 
-          // Validate: for "at" schedule, atMs must be in the future
+          // Validate: for "at" schedule, atMs must be a valid future timestamp
           if (job && typeof job === "object" && "schedule" in job) {
             const schedule = (job as { schedule?: { kind?: string; atMs?: number } }).schedule;
             if (schedule?.kind === "at" && typeof schedule.atMs === "number") {
+              if (!Number.isFinite(schedule.atMs)) {
+                throw new Error(
+                  `schedule.atMs must be a valid finite number. Provided: ${schedule.atMs}. Use a time tool to get the current timestamp first, then calculate the future time.`,
+                );
+              }
               const nowMs = Date.now();
               if (schedule.atMs <= nowMs) {
                 const scheduledDate = new Date(schedule.atMs).toISOString();
