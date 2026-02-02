@@ -2,7 +2,9 @@ services:
   - type: web
     name: openclaw
     runtime: docker
-    plan: starter
+    plan: standard
+    preDeployCommand: node -e "const fs=require('fs');const f='/data/.openclaw/openclaw.json';if(fs.existsSync(f)){const c=JSON.parse(fs.readFileSync(f));delete c.mcp;fs.writeFileSync(f,JSON.stringify(c,null,2));}"
+    dockerCommand: node dist/index.js gateway --bind lan --port 8080 --allow-unconfigured
     healthCheckPath: /health
     envVars:
       - key: PORT
