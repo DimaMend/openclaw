@@ -3,8 +3,8 @@ import type { loadConfig } from "../config/config.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { resolveConfiguredModelRef } from "../agents/model-selection.js";
 import { getResolvedLoggerSettings } from "../logging.js";
-import { isLoopbackHost } from "./net.js";
 import { resolveGatewayAuth } from "./auth.js";
+import { isLoopbackHost } from "./net.js";
 
 export async function logGatewayStartup(params: {
   cfg: ReturnType<typeof loadConfig>;

@@ -1,6 +1,11 @@
-import { test } from "node:test";
 import assert from "node:assert";
-
+import { test } from "node:test";
+import {
+  hashPassword,
+  verifyPassword,
+  isHashedPassword,
+  migratePasswordToHashed,
+} from "../src/gateway/auth-password.ts";
 // Import security modules
 import {
   checkRateLimit,
@@ -9,14 +14,6 @@ import {
   clearRateLimitCache,
   getFailureCount,
 } from "../src/gateway/auth-rate-limit.ts";
-
-import {
-  hashPassword,
-  verifyPassword,
-  isHashedPassword,
-  migratePasswordToHashed,
-} from "../src/gateway/auth-password.ts";
-
 import { authorizeGatewayConnect, resolveGatewayAuth } from "../src/gateway/auth.ts";
 
 console.log("\n🔒 OpenClaw Security Test Suite\n");

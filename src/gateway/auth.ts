@@ -2,9 +2,9 @@ import type { IncomingMessage } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import type { GatewayAuthConfig, GatewayTailscaleMode } from "../config/config.js";
 import { readTailscaleWhoisIdentity, type TailscaleWhoisIdentity } from "../infra/tailscale.js";
-import { isTrustedProxyAddress, parseForwardedForClientIp, resolveGatewayClientIp } from "./net.js";
-import { checkRateLimit, recordAuthFailure, recordAuthSuccess } from "./auth-rate-limit.js";
 import { verifyPassword, isHashedPassword } from "./auth-password.js";
+import { checkRateLimit, recordAuthFailure, recordAuthSuccess } from "./auth-rate-limit.js";
+import { isTrustedProxyAddress, parseForwardedForClientIp, resolveGatewayClientIp } from "./net.js";
 export type ResolvedGatewayAuthMode = "token" | "password";
 
 export type ResolvedGatewayAuth = {
