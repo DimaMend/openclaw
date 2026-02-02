@@ -10,6 +10,7 @@ import type {
   ListSessionsResponse,
   LoadSessionRequest,
   LoadSessionResponse,
+  McpServer,
   NewSessionRequest,
   NewSessionResponse,
   PromptRequest,
@@ -30,10 +31,24 @@ import {
   formatToolTitle,
   inferToolKind,
 } from "./event-mapper.js";
+import { getAvailableMcpCommands } from "./mcp-commands.js";
 import { readBool, readNumber, readString } from "./meta.js";
 import { parseSessionMeta, resetSessionIfNeeded, resolveSessionKey } from "./session-mapper.js";
 import { defaultAcpSessionStore, type AcpSessionStore } from "./session.js";
-import { ACP_AGENT_INFO, type AcpServerOptions } from "./types.js";
+import { ACP_AGENT_INFO, type AcpServerOptions, type McpServerConfig } from "./types.js";
+
+/**
+ * Convert ACP McpServer to our McpServerConfig
+ */
+function convertMcpServer(server: McpServer): McpServerConfig {
+  return {
+    name: server.name,
+    url: server.url,
+    command: server.command,
+    args: server.args,
+    env: server.env,
+  };
+}
 
 type PendingPrompt = {
   sessionId: string;
@@ -108,8 +123,8 @@ export class AcpGatewayAgent implements Agent {
           embeddedContext: true,
         },
         mcpCapabilities: {
-          http: false,
-          sse: false,
+          http: true,
+          sse: true,
         },
         sessionCapabilities: {
           list: {},
@@ -121,9 +136,7 @@ export class AcpGatewayAgent implements Agent {
   }
 
   async newSession(params: NewSessionRequest): Promise<NewSessionResponse> {
-    if (params.mcpServers.length > 0) {
-      this.log(`ignoring ${params.mcpServers.length} MCP servers`);
-    }
+    const mcpServers = params.mcpServers?.map(convertMcpServer) ?? [];
 
     const sessionId = randomUUID();
     const meta = parseSessionMeta(params._meta);
@@ -144,16 +157,17 @@ export class AcpGatewayAgent implements Agent {
       sessionId,
       sessionKey,
       cwd: params.cwd,
+      mcpServers,
     });
-    this.log(`newSession: ${session.sessionId} -> ${session.sessionKey}`);
+    this.log(
+      `newSession: ${session.sessionId} -> ${session.sessionKey} (${mcpServers.length} MCP servers)`,
+    );
     await this.sendAvailableCommands(session.sessionId);
     return { sessionId: session.sessionId };
   }
 
   async loadSession(params: LoadSessionRequest): Promise<LoadSessionResponse> {
-    if (params.mcpServers.length > 0) {
-      this.log(`ignoring ${params.mcpServers.length} MCP servers`);
-    }
+    const mcpServers = params.mcpServers?.map(convertMcpServer) ?? [];
 
     const meta = parseSessionMeta(params._meta);
     const sessionKey = await resolveSessionKey({
@@ -173,8 +187,11 @@ export class AcpGatewayAgent implements Agent {
       sessionId: params.sessionId,
       sessionKey,
       cwd: params.cwd,
+      mcpServers,
     });
-    this.log(`loadSession: ${session.sessionId} -> ${session.sessionKey}`);
+    this.log(
+      `loadSession: ${session.sessionId} -> ${session.sessionKey} (${mcpServers.length} MCP servers)`,
+    );
     await this.sendAvailableCommands(session.sessionId);
     return {};
   }
@@ -443,11 +460,16 @@ export class AcpGatewayAgent implements Agent {
   }
 
   private async sendAvailableCommands(sessionId: string): Promise<void> {
+    const session = this.sessionStore.getSession(sessionId);
+    const mcpServers = session?.mcpServers ?? [];
+
+    const commands = [...getAvailableCommands(), ...getAvailableMcpCommands(mcpServers)];
+
     await this.connection.sessionUpdate({
       sessionId,
       update: {
         sessionUpdate: "available_commands_update",
-        availableCommands: getAvailableCommands(),
+        availableCommands: commands,
       },
     });
   }
