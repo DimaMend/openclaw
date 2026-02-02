@@ -1,0 +1,323 @@
+import type { CollectionConfig } from 'payload'
+
+export const Bots: CollectionConfig = {
+  slug: 'bots',
+  admin: {
+    useAsTitle: 'name',
+    defaultColumns: ['name', 'status', 'model', 'updatedAt'],
+    group: 'Bot Management'
+  },
+  access: {
+    create: ({ req: { user } }) => {
+      return user?.role === 'admin' || user?.role === 'operator'
+    },
+    read: ({ req: { user } }) => {
+      if (user?.role === 'admin') return true
+      if (user?.role === 'operator') {
+        return {
+          id: {
+            in: user?.assignedBots || []
+          }
+        }
+      }
+      return false
+    },
+    update: ({ req: { user } }) => {
+      if (user?.role === 'admin') return true
+      if (user?.role === 'operator') {
+        return {
+          id: {
+            in: user?.assignedBots || []
+          }
+        }
+      }
+      return false
+    },
+    delete: ({ req: { user } }) => {
+      return user?.role === 'admin'
+    }
+  },
+  hooks: {
+    beforeChange: [
+      ({ data }) => {
+        // Auto-generate agentId from name if not provided
+        if (!data.agentId && data.name) {
+          data.agentId = data.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+        }
+        return data
+      }
+    ],
+    afterChange: [
+      async ({ doc, operation, req }) => {
+        // Sync config to gateway after create/update
+        if (operation === 'create' || operation === 'update') {
+          // TODO: Trigger gateway config sync
+          req.payload.logger.info(`Bot ${doc.agentId} config changed, sync needed`)
+        }
+      }
+    ],
+    beforeDelete: [
+      async ({ id, req }) => {
+        // Cleanup: stop gateway, delete sessions
+        req.payload.logger.info(`Cleaning up bot ${id}`)
+        // TODO: Stop gateway process
+        // TODO: Delete related sessions
+      }
+    ]
+  },
+  fields: [
+    {
+      name: 'name',
+      type: 'text',
+      required: true,
+      unique: true,
+      admin: {
+        description: 'Display name for this bot (e.g., "Customer Support Bot")'
+      }
+    },
+    {
+      name: 'agentId',
+      type: 'text',
+      required: true,
+      unique: true,
+      admin: {
+        description: 'Unique identifier (auto-generated from name)',
+        readOnly: true
+      }
+    },
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'inactive',
+      options: [
+        { label: 'Active', value: 'active' },
+        { label: 'Inactive', value: 'inactive' },
+        { label: 'Error', value: 'error' }
+      ],
+      admin: {
+        position: 'sidebar'
+      }
+    },
+    {
+      name: 'model',
+      type: 'select',
+      required: true,
+      defaultValue: 'claude-sonnet-4-5',
+      options: [
+        { label: 'Claude Opus 4.5', value: 'claude-opus-4-5' },
+        { label: 'Claude Sonnet 4.5', value: 'claude-sonnet-4-5' },
+        { label: 'Claude Haiku 4', value: 'claude-haiku-4' },
+        { label: 'Claude Sonnet 3.5', value: 'claude-3-5-sonnet-20241022' }
+      ],
+      admin: {
+        description: 'AI model powering this bot'
+      }
+    },
+    {
+      name: 'systemPrompt',
+      type: 'textarea',
+      required: false,
+      admin: {
+        description: 'Bot personality and instructions',
+        placeholder: 'You are a helpful assistant...'
+      }
+    },
+    {
+      name: 'avatar',
+      type: 'upload',
+      relationTo: 'media',
+      required: false,
+      admin: {
+        description: 'Bot profile image'
+      }
+    },
+    {
+      type: 'tabs',
+      tabs: [
+        {
+          label: 'Gateway',
+          fields: [
+            {
+              name: 'gateway',
+              type: 'group',
+              fields: [
+                {
+                  name: 'port',
+                  type: 'number',
+                  required: true,
+                  defaultValue: 18789,
+                  admin: {
+                    description: 'Gateway port (auto-assigned)'
+                  }
+                },
+                {
+                  name: 'bind',
+                  type: 'select',
+                  required: true,
+                  defaultValue: 'loopback',
+                  options: [
+                    { label: 'Loopback (localhost only)', value: 'loopback' },
+                    { label: 'LAN (local network)', value: 'lan' },
+                    { label: 'Public (internet)', value: 'public' }
+                  ]
+                },
+                {
+                  name: 'authToken',
+                  type: 'text',
+                  required: false,
+                  admin: {
+                    description: 'Gateway authentication token (auto-generated)',
+                    readOnly: true
+                  }
+                },
+                {
+                  name: 'processId',
+                  type: 'number',
+                  required: false,
+                  admin: {
+                    description: 'Process ID when gateway is running',
+                    readOnly: true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          label: 'Sessions',
+          fields: [
+            {
+              name: 'sessions',
+              type: 'group',
+              fields: [
+                {
+                  name: 'scope',
+                  type: 'select',
+                  required: true,
+                  defaultValue: 'per-sender',
+                  options: [
+                    { label: 'Per Sender', value: 'per-sender' },
+                    { label: 'Global', value: 'global' }
+                  ],
+                  admin: {
+                    description: 'How conversations are grouped'
+                  }
+                },
+                {
+                  name: 'resetMode',
+                  type: 'select',
+                  required: true,
+                  defaultValue: 'daily',
+                  options: [
+                    { label: 'Daily', value: 'daily' },
+                    { label: 'On Idle', value: 'idle' }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          label: 'Tools',
+          fields: [
+            {
+              name: 'tools',
+              type: 'group',
+              fields: [
+                {
+                  name: 'bash',
+                  type: 'checkbox',
+                  defaultValue: false,
+                  admin: {
+                    description: 'Allow bot to execute bash commands (CAUTION: security risk)'
+                  }
+                },
+                {
+                  name: 'browser',
+                  type: 'checkbox',
+                  defaultValue: false,
+                  admin: {
+                    description: 'Allow bot to browse websites'
+                  }
+                },
+                {
+                  name: 'media',
+                  type: 'checkbox',
+                  defaultValue: true,
+                  admin: {
+                    description: 'Allow bot to process images and media'
+                  }
+                },
+                {
+                  name: 'customSkills',
+                  type: 'json',
+                  admin: {
+                    description: 'Custom tool configurations'
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'errorMessage',
+      type: 'textarea',
+      required: false,
+      admin: {
+        description: 'Last error message (if status is error)',
+        readOnly: true,
+        condition: (data) => data.status === 'error'
+      }
+    },
+    {
+      name: 'lastSeen',
+      type: 'date',
+      required: false,
+      admin: {
+        description: 'Last activity timestamp',
+        readOnly: true,
+        position: 'sidebar'
+      }
+    },
+    {
+      name: 'metrics',
+      type: 'group',
+      admin: {
+        description: 'Bot metrics and statistics'
+      },
+      fields: [
+        {
+          name: 'messageCount',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true
+          }
+        },
+        {
+          name: 'sessionCount',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            readOnly: true
+          }
+        },
+        {
+          name: 'uptime',
+          type: 'number',
+          defaultValue: 0,
+          admin: {
+            description: 'Uptime in seconds',
+            readOnly: true
+          }
+        }
+      ]
+    }
+  ]
+}

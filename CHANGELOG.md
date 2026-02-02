@@ -6,6 +6,23 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
+- **Web App:** Add Payload CMS integration for user-friendly multi-bot management. (#XXXX)
+  - New web application (`apps/web/`) built with Payload CMS and Next.js
+  - Multi-bot orchestration: deploy and manage multiple OpenClaw bots from a single interface
+  - User-friendly admin panel: configure bots through intuitive forms and wizards
+  - Real-time monitoring: track bot status, connections, and activity
+  - Channel integration: set up and manage multiple messaging channels (Telegram, Discord, Slack, WhatsApp, etc.)
+  - Role-based access control: Admin, Operator, and Viewer roles
+  - Session management: view and manage active conversations
+  - Secure credential storage: encrypted API keys and tokens using AES-256-GCM
+  - Gateway orchestrator: manages multiple OpenClaw gateway processes with automatic port allocation
+  - Config synchronization: bidirectional sync between Payload DB and OpenClaw JSON5 configs
+  - Docker deployment: includes Docker Compose and Dockerfile for easy deployment
+  - Collections: Bots, BotChannels, BotBindings, Sessions, Users, Media
+  - API endpoints: start-bot, stop-bot, restart-bot, bot-status
+  - See `docs/payload-integration-architecture.md` for architecture details
+  - See `apps/web/README.md` for usage guide
+
 ### Fixes
 
 - Telegram: restore draft streaming partials. (#5543) Thanks @obviyus.
