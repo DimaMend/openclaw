@@ -463,7 +463,7 @@ const ERROR_PATTERNS = {
     "messages.1.content.1.tool_use.id",
     "invalid request format",
   ],
-  unknownModel: ["unknown model", "model not found", "does not exist", "no such model"],
+  unknownModel: ["unknown model", "model not found", "model does not exist", "no such model"],
 } as const;
 
 const IMAGE_DIMENSION_ERROR_RE =
