@@ -1003,4 +1003,90 @@ describe("runHeartbeatOnce", () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it("reads HEARTBEAT.md from default agent workspace, not from skill workspace (issue #7071)", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-hb-"));
+    const storePath = path.join(tmpDir, "sessions.json");
+    const mainWorkspace = path.join(tmpDir, "workspace-main");
+    const skillWorkspace = path.join(tmpDir, "workspace-skill");
+    const replySpy = vi.spyOn(replyModule, "getReplyFromConfig");
+    try {
+      await fs.mkdir(mainWorkspace, { recursive: true });
+      await fs.mkdir(skillWorkspace, { recursive: true });
+
+      // Create HEARTBEAT.md only in main workspace (correct location)
+      await fs.writeFile(
+        path.join(mainWorkspace, "HEARTBEAT.md"),
+        "# HEARTBEAT.md\n\n- Check server status\n",
+        "utf-8",
+      );
+
+      // Skill workspace should NOT have HEARTBEAT.md (per documentation)
+      // (We don't create it here to verify it's not being searched for)
+
+      const cfg: OpenClawConfig = {
+        agents: {
+          defaults: {
+            workspace: mainWorkspace,
+            heartbeat: { every: "5m", target: "whatsapp" },
+          },
+          list: [
+            { id: "main", default: true },
+            {
+              id: "github-promoter",
+              workspace: skillWorkspace,
+              heartbeat: { every: "5m", target: "whatsapp" },
+            },
+          ],
+        },
+        channels: { whatsapp: { allowFrom: ["*"] } },
+        session: { store: storePath },
+      };
+      const skillSessionKey = resolveAgentMainSessionKey({ cfg, agentId: "github-promoter" });
+
+      await fs.writeFile(
+        storePath,
+        JSON.stringify(
+          {
+            [skillSessionKey]: {
+              sessionId: "sid-skill",
+              updatedAt: Date.now(),
+              lastChannel: "whatsapp",
+              lastTo: "+1555",
+            },
+          },
+          null,
+          2,
+        ),
+      );
+
+      replySpy.mockResolvedValue({ text: "Server status checked" });
+      const sendWhatsApp = vi.fn().mockResolvedValue({
+        messageId: "m1",
+        toJid: "jid",
+      });
+
+      // Run heartbeat for the skill agent
+      const res = await runHeartbeatOnce({
+        cfg,
+        agentId: "github-promoter",
+        deps: {
+          sendWhatsApp,
+          getQueueSize: () => 0,
+          nowMs: () => 0,
+          webAuthExists: async () => true,
+          hasActiveWebListener: () => true,
+        },
+      });
+
+      // Should run successfully by reading HEARTBEAT.md from main workspace,
+      // not fail trying to find it in skill workspace
+      expect(res.status).toBe("ran");
+      expect(replySpy).toHaveBeenCalled();
+      expect(sendWhatsApp).toHaveBeenCalledTimes(1);
+    } finally {
+      replySpy.mockRestore();
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
