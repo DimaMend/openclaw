@@ -57,11 +57,11 @@ function upsertLmStudioProviderModel(cfg: OpenClawConfig, modelId: string): Open
       ];
 
   providers.lmstudio = {
+    ...(existingProvider ?? {}),
     baseUrl: existingProvider?.baseUrl ?? `${DEFAULT_LMSTUDIO_BASE_URL}/v1`,
     apiKey: existingProvider?.apiKey ?? "lmstudio",
     api: existingProvider?.api ?? DEFAULT_LMSTUDIO_API,
     models,
-    ...(existingProvider ? { ...existingProvider, models } : {}),
   };
 
   return {
@@ -126,8 +126,10 @@ export async function applyAuthChoiceLmStudio(
   };
 
   nextConfig = upsertLmStudioProviderModel(nextConfig, modelId);
-  nextConfig = applyPrimaryModel(nextConfig, modelRef);
-
-  await params.prompter.note(`Default model set to ${modelRef}.`, "Model configured");
-  return { config: nextConfig, agentModelOverride: params.agentId ? modelRef : undefined };
+  if (params.setDefaultModel) {
+    nextConfig = applyPrimaryModel(nextConfig, modelRef);
+    await params.prompter.note(`Default model set to ${modelRef}.`, "Model configured");
+    return { config: nextConfig, agentModelOverride: params.agentId ? modelRef : undefined };
+  }
+  return { config: nextConfig };
 }
