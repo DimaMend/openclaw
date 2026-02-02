@@ -604,7 +604,7 @@ export async function applyAuthChoiceApiProviders(
       await params.prompter.note(
         [
           "Baseten provides fast inference for open-source models via OpenAI-compatible API.",
-          "Get your API key at: https://baseten.co/settings/api-keys",
+          "Get your API key at: https://app.baseten.co/settings/api_keys",
           "Supports DeepSeek, GLM, Kimi, Qwen, and OpenAI GPT OSS models.",
         ].join("\n"),
         "Baseten",
