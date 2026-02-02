@@ -479,10 +479,7 @@ export function applyHolochainDefaults(cfg: OpenClawConfig): OpenClawConfig {
 
   // Only create conductor config if it's explicitly provided or if autoStart is enabled
   const wantsConductor =
-    holochain.autoStart === true ||
-    holochain.conductor !== undefined ||
-    holochain.conductorUrl !== undefined ||
-    holochain.bootstrapUrl !== undefined;
+    holochain.conductor?.autoStart === true || holochain.conductor !== undefined;
 
   if (wantsConductor) {
     const conductor = nextHolochain.conductor ? { ...nextHolochain.conductor } : {};

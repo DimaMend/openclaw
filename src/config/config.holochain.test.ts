@@ -207,7 +207,9 @@ describe("Holochain config defaults", () => {
     const cfg: OpenClawConfig = {
       holochain: {
         mode: "hybrid",
-        autoStart: true,
+        conductor: {
+          autoStart: true,
+        },
       },
     };
     const result = applyHolochainDefaults(cfg);
@@ -227,16 +229,5 @@ describe("Holochain config defaults", () => {
     const result = applyHolochainDefaults(cfg);
     expect(result.holochain?.conductor).toBeDefined();
     expect(result.holochain?.conductor?.adminPort).toBe(4444);
-  });
-
-  test("should create conductor when conductorUrl is set", () => {
-    const cfg: OpenClawConfig = {
-      holochain: {
-        mode: "hybrid",
-        conductorUrl: "http://localhost:4444",
-      },
-    };
-    const result = applyHolochainDefaults(cfg);
-    expect(result.holochain?.conductor).toBeDefined();
   });
 });
