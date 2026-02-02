@@ -264,7 +264,8 @@ describe("Inworld TTS Provider", () => {
 
     it("should handle invalid model gracefully", async () => {
       const result = await inworldTTS("Hello", {
-        inworld: { modelId: "invalid-model" as any },
+        // @ts-expect-error Testing invalid model ID
+        inworld: { modelId: "invalid-model" },
       });
 
       expect(result.success).toBe(false);
