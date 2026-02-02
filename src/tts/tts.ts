@@ -66,6 +66,7 @@ const TELEGRAM_OUTPUT = {
   // ElevenLabs output formats use codec_sample_rate_bitrate naming.
   // Opus @ 48kHz/64kbps is a good voice-note tradeoff for Telegram.
   elevenlabs: "opus_48000_64",
+  resemble: "mp3",
   extension: ".opus",
   voiceCompatible: true,
 };
@@ -73,6 +74,7 @@ const TELEGRAM_OUTPUT = {
 const DEFAULT_OUTPUT = {
   openai: "mp3" as const,
   elevenlabs: "mp3_44100_128",
+  resemble: "mp3",
   extension: ".mp3",
   voiceCompatible: false,
 };
@@ -1386,7 +1388,12 @@ export async function textToSpeech(params: {
         audioPath,
         latencyMs,
         provider,
-        outputFormat: provider === "openai" ? output.openai : output.elevenlabs,
+        outputFormat:
+          provider === "openai"
+            ? output.openai
+            : provider === "resemble"
+              ? output.resemble
+              : output.elevenlabs,
         voiceCompatible: output.voiceCompatible,
       };
     } catch (err) {

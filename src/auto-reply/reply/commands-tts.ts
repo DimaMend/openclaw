@@ -56,7 +56,8 @@ function ttsUsage(): ReplyPayload {
       `**Providers:**\n` +
       `• edge — Free, fast (default)\n` +
       `• openai — High quality (requires API key)\n` +
-      `• elevenlabs — Premium voices (requires API key)\n\n` +
+      `• elevenlabs — Premium voices (requires API key)\n` +
+      `• resemble — Voice cloning (requires API key)\n\n` +
       `**Text Limit (default: 1500, max: 4096):**\n` +
       `When text exceeds the limit:\n` +
       `• Summary ON: AI summarizes, then generates audio\n` +
