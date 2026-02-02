@@ -43,16 +43,12 @@ function isNoise(text: string): boolean {
  */
 async function getFullSessionContent(sessionFilePath: string): Promise<{
   messages: string[];
-  userMessages: string[];
-  assistantMessages: string[];
 } | null> {
   try {
     const content = await fs.readFile(sessionFilePath, "utf-8");
     const lines = content.trim().split("\n");
 
     const messages: string[] = [];
-    const userMessages: string[] = [];
-    const assistantMessages: string[] = [];
 
     for (const line of lines) {
       try {
@@ -65,15 +61,17 @@ async function getFullSessionContent(sessionFilePath: string): Promise<{
             // Extract text content
             let text: string | undefined;
             if (Array.isArray(msg.content)) {
-              // Find text content blocks, skip tool_use/tool_result
-              const textBlock = msg.content.find(
-                (c: unknown) =>
-                  typeof c === "object" &&
-                  c !== null &&
-                  (c as Record<string, unknown>).type === "text" &&
-                  typeof (c as Record<string, unknown>).text === "string",
-              );
-              text = textBlock?.text as string | undefined;
+              // Collect ALL text content blocks, skip tool_use/tool_result
+              const textBlocks = msg.content
+                .filter(
+                  (c: unknown) =>
+                    typeof c === "object" &&
+                    c !== null &&
+                    (c as Record<string, unknown>).type === "text" &&
+                    typeof (c as Record<string, unknown>).text === "string",
+                )
+                .map((c: unknown) => (c as Record<string, unknown>).text as string);
+              text = textBlocks.length > 0 ? textBlocks.join("\n") : undefined;
             } else if (typeof msg.content === "string") {
               text = msg.content;
             }
@@ -88,12 +86,6 @@ async function getFullSessionContent(sessionFilePath: string): Promise<{
 
             const formatted = `${role}: ${truncated}`;
             messages.push(formatted);
-
-            if (role === "user") {
-              userMessages.push(truncated);
-            } else {
-              assistantMessages.push(truncated);
-            }
           }
         }
       } catch {
@@ -101,7 +93,7 @@ async function getFullSessionContent(sessionFilePath: string): Promise<{
       }
     }
 
-    return { messages, userMessages, assistantMessages };
+    return { messages };
   } catch {
     return null;
   }
@@ -125,6 +117,15 @@ async function generateSummaryViaLLM(params: {
     // Create a temporary session file for this one-off LLM call
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-summary-"));
     tempSessionFile = path.join(tempDir, "session.jsonl");
+
+    // Initialize session file with required session header
+    const sessionHeader = JSON.stringify({
+      type: "session",
+      sessionId: `summary-generator-${Date.now()}`,
+      sessionKey: "temp:summary-generator",
+      createdAt: new Date().toISOString(),
+    });
+    await fs.writeFile(tempSessionFile, sessionHeader + "\n", "utf-8");
 
     const prompt = `Summarize this session for future memory recall. Be concise but complete.
 
@@ -227,10 +228,10 @@ const saveSessionToMemory: HookHandler = async (event) => {
 
     const sessionFile = currentSessionFile || undefined;
 
-    // Read hook config (for future extensibility)
+    // Read hook config for message limiting and future options
     const hookConfig = resolveHookConfig(cfg, "session-memory");
-    // Could add config options like: summaryEnabled, maxContentChars, etc.
-    const _hookConfig = hookConfig; // Reserved for future use
+    const messageLimit =
+      typeof hookConfig?.messages === "number" && hookConfig.messages > 0 ? hookConfig.messages : 0; // 0 = no limit (include all)
 
     let slug: string | null = null;
     let summary: string | null = null;
@@ -242,13 +243,17 @@ const saveSessionToMemory: HookHandler = async (event) => {
       console.log("[session-memory] Parsed messages:", parsed?.messages.length || 0);
 
       if (parsed && parsed.messages.length > 0) {
+        // Apply message limit if configured (take the most recent N messages)
+        const messagesToUse =
+          messageLimit > 0 ? parsed.messages.slice(-messageLimit) : parsed.messages;
+
         // Prepare content for LLM (cap at max chars)
-        const fullContent = parsed.messages.join("\n\n");
+        const fullContent = messagesToUse.join("\n\n");
         rawContent = fullContent.slice(0, MAX_CONTENT_CHARS);
 
         if (cfg) {
           // Generate slug from recent content (smaller context)
-          const slugContent = parsed.messages.slice(-10).join("\n").slice(0, MAX_SLUG_CHARS);
+          const slugContent = messagesToUse.slice(-10).join("\n").slice(0, MAX_SLUG_CHARS);
 
           console.log("[session-memory] Generating slug...");
           try {
