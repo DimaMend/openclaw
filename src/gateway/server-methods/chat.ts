@@ -143,6 +143,61 @@ function appendAssistantTranscriptMessage(params: {
 
   return { ok: true, messageId, message: transcriptEntry.message };
 }
+function appendUserTranscriptMessage(params: {
+  message: string;
+  sessionId: string;
+  storePath: string | undefined;
+  sessionFile?: string;
+  senderId?: string;
+  createIfMissing?: boolean;
+}): TranscriptAppendResult {
+  const transcriptPath = resolveTranscriptPath({
+    sessionId: params.sessionId,
+    storePath: params.storePath,
+    sessionFile: params.sessionFile,
+  });
+  if (!transcriptPath) {
+    return { ok: false, error: "transcript path not resolved" };
+  }
+
+  if (!fs.existsSync(transcriptPath)) {
+    if (!params.createIfMissing) {
+      return { ok: false, error: "transcript file not found" };
+    }
+    const ensured = ensureTranscriptFile({
+      transcriptPath,
+      sessionId: params.sessionId,
+    });
+    if (!ensured.ok) {
+      return { ok: false, error: ensured.error ?? "failed to create transcript file" };
+    }
+  }
+
+  const now = Date.now();
+  const messageId = randomUUID().slice(0, 8);
+  const messageBody: Record<string, unknown> = {
+    role: "user",
+    content: [{ type: "text", text: params.message }],
+    timestamp: now,
+  };
+  if (params.senderId) {
+    messageBody.senderId = params.senderId;
+  }
+  const transcriptEntry = {
+    type: "message",
+    id: messageId,
+    timestamp: new Date(now).toISOString(),
+    message: messageBody,
+  };
+
+  try {
+    fs.appendFileSync(transcriptPath, `${JSON.stringify(transcriptEntry)}\n`, "utf-8");
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  return { ok: true, messageId, message: transcriptEntry.message };
+}
 
 function nextChatSeq(context: { agentRunSeq: Map<string, number> }, runId: string) {
   const next = (context.agentRunSeq.get(runId) ?? 0) + 1;
@@ -449,6 +504,29 @@ export const chatHandlers: GatewayRequestHandlers = {
       );
       const commandBody = injectThinking ? `/think ${p.thinking} ${parsedMessage}` : parsedMessage;
       const clientInfo = client?.connect?.client;
+      const transcriptText =
+        trimmedMessage ||
+        normalizedAttachments
+          .map((attachment) => attachment.fileName || attachment.type || "attachment")
+          .filter((value) => value && value.trim())
+          .join(", ");
+      if (transcriptText) {
+        const { storePath: latestStorePath, entry: latestEntry } = loadSessionEntry(p.sessionKey);
+        const sessionId = latestEntry?.sessionId ?? entry?.sessionId ?? clientRunId;
+        const appended = appendUserTranscriptMessage({
+          message: transcriptText,
+          sessionId,
+          storePath: latestStorePath,
+          sessionFile: latestEntry?.sessionFile,
+          senderId: clientInfo?.id,
+          createIfMissing: true,
+        });
+        if (!appended.ok) {
+          context.logGateway.warn(
+            `webchat transcript user append failed: ${appended.error ?? "unknown error"}`,
+          );
+        }
+      }
       // Inject timestamp so agents know the current date/time.
       // Only BodyForAgent gets the timestamp — Body stays raw for UI display.
       // See: https://github.com/moltbot/moltbot/issues/3658
