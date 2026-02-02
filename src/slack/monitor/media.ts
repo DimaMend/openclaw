@@ -51,10 +51,8 @@ function resolveRequestUrl(input: RequestInfo | URL): string {
   if (input instanceof URL) {
     return input.toString();
   }
-  if ("url" in input && typeof input.url === "string") {
-    return input.url;
-  }
-  return String(input);
+  // RequestInfo is string | Request, and Request always has .url
+  return input.url;
 }
 
 function createSlackMediaFetch(token: string): FetchLike {
