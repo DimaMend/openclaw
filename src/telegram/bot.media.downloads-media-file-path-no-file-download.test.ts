@@ -177,7 +177,9 @@ describe("telegram inbound media", () => {
       expect(fetchSpy).toHaveBeenCalled();
       expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://api.telegram.org/file/bottok/photos/1.jpg");
       if (fetchSpy.mock.calls[0]?.[1]) {
-        expect(fetchSpy.mock.calls[0]?.[1]).toEqual(expect.objectContaining({ redirect: "manual" }));
+        expect(fetchSpy.mock.calls[0]?.[1]).toEqual(
+          expect.objectContaining({ redirect: "manual" }),
+        );
       }
       expect(replySpy).toHaveBeenCalledTimes(1);
       const payload = replySpy.mock.calls[0][0];
@@ -236,7 +238,9 @@ describe("telegram inbound media", () => {
     expect(proxyFetch).toHaveBeenCalled();
     expect(proxyFetch.mock.calls[0]?.[0]).toBe("https://api.telegram.org/file/bottok/photos/2.jpg");
     if (proxyFetch.mock.calls[0]?.[1]) {
-      expect(proxyFetch.mock.calls[0]?.[1]).toEqual(expect.objectContaining({ redirect: "manual" }));
+      expect(proxyFetch.mock.calls[0]?.[1]).toEqual(
+        expect.objectContaining({ redirect: "manual" }),
+      );
     }
 
     globalFetchSpy.mockRestore();
