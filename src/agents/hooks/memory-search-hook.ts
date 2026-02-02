@@ -102,7 +102,12 @@ async function searchMemoryGateway(
             score: r.score || 0,
             lines: "", // mcporter doesn't return line numbers
           }));
-          resolve(results.filter((r) => r.content.length > 0));
+          resolve(
+            results.filter(
+              (r: { content: string; path: string; score: number; lines: string }) =>
+                r.content.length > 0,
+            ),
+          );
         } else {
           resolve([]);
         }
