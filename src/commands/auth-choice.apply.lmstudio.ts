@@ -24,6 +24,26 @@ function isLoopbackHost(host: string): boolean {
   );
 }
 
+function isPrivateHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase();
+  const hostOnly = normalized.replace(/^\[/, "").replace(/\].*$/, "").split(":")[0] ?? "";
+  const parts = hostOnly.split(".").map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) {
+    return false;
+  }
+  const [a, b] = parts;
+  if (a === 10) {
+    return true;
+  }
+  if (a === 172 && b >= 16 && b <= 31) {
+    return true;
+  }
+  if (a === 192 && b === 168) {
+    return true;
+  }
+  return false;
+}
+
 function normalizeLmStudioBaseUrl(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -37,7 +57,7 @@ function normalizeLmStudioBaseUrl(raw: string): string | null {
       return trimmed.split("/")[0] ?? trimmed;
     }
   })();
-  const defaultScheme = isLoopbackHost(hostInput) ? "http" : "https";
+  const defaultScheme = isLoopbackHost(hostInput) || isPrivateHost(hostInput) ? "http" : "https";
   const withScheme = hasUrlScheme ? trimmed : `${defaultScheme}://${trimmed}`;
 
   let url: URL;
