@@ -1,0 +1,33 @@
+{
+  "name": "@openclaw/core-memories",
+  "version": "1.0.0",
+  "description": "Hierarchical memory system for OpenClaw agents with progressive compression and event-driven retrieval",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node __tests__/index.test.js"
+  },
+  "keywords": [
+    "openclaw",
+    "memory",
+    "agent",
+    "ai",
+    "hierarchical-memory",
+    "compression"
+  ],
+  "author": "Louis Angeli <lucas.was.here@proton.me>",
+  "contributors": [
+    "Lucas (OpenClaw Agent)"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/openclaw.git",
+    "directory": "packages/core-memories"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.2.0"
+  }
+}
