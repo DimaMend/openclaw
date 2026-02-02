@@ -8,9 +8,11 @@ Docs: https://docs.openclaw.ai
 
 - Ollama: enable auto-discovery for local models (no API key required) + configurable timeouts/base URLs.
 - Docs: seed zh-CN translations. (#6619) Thanks @joshp123.
+- Docs: expand zh-Hans navigation and fix zh-CN index asset paths. (#7242) Thanks @joshp123.
 
 ### Fixes
 
+- fix(webchat): respect user scroll position during streaming and refresh (#7226) (thanks @marcomarandiz)
 - Security: guard skill installer downloads with SSRF checks (block private/localhost URLs).
 - Media understanding: apply SSRF guardrails to provider fetches; allow private baseUrl overrides explicitly.
 - Tests: stub SSRF DNS pinning in web auto-reply + Gemini video coverage. (#6619) Thanks @joshp123.
