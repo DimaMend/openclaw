@@ -434,8 +434,8 @@ export function createGuardrailPlugin<TConfig extends GuardrailBaseConfig>(
     description: definition.description,
 
     register(api) {
-      const config = api.pluginConfig as TConfig | undefined;
-      if (!config?.enabled) {
+      const config = (api.pluginConfig ?? {}) as TConfig;
+      if (config.enabled === false) {
         api.logger.debug?.(`${definition.name} disabled or not configured`);
         return;
       }
