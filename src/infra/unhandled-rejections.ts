@@ -81,6 +81,28 @@ function isConfigError(err: unknown): boolean {
 }
 
 /**
+ * Checks if an error is undici's TLS session null error.
+ * This occurs when undici's connection pool tries to resume a TLS session
+ * after the socket has already been closed - a race condition during reconnection.
+ * Stack trace pattern: TLSSocket.setSession -> undici/lib/core/connect.js
+ *
+ * Issue #6201: TypeError: Cannot read properties of null (reading 'setSession')
+ */
+export function isUndiciTlsNullError(err: unknown): boolean {
+  if (!(err instanceof TypeError)) {
+    return false;
+  }
+  const message = err.message ?? "";
+  // Match: "Cannot read properties of null (reading 'setSession')"
+  if (!message.includes("null") || !message.includes("setSession")) {
+    return false;
+  }
+  // Verify it's from undici/node TLS stack
+  const stack = err.stack ?? "";
+  return stack.includes("_tls_wrap") || stack.includes("undici") || stack.includes("TLSSocket");
+}
+
+/**
  * Checks if an error is a transient network error that shouldn't crash the gateway.
  * These are typically temporary connectivity issues that will resolve on their own.
  */
@@ -100,6 +122,11 @@ export function isTransientNetworkError(err: unknown): boolean {
     if (cause) {
       return isTransientNetworkError(cause);
     }
+    return true;
+  }
+
+  // undici TLS session null error during reconnection (issue #6201)
+  if (isUndiciTlsNullError(err)) {
     return true;
   }
 
