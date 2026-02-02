@@ -26,6 +26,7 @@ export {
   timeoutMemberDiscord,
 } from "./send.guild.js";
 export {
+  createForumThreadDiscord,
   createThreadDiscord,
   deleteMessageDiscord,
   editMessageDiscord,
@@ -62,6 +63,7 @@ export type {
   DiscordSearchQuery,
   DiscordSendResult,
   DiscordStickerUpload,
+  DiscordForumThreadCreate,
   DiscordThreadCreate,
   DiscordThreadList,
   DiscordTimeoutTarget,

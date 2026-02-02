@@ -1,6 +1,7 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { DiscordActionConfig } from "../../config/config.js";
 import {
+  createForumThreadDiscord,
   createThreadDiscord,
   deleteMessageDiscord,
   editMessageDiscord,
@@ -293,6 +294,27 @@ export async function handleDiscordMessagingAction(
             { accountId },
           )
         : await createThreadDiscord(channelId, { name, messageId, autoArchiveMinutes });
+      return jsonResult({ ok: true, thread });
+    }
+    case "forumPostCreate": {
+      if (!isActionEnabled("threads")) {
+        throw new Error("Discord threads/forum posts are disabled.");
+      }
+      const channelId = resolveChannelId();
+      const name = readStringParam(params, "name", { required: true });
+      const content = readStringParam(params, "content", { required: true });
+      const autoArchiveMinutesRaw = params.autoArchiveMinutes;
+      const autoArchiveMinutes =
+        typeof autoArchiveMinutesRaw === "number" && Number.isFinite(autoArchiveMinutesRaw)
+          ? autoArchiveMinutesRaw
+          : undefined;
+      const thread = accountId
+        ? await createForumThreadDiscord(
+            channelId,
+            { name, content, autoArchiveMinutes },
+            { accountId },
+          )
+        : await createForumThreadDiscord(channelId, { name, content, autoArchiveMinutes });
       return jsonResult({ ok: true, thread });
     }
     case "threadList": {

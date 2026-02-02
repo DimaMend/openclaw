@@ -73,6 +73,13 @@ export type DiscordThreadCreate = {
   autoArchiveMinutes?: number;
 };
 
+export type DiscordForumThreadCreate = {
+  name: string;
+  content: string;
+  autoArchiveMinutes?: number;
+  appliedTags?: string[];
+};
+
 export type DiscordThreadList = {
   guildId: string;
   channelId?: string;

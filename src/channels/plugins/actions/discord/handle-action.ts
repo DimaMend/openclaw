@@ -200,6 +200,25 @@ export async function handleDiscordMessageAction(
     );
   }
 
+  if (action === "forum-post-create") {
+    const name = readStringParam(params, "threadName", { required: true });
+    const content = readStringParam(params, "message", { required: true });
+    const autoArchiveMinutes = readNumberParam(params, "autoArchiveMin", {
+      integer: true,
+    });
+    return await handleDiscordAction(
+      {
+        action: "forumPostCreate",
+        accountId: accountId ?? undefined,
+        channelId: resolveChannelId(),
+        name,
+        content,
+        autoArchiveMinutes,
+      },
+      cfg,
+    );
+  }
+
   if (action === "sticker") {
     const stickerIds =
       readStringArrayParam(params, "stickerId", {

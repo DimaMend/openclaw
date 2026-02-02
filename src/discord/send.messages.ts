@@ -1,6 +1,7 @@
 import type { APIMessage } from "discord-api-types/v10";
 import { Routes } from "discord-api-types/v10";
 import type {
+  DiscordForumThreadCreate,
   DiscordMessageEdit,
   DiscordMessageQuery,
   DiscordReactOpts,
@@ -106,6 +107,31 @@ export async function createThreadDiscord(
     body.auto_archive_duration = payload.autoArchiveMinutes;
   }
   const route = Routes.threads(channelId, payload.messageId);
+  return await rest.post(route, { body });
+}
+
+/**
+ * Create a new thread (post) in a Forum or Media channel.
+ * Unlike regular threads, forum threads require an initial message.
+ */
+export async function createForumThreadDiscord(
+  channelId: string,
+  payload: DiscordForumThreadCreate,
+  opts: DiscordReactOpts = {},
+) {
+  const rest = resolveDiscordRest(opts);
+  const body: Record<string, unknown> = {
+    name: payload.name,
+    message: { content: payload.content },
+  };
+  if (payload.autoArchiveMinutes) {
+    body.auto_archive_duration = payload.autoArchiveMinutes;
+  }
+  if (payload.appliedTags && payload.appliedTags.length > 0) {
+    body.applied_tags = payload.appliedTags;
+  }
+  // Forum threads use POST /channels/{channel.id}/threads without messageId
+  const route = Routes.threads(channelId);
   return await rest.post(route, { body });
 }
 

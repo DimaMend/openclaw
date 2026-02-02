@@ -23,6 +23,7 @@ export const CHANNEL_MESSAGE_ACTION_NAMES = [
   "thread-create",
   "thread-list",
   "thread-reply",
+  "forum-post-create",
   "search",
   "sticker",
   "sticker-search",
