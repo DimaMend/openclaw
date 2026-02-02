@@ -5,27 +5,27 @@ homepage: https://www.zotero.org/
 metadata:
   {
     "openclaw":
-      {
-        "emoji": "📚",
-        "requires": { "bins": ["zot"] },
-        "install":
-          [
-            {
-              "id": "pip",
-              "kind": "pip",
-              "package": "pyzotero-cli",
-              "bins": ["zot"],
-              "label": "Install pyzotero-cli (pip)",
-            },
-            {
-              "id": "uv",
-              "kind": "uv",
-              "package": "pyzotero-cli",
-              "bins": ["zot"],
-              "label": "Install pyzotero-cli (uv)",
-            },
-          ],
-      },
+    {
+      "emoji": "📚",
+      "requires": { "bins": ["zot"] },
+      "install":
+      [
+        {
+          "id": "pip",
+          "kind": "pip",
+          "package": "pyzotero-cli",
+          "bins": ["zot"],
+          "label": "Install pyzotero-cli (pip)"
+        },
+        {
+          "id": "uv",
+          "kind": "uv",
+          "package": "pyzotero-cli",
+          "bins": ["zot"],
+          "label": "Install pyzotero-cli (uv)"
+        }
+      ]
+    }
   }
 ---
 
