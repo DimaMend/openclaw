@@ -94,17 +94,3 @@ export function applySystemPromptOverrideToSession(
   mutableSession._baseSystemPrompt = prompt;
   mutableSession._rebuildSystemPrompt = () => prompt;
 }
-
-export function applySystemPromptOverrideToSession(
-  session: AgentSession,
-  override: (defaultPrompt?: string) => string,
-) {
-  const prompt = override().trim();
-  session.agent.setSystemPrompt(prompt);
-  const mutableSession = session as unknown as {
-    _baseSystemPrompt?: string;
-    _rebuildSystemPrompt?: (toolNames: string[]) => string;
-  };
-  mutableSession._baseSystemPrompt = prompt;
-  mutableSession._rebuildSystemPrompt = () => prompt;
-}
