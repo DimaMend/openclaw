@@ -620,6 +620,37 @@ describe("applyMediaUnderstanding", () => {
     expect(ctx.Body).not.toContain("<file");
   });
 
+  it("skips audio attachments even if content is valid CSV", async () => {
+    const { applyMediaUnderstanding } = await loadApply();
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-media-"));
+    const filePath = path.join(dir, "data.mp3");
+    // Valid CSV content in an audio file - should still be skipped
+    const csvText = '"a","b","c"\n"1","2","3"';
+    const csvBuffer = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(csvText, "utf16le")]);
+    await fs.writeFile(filePath, csvBuffer);
+
+    const ctx: MsgContext = {
+      Body: "<media:audio>",
+      MediaPath: filePath,
+      MediaType: "audio/mpeg",
+    };
+    const cfg: OpenClawConfig = {
+      tools: {
+        media: {
+          audio: { enabled: false },
+          image: { enabled: false },
+          video: { enabled: false },
+        },
+      },
+    };
+
+    const result = await applyMediaUnderstanding({ ctx, cfg });
+
+    // Audio files are always skipped - CSV detection should not matter
+    expect(result.appliedFile).toBe(false);
+    expect(ctx.Body).not.toContain("<file");
+  });
+
   it("skips binary audio attachments that are not text-like", async () => {
     const { applyMediaUnderstanding } = await loadApply();
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-media-"));
@@ -649,7 +680,7 @@ describe("applyMediaUnderstanding", () => {
     expect(ctx.Body).not.toContain("<file");
   });
 
-  it("respects configured allowedMimes for text-like audio attachments", async () => {
+  it("skips audio even when allowedMimes would permit text", async () => {
     const { applyMediaUnderstanding } = await loadApply();
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-media-"));
     const tsvPath = path.join(dir, "report.mp3");
