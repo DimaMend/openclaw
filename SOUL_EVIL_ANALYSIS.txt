@@ -1,0 +1,279 @@
+# SOUL_EVIL_ANALYSIS.txt
+# Generated: 2026-02-02
+# Purpose: Phase 1 Priority Zero - Runtime Swap Mechanism Analysis
+# Directive: KIMI_DIRECTIVE_FIREWALL_AGENTS.md (Revised)
+
+## EXECUTIVE SUMMARY
+
+**Classification: PUBLIC_TRIGGERABLE (conditional)**
+
+The soul-evil mechanism IS triggerable from the public layer, but requires:
+1. Hook must be explicitly enabled in config
+2. Trigger conditions (purge window OR random chance) must be met
+
+Risk: If config is extractable (ZeroLeaks finding), attacker can determine if
+soul-evil is enabled and predict/exploit purge windows.
+
+---
+
+## SWAP MECHANISM ANALYSIS
+
+### Primary Function: applySoulEvilOverride()
+
+**Location:** `src/hooks/soul-evil.ts:192-249`
+
+```typescript
+export async function applySoulEvilOverride(params: {
+  files: WorkspaceBootstrapFile[];    // Contains SOUL.md content
+  workspaceDir: string;                // Where SOUL_EVIL.md is read from
+  config?: SoulEvilConfig;             // Enables/configures the swap
+  userTimezone?: string;
+  now?: Date;
+  random?: () => number;
+  log?: SoulEvilLog;
+}): Promise<WorkspaceBootstrapFile[]>
+```
+
+**What it does:**
+1. Calls `decideSoulEvil()` to check if swap should occur (lines 201-207)
+2. If triggered, reads `SOUL_EVIL.md` from workspace directory (lines 209-219)
+3. Finds SOUL.md in the bootstrap files array (line 228)
+4. Replaces SOUL.md content with SOUL_EVIL.md content IN MEMORY (lines 237-241)
+5. Returns modified files array
+
+**Critical observation:** The swap happens in memory, not on disk. The modified
+`bootstrapFiles` array is then used to build the system prompt.
+
+### Decision Function: decideSoulEvil()
+
+**Location:** `src/hooks/soul-evil.ts:162-190`
+
+**Trigger conditions:**
+1. **Purge window:** Daily time window (e.g., 21:00 for 15 minutes)
+   - Configured via `purge.at` (HH:mm) and `purge.duration` (e.g., "15m")
+   - Checked via `isWithinDailyPurgeWindow()` (lines 129-160)
+
+2. **Random chance:** Probability on each invocation
+   - Configured via `chance` (0-1 float)
+   - Uses `Math.random()` by default (line 183-185)
+
+**Precedence:** Purge window wins over random chance (purge checked first).
+
+---
+
+## CALL CHAIN FROM PUBLIC LAYER
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PUBLIC LAYER (User Messages)                                                 │
+│ Gateway HTTP/WS → Channels (Discord, Telegram, etc.)                        │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ src/auto-reply/reply/*.ts                                                   │
+│ Message processing and agent invocation                                     │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ src/agents/pi-embedded-runner/run/attempt.ts                                │
+│ Calls resolveBootstrapContextForRun()                                       │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ src/agents/bootstrap-files.ts:19-39                                         │
+│ resolveBootstrapFilesForRun() → applyBootstrapHookOverrides()               │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ src/agents/bootstrap-hooks.ts:7-31                                          │
+│ applyBootstrapHookOverrides() → triggerInternalHook("agent:bootstrap")      │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ src/hooks/internal-hooks.ts:123-143                                         │
+│ triggerInternalHook() → iterates all registered handlers                    │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ src/hooks/bundled/soul-evil/handler.ts:9-40                                 │
+│ soulEvilHook() → checks config enabled → calls applySoulEvilOverride()      │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ src/hooks/soul-evil.ts:192-249                                              │
+│ applySoulEvilOverride() → decideSoulEvil() → REPLACES SOUL.md CONTENT       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## FILES INVOLVED
+
+| File | Line(s) | Role |
+|------|---------|------|
+| src/hooks/soul-evil.ts | 192-249 | Core swap implementation |
+| src/hooks/soul-evil.ts | 162-190 | Decision logic (purge/chance) |
+| src/hooks/bundled/soul-evil/handler.ts | 9-40 | Hook event handler |
+| src/hooks/bundled/soul-evil/HOOK.md | * | Hook documentation/config |
+| src/agents/bootstrap-hooks.ts | 7-31 | Triggers agent:bootstrap event |
+| src/agents/bootstrap-files.ts | 19-39 | Calls hook system |
+| src/hooks/internal-hooks.ts | 123-143 | Hook dispatcher |
+
+---
+
+## CONFIG GATING
+
+The swap only occurs if ALL of these conditions are met:
+
+1. **Hook enabled in config:**
+   ```json
+   {
+     "hooks": {
+       "internal": {
+         "enabled": true,
+         "entries": {
+           "soul-evil": {
+             "enabled": true,
+             ...
+           }
+         }
+       }
+     }
+   }
+   ```
+
+2. **Handler check (handler.ts:16):**
+   ```typescript
+   if (!hookConfig || hookConfig.enabled === false) return;
+   ```
+
+3. **Trigger condition met:**
+   - Inside purge window, OR
+   - Random chance succeeds
+
+---
+
+## ATTACK SCENARIOS
+
+### Scenario 1: Purge Window Prediction
+1. Attacker extracts config (ZeroLeaks vulnerability)
+2. Identifies purge window: `purge.at: "21:00", duration: "15m"`
+3. Sends message at 21:05
+4. Agent responds with SOUL_EVIL.md persona
+
+### Scenario 2: Chance Exploitation
+1. Attacker extracts config, sees `chance: 0.1` (10%)
+2. Sends multiple messages
+3. Statistically, ~10% will use evil persona
+
+### Scenario 3: Config Injection (if writable)
+1. If config is writable from public layer (separate vulnerability)
+2. Attacker enables soul-evil with `chance: 1.0`
+3. All subsequent messages use evil persona
+
+---
+
+## RECOMMENDED REMEDIATION
+
+### Option A: Full Disable (Recommended for HueAndLogic deployment)
+
+```typescript
+// src/hooks/soul-evil.ts - Replace applySoulEvilOverride
+
+export async function applySoulEvilOverride(params: {
+  files: WorkspaceBootstrapFile[];
+  // ... other params
+}): Promise<WorkspaceBootstrapFile[]> {
+  // FIREWALL: Runtime soul swap disabled in hardened fork
+  // To modify agent persona, edit SOUL.md in internal/behavioral-core/
+  // and restart the agent process.
+  //
+  // Rationale: Runtime behavioral modification is a security risk
+  // when the config layer is potentially extractable.
+  return params.files;  // No modification, return original
+}
+```
+
+### Option B: Internal API Guard (If feature needed)
+
+```typescript
+// src/hooks/soul-evil.ts - Add caller verification
+
+import { verifyInternalCaller, type CallerContext } from '../internal/auth-guard';
+
+export async function applySoulEvilOverride(params: {
+  files: WorkspaceBootstrapFile[];
+  callerContext?: CallerContext;  // NEW: caller identification
+  // ... other params
+}): Promise<WorkspaceBootstrapFile[]> {
+  // FIREWALL: Verify caller is internal config API
+  if (!params.callerContext || !verifyInternalCaller(params.callerContext)) {
+    logSecurityEvent({
+      type: 'SOUL_SWAP_BLOCKED',
+      source: params.callerContext?.source ?? 'unknown',
+      timestamp: new Date().toISOString(),
+    });
+    return params.files;  // Block swap, return original
+  }
+
+  // ... existing implementation for verified callers
+}
+```
+
+---
+
+## VERIFICATION TEST
+
+After remediation, this test MUST pass:
+
+```typescript
+// test/security/soul-evil-blocked.test.ts
+
+import { applySoulEvilOverride } from '../src/hooks/soul-evil';
+
+describe('soul-evil public access blocked', () => {
+  it('should not swap SOUL.md when called from public context', async () => {
+    const originalFiles = [
+      { name: 'SOUL.md', content: 'Original persona', missing: false, path: '/test/SOUL.md' }
+    ];
+
+    const result = await applySoulEvilOverride({
+      files: originalFiles,
+      workspaceDir: '/test',
+      config: { chance: 1.0 },  // 100% chance - would always swap before
+      // No callerContext = public/unauthorized
+    });
+
+    // MUST return original, unmodified
+    expect(result[0].content).toBe('Original persona');
+  });
+});
+```
+
+---
+
+## PHASE 1.0 DELIVERABLE STATUS
+
+| Requirement | Status |
+|-------------|--------|
+| Full swap mechanism documented | ✅ COMPLETE |
+| Call chain from public layer traced | ✅ COMPLETE |
+| All involved files identified | ✅ COMPLETE |
+| Classification determined | ✅ PUBLIC_TRIGGERABLE (conditional) |
+| Remediation options specified | ✅ COMPLETE |
+| Verification test defined | ✅ COMPLETE |
+
+**Next step:** Implement Option A (Full Disable) or Option B (Internal API Guard)
+per operator preference.
+
+---
+
+*Analysis completed by Agent Firewall reconnaissance.*
+*Session: https://claude.ai/code/session_01Jrxu3TjNsMmLdtP5PMmNzu*

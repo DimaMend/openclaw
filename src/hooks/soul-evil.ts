@@ -189,6 +189,30 @@ export function decideSoulEvil(params: SoulEvilCheckParams): SoulEvilDecision {
   return { useEvil: false, fileName };
 }
 
+/**
+ * FIREWALL: Runtime soul swap DISABLED in hardened fork.
+ *
+ * This function previously allowed hot-swapping the agent's SOUL.md personality
+ * during operation based on time windows or random chance. This capability has
+ * been disabled for security reasons:
+ *
+ * 1. Runtime behavioral modification is a security risk when the config layer
+ *    is potentially extractable (ZeroLeaks finding: 2/100 security score).
+ *
+ * 2. An attacker who can read config can predict purge windows and exploit
+ *    the alternate persona.
+ *
+ * 3. To modify agent persona in this hardened fork:
+ *    - Edit SOUL.md in the internal behavioral core directory
+ *    - Restart the agent process
+ *    - Changes are verified against baseline hashes at startup
+ *
+ * The function signature is preserved for API compatibility, but the swap
+ * logic is replaced with a no-op that logs the blocked attempt.
+ *
+ * @see SOUL_EVIL_ANALYSIS.txt for full security analysis
+ * @see Phase 1 Directive (KIMI_DIRECTIVE_FIREWALL_AGENTS.md)
+ */
 export async function applySoulEvilOverride(params: {
   files: WorkspaceBootstrapFile[];
   workspaceDir: string;
@@ -198,52 +222,42 @@ export async function applySoulEvilOverride(params: {
   random?: () => number;
   log?: SoulEvilLog;
 }): Promise<WorkspaceBootstrapFile[]> {
+  // FIREWALL: Check if swap would have been triggered (for logging only)
   const decision = decideSoulEvil({
     config: params.config,
     userTimezone: params.userTimezone,
     now: params.now,
     random: params.random,
   });
-  if (!decision.useEvil) return params.files;
 
-  const workspaceDir = resolveUserPath(params.workspaceDir);
-  const evilPath = path.join(workspaceDir, decision.fileName);
-  let evilContent: string;
-  try {
-    evilContent = await fs.readFile(evilPath, "utf-8");
-  } catch {
-    params.log?.warn?.(
-      `SOUL_EVIL active (${decision.reason ?? "unknown"}) but file missing: ${evilPath}`,
+  // If a swap would have occurred, log it as blocked
+  if (decision.useEvil) {
+    // Log to console for visibility
+    console.warn(
+      `[FIREWALL] Soul swap BLOCKED: trigger=${decision.reason ?? "unknown"}, ` +
+        `file=${decision.fileName}. Runtime behavioral modification is disabled.`,
     );
-    return params.files;
+
+    // Log structured security event (async-safe, non-blocking)
+    try {
+      const { logSecurityEvent, SecurityEventTypes } = await import(
+        "../internal/security-logger.js"
+      );
+      logSecurityEvent({
+        type: SecurityEventTypes.SOUL_SWAP_BLOCKED,
+        source: "soul-evil-hook",
+        blocked: true,
+        details: {
+          triggerReason: decision.reason,
+          targetFile: decision.fileName,
+          workspaceDir: params.workspaceDir,
+        },
+      });
+    } catch {
+      // Security logger not available - continue without structured logging
+    }
   }
 
-  if (!evilContent.trim()) {
-    params.log?.warn?.(
-      `SOUL_EVIL active (${decision.reason ?? "unknown"}) but file empty: ${evilPath}`,
-    );
-    return params.files;
-  }
-
-  const hasSoulEntry = params.files.some((file) => file.name === "SOUL.md");
-  if (!hasSoulEntry) {
-    params.log?.warn?.(
-      `SOUL_EVIL active (${decision.reason ?? "unknown"}) but SOUL.md not in bootstrap files`,
-    );
-    return params.files;
-  }
-
-  let replaced = false;
-  const updated = params.files.map((file) => {
-    if (file.name !== "SOUL.md") return file;
-    replaced = true;
-    return { ...file, content: evilContent, missing: false };
-  });
-  if (!replaced) return params.files;
-
-  params.log?.debug?.(
-    `SOUL_EVIL active (${decision.reason ?? "unknown"}) using ${decision.fileName}`,
-  );
-
-  return updated;
+  // FIREWALL: Always return original files, never swap
+  return params.files;
 }
