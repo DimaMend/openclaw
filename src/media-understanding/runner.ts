@@ -270,17 +270,33 @@ async function probeGeminiCli(): Promise<boolean> {
     return cached;
   }
   const resolved = (async () => {
-    if (!(await hasBinary("gemini"))) {
-      return false;
+    // Try "gemini" first
+    if (await hasBinary("gemini")) {
+      try {
+        const { stdout } = await runExec("gemini", ["--output-format", "json", "ok"], {
+          timeoutMs: 8000,
+        });
+        if (extractGeminiResponse(stdout) ?? stdout.toLowerCase().includes("ok")) {
+          return true;
+        }
+      } catch {
+        // fall through to npx
+      }
     }
-    try {
-      const { stdout } = await runExec("gemini", ["--output-format", "json", "ok"], {
-        timeoutMs: 8000,
-      });
-      return Boolean(extractGeminiResponse(stdout) ?? stdout.toLowerCase().includes("ok"));
-    } catch {
-      return false;
+
+    // Try "npx @google/gemini-cli" fallback
+    if (await hasBinary("npx")) {
+      try {
+        const { stdout } = await runExec("npx", ["@google/gemini-cli", "--output-format", "json", "ok"], {
+          timeoutMs: 8000,
+        });
+        return Boolean(extractGeminiResponse(stdout) ?? stdout.toLowerCase().includes("ok"));
+      } catch {
+        return false;
+      }
     }
+
+    return false;
   })();
   geminiProbeCache.set("gemini", resolved);
   return resolved;
@@ -652,6 +668,8 @@ async function resolveCliOutput(params: {
   mediaPath: string;
 }): Promise<string> {
   const commandId = commandBase(params.command);
+  const isGemini =
+    commandId === "gemini" || (commandId === "npx" && params.args[0] === "@google/gemini-cli");
   const fileOutput =
     commandId === "whisper-cli"
       ? resolveWhisperCppOutputPath(params.args)
@@ -667,7 +685,7 @@ async function resolveCliOutput(params: {
     } catch {}
   }
 
-  if (commandId === "gemini") {
+  if (isGemini) {
     const response = extractGeminiResponse(params.stdout);
     if (response) {
       return response;
@@ -1035,9 +1053,25 @@ async function runCliEntry(params: {
     Prompt: prompt,
     MaxChars: maxChars,
   };
-  const argv = [command, ...args].map((part, index) =>
-    index === 0 ? part : applyTemplate(part, templCtx),
-  );
+  let execCommand = command;
+  let execArgs = [...args];
+  let isNpxFallback = false;
+
+  // Fallback "gemini" to "npx @google/gemini-cli" if not found
+  if (command === "gemini" && !(await hasBinary("gemini"))) {
+    if (await hasBinary("npx")) {
+      execCommand = "npx";
+      execArgs = ["@google/gemini-cli", ...args];
+      isNpxFallback = true;
+    }
+  }
+
+  const argv = [execCommand, ...execArgs].map((part, index) => {
+    // If we're using npx fallback, the first 2 parts (npx, @google/gemini-cli) are not templates.
+    // Otherwise, only the first part (command) is not a template.
+    const isFixed = isNpxFallback ? index < 2 : index === 0;
+    return isFixed ? part : applyTemplate(part, templCtx);
+  });
   try {
     if (shouldLogVerbose()) {
       logVerbose(`Media understanding via CLI: ${argv.join(" ")}`);
