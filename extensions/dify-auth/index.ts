@@ -21,6 +21,84 @@ const parseCompositeKey = (compositeKey: string) => {
   };
 };
 
+const resolveToolArguments = (input: unknown) => {
+  if (typeof input === "string") {
+    const trimmed = input.trim();
+    return trimmed.length > 0 ? trimmed : "{}";
+  }
+  return JSON.stringify(input ?? {});
+};
+
+const resolveToolCallId = (candidate: unknown) => {
+  if (typeof candidate === "string" || typeof candidate === "number") {
+    const value = String(candidate).trim();
+    if (!value) {
+      return "";
+    }
+    return value.startsWith("call_") ? value : `call_${value}`;
+  }
+  return "";
+};
+
+const resolveDifyToolCall = (
+  data: Record<string, unknown>,
+  appType: "chat" | "agent",
+) => {
+  if (appType !== "agent") {
+    return null;
+  }
+  const event = typeof data.event === "string" ? data.event : "";
+  if (event === "agent_thought") {
+    const toolName = typeof data.tool === "string" ? data.tool.trim() : "";
+    if (!toolName) {
+      return null;
+    }
+    const argsString = resolveToolArguments(data.tool_input);
+    const callId =
+      resolveToolCallId(data.tool_call_id) ||
+      resolveToolCallId(data.id) ||
+      resolveToolCallId(data.task_id) ||
+      `call_${Date.now()}`;
+    return { toolName, argsString, callId };
+  }
+  if (event === "tool_call") {
+    const toolName = typeof data.name === "string" ? data.name.trim() : "";
+    if (!toolName) {
+      return null;
+    }
+    const argsString = resolveToolArguments(data.arguments);
+    const callId =
+      resolveToolCallId(data.tool_call_id) ||
+      resolveToolCallId(data.task_id) ||
+      `call_${Date.now()}`;
+    return { toolName, argsString, callId };
+  }
+  return null;
+};
+
+const resolveToolResultPrefix = (message: {
+  role?: string;
+  name?: string;
+  toolName?: string;
+  toolCallId?: string;
+  toolUseId?: string;
+}) => {
+  const role = message.role?.toLowerCase();
+  if (role !== "toolresult" && role !== "tool" && role !== "tool_result") {
+    return "";
+  }
+  const toolName =
+    (typeof message.toolName === "string" && message.toolName.trim()) ||
+    (typeof message.name === "string" && message.name.trim()) ||
+    "tool";
+  const toolCallId =
+    (typeof message.toolCallId === "string" && message.toolCallId.trim()) ||
+    (typeof message.toolUseId === "string" && message.toolUseId.trim()) ||
+    "";
+  const idSuffix = toolCallId ? ` id=${toolCallId}` : "";
+  return `Tool result (${toolName})${idSuffix}:`;
+};
+
 async function verifyDifyKey(apiKey: string, baseUrl: string) {
   const res = await fetch(`${baseUrl}/site`, {
     headers: { [HEADER_AUTHORIZATION]: `Bearer ${apiKey}` },
@@ -213,7 +291,7 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
   }
 
   const compositeKey = authHeader.replace("Bearer ", "").trim();
-  const { apiKey, baseUrl } = parseCompositeKey(compositeKey);
+  const { apiKey, baseUrl, appType } = parseCompositeKey(compositeKey);
 
   if (!apiKey || !baseUrl) {
     res.statusCode = 401;
@@ -231,6 +309,10 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
     user?: string;
     messages?: Array<{
       role?: string;
+      name?: string;
+      toolName?: string;
+      toolCallId?: string;
+      toolUseId?: string;
       content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
     }>;
   };
@@ -245,7 +327,9 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
   console.log("[dify-auth] Proxying request to", baseUrl);
 
   const messages = body.messages || [];
-  const lastMessage = messages[messages.length - 1]?.content || "";
+  const lastMessageEntry = messages[messages.length - 1];
+  const lastMessage = lastMessageEntry?.content ?? "";
+  const toolResultPrefix = lastMessageEntry ? resolveToolResultPrefix(lastMessageEntry) : "";
   let systemMessage = "";
   for (const message of messages) {
     if (
@@ -299,7 +383,9 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
   if (Array.isArray(lastMessage)) {
     const textPart = lastMessage.find((p) => p.type === "text");
     if (textPart?.text) {
-      difyPayload.query = textPart.text;
+      difyPayload.query = toolResultPrefix
+        ? `${toolResultPrefix}\n${textPart.text}`
+        : textPart.text;
     }
 
     const imageParts = lastMessage.filter((p) => p.type === "image_url");
@@ -329,7 +415,8 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
       }
     }
   } else {
-    difyPayload.query = String(lastMessage);
+    const textValue = String(lastMessage);
+    difyPayload.query = toolResultPrefix ? `${toolResultPrefix}\n${textValue}` : textValue;
   }
 
   if (!conversationId && systemMessage && typeof difyPayload.query === "string") {
@@ -407,22 +494,8 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
               setConversationId(sessionKey, data.conversation_id, Date.now());
             }
 
-            if (data.event === "tool_call") {
-              const toolPayload = data as Record<string, unknown>;
-              const nameValue = toolPayload.name;
-              const toolName = typeof nameValue === "string" ? nameValue.trim() : "";
-              const rawArgs = toolPayload.arguments;
-              const argsString =
-                typeof rawArgs === "string" ? rawArgs : JSON.stringify(rawArgs ?? {});
-              const taskId = toolPayload.task_id;
-              const taskIdStr =
-                typeof taskId === "string" || typeof taskId === "number"
-                  ? String(taskId)
-                  : undefined;
-              const callId =
-                typeof toolPayload.tool_call_id === "string" && toolPayload.tool_call_id
-                  ? toolPayload.tool_call_id
-                  : `call_${taskIdStr ?? Date.now()}`;
+            const toolCall = resolveDifyToolCall(data as Record<string, unknown>, appType);
+            if (toolCall) {
               const chunk = {
                 id: responseId,
                 object: "chat.completion.chunk",
@@ -436,11 +509,11 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
                       tool_calls: [
                         {
                           index: 0,
-                          id: callId,
+                          id: toolCall.callId,
                           type: "function",
                           function: {
-                            name: toolName,
-                            arguments: argsString,
+                            name: toolCall.toolName,
+                            arguments: toolCall.argsString,
                           },
                         },
                       ],
