@@ -138,6 +138,7 @@ export const dispatchTelegramMessage = async ({
     : undefined;
   let editStreamingDisabled = !editStream;
   let editText = "";
+  let lastPartialText = "";
   const mergeEditText = (next: string, mode: "block" | "partial") => {
     if (!next) {
       return editText;
@@ -159,6 +160,32 @@ export const dispatchTelegramMessage = async ({
     editText = mode === "block" ? editText + next : next;
     return editText;
   };
+  const appendEditDelta = (next: string) => {
+    if (!next) {
+      return editText;
+    }
+    if (!lastPartialText) {
+      lastPartialText = next;
+      editText = next;
+      return editText;
+    }
+    if (next.startsWith(lastPartialText)) {
+      const delta = next.slice(lastPartialText.length);
+      lastPartialText = next;
+      if (delta) {
+        editText += delta;
+      }
+      return editText;
+    }
+    if (lastPartialText.startsWith(next)) {
+      lastPartialText = next;
+      editText = next;
+      return editText;
+    }
+    lastPartialText = next;
+    editText += next;
+    return editText;
+  };
 
   const disableBlockStreaming = editStreamingEnabled
     ? false
@@ -177,7 +204,7 @@ export const dispatchTelegramMessage = async ({
   const handlePartialReply = (payload?: { text?: string }) => {
     const text = payload?.text;
     if (editStream && !editStreamingDisabled && text) {
-      const merged = mergeEditText(text, "partial");
+      const merged = appendEditDelta(text);
       const handled = editStream.update(merged, { source: "partial" });
       if (!handled) {
         editStreamingDisabled = true;
@@ -261,6 +288,7 @@ export const dispatchTelegramMessage = async ({
               ? Number.parseInt(payload.replyToId, 10)
               : undefined;
             const merged = mergeEditText(text, "block");
+            lastPartialText = merged;
             const handled = Number.isFinite(replyToMessageId)
               ? editStream.update(merged, { replyToMessageId })
               : editStream.update(merged);
