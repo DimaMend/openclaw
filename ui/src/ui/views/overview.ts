@@ -2,8 +2,8 @@ import { html } from "lit";
 import type { GatewayHelloOk } from "../gateway";
 import type { UiSettings } from "../storage";
 import { formatAgo, formatDurationMs } from "../format";
-import { formatNextRun } from "../presenter";
 import { icons } from "../icons";
+import { formatNextRun } from "../presenter";
 
 export type OverviewProps = {
   connected: boolean;
@@ -151,26 +151,25 @@ export function renderOverview(props: OverviewProps) {
           </label>
           <label class="field">
             <span>Password (not stored)</span>
-            <div style="position: relative; display: flex; align-items: stretch;">
+            <div class="cfg-input-wrap--toggle">
               <input
                 type="password"
+                class="cfg-input"
                 .value=${props.password}
                 @input=${(e: Event) => {
                   const v = (e.target as HTMLInputElement).value;
                   props.onPasswordChange(v);
                 }}
                 placeholder="system or shared password"
-                style="flex: 1; padding-right: 40px;"
               />
               <button
                 type="button"
-                class="cfg-input__toggle"
-                style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%);"
+                class="cfg-input__toggle cfg-input__toggle--absolute"
                 title="Toggle visibility"
                 @click=${(e: Event) => {
                   const button = e.currentTarget as HTMLElement;
                   const wrapper = button.parentElement;
-                  const input = wrapper?.querySelector('input') as HTMLInputElement;
+                  const input = wrapper?.querySelector("input") as HTMLInputElement;
                   if (input) {
                     input.type = input.type === "password" ? "text" : "password";
                   }

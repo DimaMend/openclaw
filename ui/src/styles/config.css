@@ -752,6 +752,25 @@
   background: var(--border);
 }
 
+/* Input wrapper with absolute positioned toggle */
+.cfg-input-wrap--toggle {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.cfg-input-wrap--toggle .cfg-input {
+  flex: 1;
+  padding-right: 40px;
+}
+
+.cfg-input__toggle--absolute {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 /* Textarea */
 .cfg-textarea {
   width: 100%;
