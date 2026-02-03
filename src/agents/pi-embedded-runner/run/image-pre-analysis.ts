@@ -1,9 +1,9 @@
 /**
  * Image pre-analysis module.
  *
- * When `agents.defaults.imageModel` is configured and the main model doesn't support images,
- * this module analyzes images using the configured imageModel first, then passes the
- * text analysis results to the main model.
+ * When `agents.defaults.imageModel` is configured, this module analyzes images using the
+ * configured imageModel first, then passes the text analysis results to the main model.
+ * The main model's image capability is only used as a fallback.
  *
  * This helps models like MiniMax M2.1 or GLM that lack native vision capabilities
  * to still understand image content through a vision-capable model.
@@ -81,6 +81,8 @@ export async function analyzeImagesWithImageModel(params: {
     : DEFAULT_IMAGE_ANALYSIS_PROMPT;
 
   const analyses: string[] = [];
+  let analyzedCount = 0;
+  let successCount = 0;
   let lastProvider = "";
   let lastModel = "";
 
@@ -91,6 +93,7 @@ export async function analyzeImagesWithImageModel(params: {
       continue;
     }
 
+    analyzedCount += 1;
     const imageLabel = images.length > 1 ? `Image ${i + 1}` : "Image";
 
     try {
@@ -160,6 +163,7 @@ export async function analyzeImagesWithImageModel(params: {
       });
 
       analyses.push(`[${imageLabel} Analysis]\n${result.result.text}`);
+      successCount += 1;
       lastProvider = result.result.provider;
       lastModel = result.result.model;
 
@@ -169,19 +173,19 @@ export async function analyzeImagesWithImageModel(params: {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       log.warn(`Image pre-analysis failed for ${imageLabel}: ${errorMsg}`);
-      analyses.push(`[${imageLabel}]\n(Image analysis failed: ${errorMsg})`);
+      analyses.push(`[${imageLabel}]\n(Image analysis failed.)`);
     }
   }
 
   const analysisText =
     analyses.length > 0
-      ? `\n\n---\nThe following image analysis was performed by a vision model (${lastProvider}/${lastModel}):\n\n${analyses.join("\n\n")}\n---\n`
+      ? `\n\n---\n${successCount > 0 ? `The following image analysis was performed by a vision model (${lastProvider}/${lastModel}):\n\n` : ""}${analyses.join("\n\n")}\n---\n`
       : "";
 
   return {
     analysisText,
     provider: lastProvider,
     model: lastModel,
-    imageCount: images.length,
+    imageCount: analyzedCount,
   };
 }
