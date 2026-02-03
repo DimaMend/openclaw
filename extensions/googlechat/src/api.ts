@@ -294,10 +294,25 @@ export async function getGoogleChatMessage(params: {
       { method: "GET" }
     );
   } catch (err) {
+    // Log error for debugging but return null for best-effort behavior
+    account.runtime?.log?.(
+      `[Google Chat] Failed to fetch message ${messageName}: ${err instanceof Error ? err.message : String(err)}`
+    );
     return null;
   }
 }
 
+/**
+ * Attempts to fetch the parent message of a thread.
+ *
+ * ⚠️ HEURISTIC: This function assumes the thread ID can be converted into a message name
+ * using patterns `${threadId}.${threadId}` or `${threadId}`. This is based on observed
+ * Google Chat behavior but is not guaranteed by the API. If Google Chat naming changes,
+ * this will return null and thread parent context will be unavailable.
+ *
+ * Consider deriving parent message from event fields if available, or treat this as
+ * best-effort with graceful fallback.
+ */
 export async function getThreadParentMessage(params: {
   account: ResolvedGoogleChatAccount;
   threadResourceName: string;
@@ -308,13 +323,13 @@ export async function getThreadParentMessage(params: {
   const match = threadResourceName.match(/^(.+)\/threads\/(.+)$/);
   if (!match) return null;
   const [, spaceId, threadId] = match;
-  
-  // Try common message name patterns
+
+  // Try common message name patterns (heuristic - may fail if API changes)
   const possibleMessageNames = [
     `${spaceId}/messages/${threadId}.${threadId}`,
     `${spaceId}/messages/${threadId}`,
   ];
-  
+
   for (const messageName of possibleMessageNames) {
     try {
       const result = await getGoogleChatMessage({ account, messageName });
@@ -323,6 +338,6 @@ export async function getThreadParentMessage(params: {
       // Try next pattern
     }
   }
-  
+
   return null;
 }

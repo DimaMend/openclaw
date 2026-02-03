@@ -262,16 +262,38 @@ export async function handleGoogleChatWebhookRequest(
   }
 
   selected.statusSink?.({ lastInboundAt: Date.now() });
-  
+
   // For synchronous responses in spaces, we need to return a proper message
   const evtType = (event.type ?? (event as { eventType?: string }).eventType)?.toUpperCase();
   const isGroup = event.space?.type?.toUpperCase() !== "DM";
-  
+
   // For non-MESSAGE events in groups (like ADDED_TO_SPACE), return an acknowledgment
+  // Only send a greeting if the space is allowlisted/enabled to avoid spamming
   if (isGroup && evtType !== "MESSAGE") {
+    const spaceId = event.space?.name ?? "";
+    const groupConfigResolved = resolveGroupConfig({
+      groupId: spaceId,
+      groupName: event.space?.displayName ?? null,
+      groups: selected.account.config.groups ?? undefined,
+    });
+    const defaultGroupPolicy = selected.config.channels?.defaults?.groupPolicy;
+    const groupPolicy = selected.account.config.groupPolicy ?? defaultGroupPolicy ?? "allowlist";
+    const groupEntry = groupConfigResolved.entry;
+    const groupAllowed = Boolean(groupEntry) || Boolean((selected.account.config.groups ?? {})["*"]);
+
+    // Only respond if space is explicitly allowed (not disabled, and either in allowlist or wildcard)
+    const shouldRespond = groupPolicy !== "disabled" &&
+      (groupPolicy !== "allowlist" || groupAllowed) &&
+      groupEntry?.enabled !== false &&
+      groupEntry?.allow !== false;
+
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ text: "Hello! I'm Chopper! 🦌" }));
+    if (shouldRespond) {
+      res.end(JSON.stringify({ text: "Hello! I'm Chopper! 🦌" }));
+    } else {
+      res.end("{}");
+    }
     return true;
   }
   
@@ -626,10 +648,8 @@ async function processMessageWithPipeline(params: {
       // Ignore fetch errors
     }
   }
-  // Include thread parent context in rawBody for visibility
-  if (threadParentText && !quotedMessageText) {
-    rawBody = `[THREAD PARENT: "${threadParentText.substring(0, 200)}${threadParentText.length > 200 ? '...' : ''}"] ${rawBody}`;
-  }
+  // Note: Thread parent context is passed via dedicated ThreadParentText field
+  // Do NOT modify rawBody - it should remain the original user-authored message
 
   const previousTimestamp = core.channel.session.readSessionUpdatedAt({
     storePath,
