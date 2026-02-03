@@ -300,6 +300,12 @@ importers:
         specifier: workspace:*
         version: link:../..
 
+  extensions/glitchward-shield:
+    devDependencies:
+      openclaw:
+        specifier: workspace:*
+        version: link:../..
+
   extensions/google-antigravity-auth:
     devDependencies:
       openclaw:
