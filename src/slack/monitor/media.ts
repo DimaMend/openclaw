@@ -117,7 +117,10 @@ export async function fetchWithSlackAuth(
 
   // Follow the redirect without the Authorization header
   // (Slack's CDN URLs are pre-signed and don't need it)
-  return fetch(resolvedUrl.toString(), { redirect: "follow", signal: AbortSignal.timeout(timeoutMs) });
+  return fetch(resolvedUrl.toString(), {
+    redirect: "follow",
+    signal: AbortSignal.timeout(timeoutMs),
+  });
 }
 
 export async function resolveSlackMedia(params: {
