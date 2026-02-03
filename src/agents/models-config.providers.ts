@@ -77,13 +77,33 @@ const QWEN_PORTAL_DEFAULT_COST = {
 
 // Ollama URLs - can be overridden via OLLAMA_HOST environment variable
 // Supports cross-machine setups (e.g., OLLAMA_HOST=http://192.168.1.100:11434)
+// Handles various OLLAMA_HOST formats: host:port, http://host:port, http://host:port/path
+function normalizeOllamaHost(): string {
+  const envHost = process.env.OLLAMA_HOST;
+  if (!envHost) {
+    return "http://127.0.0.1:11434";
+  }
+
+  // Add http:// if no scheme provided (e.g., "host:port" -> "http://host:port")
+  const withScheme = envHost.includes("://") ? envHost : `http://${envHost}`;
+
+  try {
+    const url = new URL(withScheme);
+    // Return only protocol + host (ignore any path component)
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    // If URL parsing fails, fall back to localhost
+    console.warn(`Invalid OLLAMA_HOST format: ${envHost}, using localhost`);
+    return "http://127.0.0.1:11434";
+  }
+}
+
 function getOllamaBaseUrl(): string {
-  const host = process.env.OLLAMA_HOST?.replace(/\/$/, "") ?? "http://127.0.0.1:11434";
-  return `${host}/v1`;
+  return `${normalizeOllamaHost()}/v1`;
 }
 
 function getOllamaApiBaseUrl(): string {
-  return process.env.OLLAMA_HOST?.replace(/\/$/, "") ?? "http://127.0.0.1:11434";
+  return normalizeOllamaHost();
 }
 
 const OLLAMA_DEFAULT_CONTEXT_WINDOW = 128000;
