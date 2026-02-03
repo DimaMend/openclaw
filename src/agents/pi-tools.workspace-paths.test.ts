@@ -22,27 +22,29 @@ function safeCwd(): string {
   }
 }
 
-function safeChdir(dir: string) {
+function restoreCwd(dir: string) {
   try {
     process.chdir(dir);
   } catch {
-    if (dir !== FALLBACK_CWD) {
-      try {
-        process.chdir(FALLBACK_CWD);
-      } catch {
-        // best effort
-      }
+    try {
+      process.chdir(FALLBACK_CWD);
+    } catch {
+      // best effort
     }
   }
 }
 
 async function withCwd<T>(dir: string, fn: () => Promise<T>) {
   const prevCwd = safeCwd();
+
+  // If we cannot enter the requested directory, the test should fail.
+  // (We still guard restoration so Windows flakiness doesn't crash the worker.)
+  process.chdir(dir);
+
   try {
-    safeChdir(dir);
     return await fn();
   } finally {
-    safeChdir(prevCwd);
+    restoreCwd(prevCwd);
   }
 }
 
