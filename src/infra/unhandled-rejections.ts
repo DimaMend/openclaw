@@ -103,6 +103,23 @@ export function isTransientNetworkError(err: unknown): boolean {
     return true;
   }
 
+  // Grammy (Telegram) errors - check for network-related failures
+  if (err && typeof err === "object" && "name" in err) {
+    const errName = String(err.name);
+    const errMessage = "message" in err && typeof err.message === "string" ? err.message : "";
+    
+    if (errName === "GrammyError" || errName === "HttpError") {
+      // 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout
+      if (/\b(502|503|504)\b/.test(errMessage)) {
+        return true;
+      }
+      // Connection-related Grammy errors
+      if (errMessage.includes("Connection") || errMessage.includes("timeout")) {
+        return true;
+      }
+    }
+  }
+
   // Check the cause chain recursively
   const cause = getErrorCause(err);
   if (cause && cause !== err) {
