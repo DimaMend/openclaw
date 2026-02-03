@@ -626,6 +626,9 @@ html[data-theme="dark"] .docs-chat-user {
         assistantBubble.innerHTML = renderMarkdown(fullText);
         messages.scrollTop = messages.scrollHeight;
       }
+      // Flush any remaining buffered bytes (partial UTF-8 sequences)
+      fullText += decoder.decode();
+      assistantBubble.innerHTML = renderMarkdown(fullText);
       // Add copy buttons after streaming completes
       addCopyButtons(assistantBubble, fullText);
     } catch (err) {
