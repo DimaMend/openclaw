@@ -35,6 +35,7 @@ type DiscordSendOpts = {
   replyTo?: string;
   retry?: RetryConfig;
   embeds?: unknown[];
+  silent?: boolean;
 };
 
 export async function sendMessageDiscord(
@@ -70,6 +71,7 @@ export async function sendMessageDiscord(
         accountInfo.config.maxLinesPerMessage,
         opts.embeds,
         chunkMode,
+        opts.silent,
       );
     } else {
       result = await sendDiscordText(
@@ -81,6 +83,7 @@ export async function sendMessageDiscord(
         accountInfo.config.maxLinesPerMessage,
         opts.embeds,
         chunkMode,
+        opts.silent,
       );
     }
   } catch (err) {
