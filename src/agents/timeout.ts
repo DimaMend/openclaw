@@ -19,9 +19,10 @@ export function resolveAgentTimeoutMs(opts: {
 }): number {
   const minMs = Math.max(normalizeNumber(opts.minMs) ?? 1, 1);
   const defaultMs = resolveAgentTimeoutSeconds(opts.cfg) * 1000;
-  // Use a very large timeout value (30 days) to represent "no timeout"
-  // when explicitly set to 0. This avoids setTimeout issues with Infinity.
-  const NO_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000;
+  // Use max safe timeout value for Node.js setTimeout (~24.8 days) to represent
+  // "no timeout" when explicitly set to 0. Node's setTimeout uses 32-bit signed
+  // int which maxes at 2^31-1 ms. Values above that wrap to 1ms, causing immediate timeout.
+  const NO_TIMEOUT_MS = 2147483647;
   const overrideMs = normalizeNumber(opts.overrideMs);
   if (overrideMs !== undefined) {
     if (overrideMs === 0) {
@@ -30,7 +31,8 @@ export function resolveAgentTimeoutMs(opts: {
     if (overrideMs < 0) {
       return defaultMs;
     }
-    return Math.max(overrideMs, minMs);
+    // Cap at NO_TIMEOUT_MS to avoid 32-bit signed int overflow in setTimeout
+    return Math.min(Math.max(overrideMs, minMs), NO_TIMEOUT_MS);
   }
   const overrideSeconds = normalizeNumber(opts.overrideSeconds);
   if (overrideSeconds !== undefined) {
@@ -40,7 +42,8 @@ export function resolveAgentTimeoutMs(opts: {
     if (overrideSeconds < 0) {
       return defaultMs;
     }
-    return Math.max(overrideSeconds * 1000, minMs);
+    // Cap at NO_TIMEOUT_MS to avoid 32-bit signed int overflow in setTimeout
+    return Math.min(Math.max(overrideSeconds * 1000, minMs), NO_TIMEOUT_MS);
   }
   return Math.max(defaultMs, minMs);
 }
