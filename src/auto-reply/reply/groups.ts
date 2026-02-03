@@ -6,6 +6,17 @@ import { isInternalMessageChannel } from "../../utils/message-channel.js";
 import { normalizeGroupActivation } from "../group-activation.js";
 import type { TemplateContext } from "../templating.js";
 
+export type SlackIdentityContext = {
+  botUserId?: string;
+  botName?: string;
+  displayName?: string;
+  teammates?: Array<{
+    userId: string;
+    name: string;
+    displayName: string;
+  }>;
+};
+
 function extractGroupId(raw: string | undefined | null): string | undefined {
   const trimmed = (raw ?? "").trim();
   if (!trimmed) {
@@ -74,6 +85,7 @@ export function buildGroupIntro(params: {
   sessionEntry?: SessionEntry;
   defaultActivation: "always" | "mention" | "auto";
   silentToken: string;
+  slackIdentity?: SlackIdentityContext;
 }): string {
   const activation =
     normalizeGroupActivation(params.sessionEntry?.groupActivation) ?? params.defaultActivation;
@@ -130,7 +142,29 @@ export function buildGroupIntro(params: {
     "Be a good group participant: mostly lurk and follow the conversation; reply only when directly addressed or you can add clear value. Emoji reactions are welcome when available.";
   const styleLine =
     "Write like a human. Avoid Markdown tables. Don't type literal \\n sequences; use real line breaks sparingly.";
-  return [
+
+  // Build identity block for Slack co-working awareness
+  const identityBlock = params.slackIdentity?.botUserId
+    ? [
+        "## Your Identity",
+        `- Name: ${params.slackIdentity.displayName || params.slackIdentity.botName || "Assistant"}`,
+        `- Slack User ID: ${params.slackIdentity.botUserId}`,
+        `- Mention format: <@${params.slackIdentity.botUserId}>`,
+      ].join("\n")
+    : undefined;
+
+  const teammatesBlock =
+    params.slackIdentity?.teammates && params.slackIdentity.teammates.length > 0
+      ? [
+          "## Your Teammates (other bots in this workspace)",
+          ...params.slackIdentity.teammates.map(
+            (t) => `- @${t.name} (${t.userId}): ${t.displayName || "Bot user"}`,
+          ),
+          "When someone mentions a teammate, that message may not be for you.",
+        ].join("\n")
+      : undefined;
+
+  const groupIntro = [
     subjectLine,
     membersLine,
     activationLine,
@@ -143,4 +177,7 @@ export function buildGroupIntro(params: {
     .filter(Boolean)
     .join(" ")
     .concat(" Address the specific sender noted in the message context.");
+
+  // Prepend identity blocks if present
+  return [identityBlock, teammatesBlock, groupIntro].filter(Boolean).join("\n\n");
 }
