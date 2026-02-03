@@ -1,6 +1,7 @@
 import type { AgentCommandOpts } from "./agent/types.js";
 import {
   listAgentIds,
+  resolveAgentConfig,
   resolveAgentDir,
   resolveAgentModelFallbacksOverride,
   resolveAgentModelPrimary,
@@ -30,6 +31,7 @@ import {
   formatXHighModelHint,
   normalizeThinkLevel,
   normalizeVerboseLevel,
+  resolveMaxThinkLevel,
   supportsXHighThinking,
   type ThinkLevel,
   type VerboseLevel,
@@ -92,8 +94,14 @@ export async function agentCommand(
       );
     }
   }
-  const agentCfg = cfg.agents?.defaults;
   const sessionAgentId = agentIdOverride ?? resolveAgentIdFromSessionKey(opts.sessionKey?.trim());
+  // Merge per-agent config (e.g. thinkingDefault) with global defaults
+  const perAgentConfig = resolveAgentConfig(cfg, sessionAgentId);
+  const agentCfg = perAgentConfig
+    ? Object.assign({}, cfg.agents?.defaults, {
+        thinkingDefault: perAgentConfig.thinkingDefault ?? cfg.agents?.defaults?.thinkingDefault,
+      })
+    : cfg.agents?.defaults;
   const workspaceDirRaw = resolveAgentWorkspaceDir(cfg, sessionAgentId);
   const agentDir = resolveAgentDir(cfg, sessionAgentId);
   const workspace = await ensureAgentWorkspace({
@@ -350,6 +358,7 @@ export async function agentCommand(
         catalog: catalogForThinking,
       });
     }
+    resolvedThinkLevel = resolveMaxThinkLevel(resolvedThinkLevel, provider, model);
     if (resolvedThinkLevel === "xhigh" && !supportsXHighThinking(provider, model)) {
       const explicitThink = Boolean(thinkOnce || thinkOverride);
       if (explicitThink) {
