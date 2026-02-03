@@ -26,7 +26,7 @@ import {
   resolveAuthProfileOrder,
   type ResolvedProviderAuth,
 } from "../model-auth.js";
-import { normalizeProviderId } from "../model-selection.js";
+import { normalizeProviderId, parseModelRef } from "../model-selection.js";
 import { ensureOpenClawModelsJson } from "../models-config.js";
 import {
   classifyFailoverReason,
@@ -94,23 +94,13 @@ export async function runEmbeddedPiAgent(
       const prevCwd = process.cwd();
 
       // Resolve provider/model: params > config primary > hardcoded defaults
-      let targetProvider = params.provider?.trim();
-      let targetModel = params.model?.trim();
+      // We parse the configured primary model (if any) to fill in missing gaps
+      // while letting explicit params take precedence per-field.
+      const primaryRaw = params.config?.agents?.defaults?.model?.primary;
+      const primaryRef = primaryRaw ? parseModelRef(primaryRaw, DEFAULT_PROVIDER) : null;
 
-      if (!targetProvider && !targetModel) {
-        const primary = params.config?.agents?.defaults?.model?.primary?.trim();
-        if (primary) {
-          // Parse "provider/model" or "provider/namespace/model" by splitting on first slash
-          const firstSlash = primary.indexOf("/");
-          if (firstSlash > 0 && firstSlash < primary.length - 1) {
-            targetProvider = primary.substring(0, firstSlash).trim();
-            targetModel = primary.substring(firstSlash + 1).trim();
-          }
-        }
-      }
-
-      const provider = targetProvider || DEFAULT_PROVIDER;
-      const modelId = targetModel || DEFAULT_MODEL;
+      const provider = (params.provider?.trim() || primaryRef?.provider || DEFAULT_PROVIDER).trim();
+      const modelId = (params.model?.trim() || primaryRef?.model || DEFAULT_MODEL).trim();
       const agentDir = params.agentDir ?? resolveOpenClawAgentDir();
       const fallbackConfigured =
         (params.config?.agents?.defaults?.model?.fallbacks?.length ?? 0) > 0;
