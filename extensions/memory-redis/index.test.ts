@@ -6,22 +6,24 @@
  * - Memory storage and retrieval
  * - Auto-recall via hooks
  * - Auto-capture filtering
+ * - Message timestamp handling and deduplication
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { randomUUID } from "node:crypto";
+import { convertToMemoryMessages, readSessionIdFromStore } from "./index.js";
 
 const MEMORY_SERVER_URL = process.env.AGENT_MEMORY_SERVER_URL ?? "http://localhost:8000";
 const HAS_SERVER = Boolean(process.env.AGENT_MEMORY_SERVER_URL);
 const liveEnabled = HAS_SERVER && process.env.OPENCLAW_LIVE_TEST === "1";
 const describeLive = liveEnabled ? describe : describe.skip;
 
-describe("memory-redis plugin", () => {
+describe("redis-memory plugin", () => {
   test("memory plugin registers and initializes correctly", async () => {
     const { default: memoryPlugin } = await import("./index.js");
 
-    expect(memoryPlugin.id).toBe("memory-redis");
-    expect(memoryPlugin.name).toBe("Memory (Redis)");
+    expect(memoryPlugin.id).toBe("redis-memory");
+    expect(memoryPlugin.name).toBe("Redis Memory");
     expect(memoryPlugin.kind).toBe("memory");
     expect(memoryPlugin.configSchema).toBeDefined();
     expect(memoryPlugin.register).toBeInstanceOf(Function);
@@ -67,7 +69,7 @@ describe("memory-redis plugin", () => {
     expect(config?.recallLimit).toBe(3);
     expect(config?.autoCapture).toBe(true);
     expect(config?.autoRecall).toBe(true);
-    expect(config?.summaryViewName).toBe("openclaw_user_summary");
+    expect(config?.summaryViewName).toBe("agent_user_summary");
     expect(config?.summaryTimeWindowDays).toBe(30);
   });
 
@@ -148,8 +150,168 @@ describe("memory-redis plugin", () => {
   });
 });
 
+describe("convertToMemoryMessages", () => {
+  test("preserves original timestamp when provided", () => {
+    const timestamp = 1706900000000; // Fixed Unix ms timestamp
+    const messages = [
+      { role: "user", content: "Hello", timestamp, id: "msg-1" },
+    ];
+
+    const result = convertToMemoryMessages(messages);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("msg-1");
+    expect(result[0].created_at).toBe(new Date(timestamp).toISOString());
+  });
+
+  test("falls back to current time when timestamp not provided", () => {
+    const before = Date.now();
+    const messages = [
+      { role: "user", content: "Hello", id: "msg-1" },
+    ];
+
+    const result = convertToMemoryMessages(messages);
+    const after = Date.now();
+
+    expect(result).toHaveLength(1);
+    const resultTs = new Date(result[0].created_at!).getTime();
+    expect(resultTs).toBeGreaterThanOrEqual(before);
+    expect(resultTs).toBeLessThanOrEqual(after);
+  });
+
+  test("generates UUID for id when not provided", () => {
+    const messages = [
+      { role: "user", content: "Hello" },
+    ];
+
+    const result = convertToMemoryMessages(messages);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBeDefined();
+    expect(result[0].id).toMatch(/^[0-9a-f-]{36}$/i);
+  });
+
+  test("filters out non-user/assistant messages", () => {
+    const messages = [
+      { role: "system", content: "You are an assistant" },
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: "Hi there" },
+      { role: "tool", content: "Tool result" },
+    ];
+
+    const result = convertToMemoryMessages(messages);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].role).toBe("user");
+    expect(result[1].role).toBe("assistant");
+  });
+
+  test("filters out injected memory context", () => {
+    const messages = [
+      { role: "user", content: "<relevant-memories>Some context</relevant-memories>" },
+      { role: "user", content: "Real user message" },
+    ];
+
+    const result = convertToMemoryMessages(messages);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].content).toBe("Real user message");
+  });
+
+  test("filters out empty content", () => {
+    const messages = [
+      { role: "user", content: "" },
+      { role: "user", content: "   " },
+      { role: "user", content: "Valid message" },
+    ];
+
+    const result = convertToMemoryMessages(messages);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].content).toBe("Valid message");
+  });
+
+  test("handles invalid input gracefully", () => {
+    const messages = [
+      null,
+      undefined,
+      "not an object",
+      { notRole: "user" },
+      { role: 123, content: "invalid role type" },
+    ];
+
+    const result = convertToMemoryMessages(messages as any);
+
+    expect(result).toHaveLength(0);
+  });
+});
+
+describe("readSessionIdFromStore", () => {
+  test("returns null when session store does not exist", () => {
+    // Use a sessionKey that won't have a store file
+    const result = readSessionIdFromStore("nonexistent:agent:key");
+    expect(result).toBeNull();
+  });
+
+  test("returns null for empty sessionKey", () => {
+    const result = readSessionIdFromStore("");
+    expect(result).toBeNull();
+  });
+});
+
+describe("timestamp-based message filtering", () => {
+  test("filters messages newer than cutoff timestamp", () => {
+    const cutoffTs = 1706900000000;
+    const messages = [
+      { role: "user" as const, content: "Old message", id: "1", created_at: new Date(cutoffTs - 1000).toISOString() },
+      { role: "user" as const, content: "At cutoff", id: "2", created_at: new Date(cutoffTs).toISOString() },
+      { role: "user" as const, content: "New message", id: "3", created_at: new Date(cutoffTs + 1000).toISOString() },
+    ];
+
+    const newMessages = messages.filter((m) => {
+      const msgTs = m.created_at ? new Date(m.created_at).getTime() : 0;
+      return msgTs > cutoffTs;
+    });
+
+    expect(newMessages).toHaveLength(1);
+    expect(newMessages[0].id).toBe("3");
+  });
+
+  test("returns all messages when cutoff is 0", () => {
+    const cutoffTs = 0;
+    const messages = [
+      { role: "user" as const, content: "Message 1", id: "1", created_at: new Date(1000).toISOString() },
+      { role: "user" as const, content: "Message 2", id: "2", created_at: new Date(2000).toISOString() },
+    ];
+
+    const newMessages = messages.filter((m) => {
+      const msgTs = m.created_at ? new Date(m.created_at).getTime() : 0;
+      return msgTs > cutoffTs;
+    });
+
+    expect(newMessages).toHaveLength(2);
+  });
+
+  test("handles missing created_at gracefully", () => {
+    const cutoffTs = 1706900000000;
+    const messages = [
+      { role: "user" as const, content: "No timestamp", id: "1" },
+      { role: "user" as const, content: "Has timestamp", id: "2", created_at: new Date(cutoffTs + 1000).toISOString() },
+    ];
+
+    const newMessages = messages.filter((m) => {
+      const msgTs = (m as any).created_at ? new Date((m as any).created_at).getTime() : 0;
+      return msgTs > cutoffTs;
+    });
+
+    // Message without timestamp gets 0, which is < cutoffTs, so filtered out
+    expect(newMessages).toHaveLength(1);
+    expect(newMessages[0].id).toBe("2");
+  });
+});
+
 // Live tests that require agent-memory-server running
-describeLive("memory-redis plugin live tests", () => {
+describeLive("redis-memory plugin live tests", () => {
   test("memory tools work end-to-end", async () => {
     const { default: memoryPlugin } = await import("./index.js");
     const testNamespace = `test-${randomUUID().slice(0, 8)}`;
@@ -162,8 +324,8 @@ describeLive("memory-redis plugin live tests", () => {
     const logs: string[] = [];
 
     const mockApi = {
-      id: "memory-redis",
-      name: "Memory (Redis)",
+      id: "redis-memory",
+      name: "Redis Memory",
       source: "test",
       config: {},
       pluginConfig: {
@@ -275,8 +437,8 @@ describeLive("memory-redis plugin live tests", () => {
     const logs: string[] = [];
 
     const mockApi = {
-      id: "memory-redis",
-      name: "Memory (Redis)",
+      id: "redis-memory",
+      name: "Redis Memory",
       source: "test",
       config: {},
       pluginConfig: {
@@ -319,8 +481,8 @@ describeLive("memory-redis plugin live tests", () => {
     const logs: string[] = [];
 
     const mockApi = {
-      id: "memory-redis",
-      name: "Memory (Redis)",
+      id: "redis-memory",
+      name: "Redis Memory",
       source: "test",
       config: {},
       pluginConfig: {

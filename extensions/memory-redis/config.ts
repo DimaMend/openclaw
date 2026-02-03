@@ -1,4 +1,6 @@
-import { Type } from "@sinclair/typebox";
+/**
+ * Configuration schema and parsing for the agent-memory-plugin.
+ */
 
 /**
  * Memory extraction strategy types.
@@ -22,10 +24,16 @@ export type MemoryConfig = {
   apiKey?: string;
   /** Optional bearer token for authentication */
   bearerToken?: string;
-  /** Namespace for organizing memories (default: "openclaw") */
+  /** Namespace for organizing memories (default: "default") */
   namespace?: string;
   /** User ID for memory isolation (default: "default") */
   userId?: string;
+  /**
+   * Working memory session ID override.
+   * If set, uses this fixed session ID instead of deriving from OpenClaw session.
+   * Useful for maintaining a single continuous working memory across sessions.
+   */
+  workingMemorySessionId?: string;
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;
   /** Enable auto-capture of important information from conversations */
@@ -36,53 +44,38 @@ export type MemoryConfig = {
   minScore?: number;
   /** Maximum number of memories to recall (default: 3) */
   recallLimit?: number;
-  /**
-   * Memory extraction strategy for background processing.
-   *
-   * - "discrete" (default): Extract semantic and episodic memories
-   * - "summary": Maintain a running summary of the conversation
-   * - "preferences": Focus on extracting user preferences
-   * - "custom": Use a custom extraction prompt (requires customPrompt)
-   */
+  /** Memory extraction strategy for background processing */
   extractionStrategy?: MemoryStrategy;
-  /**
-   * Custom extraction prompt (only used when extractionStrategy is "custom").
-   *
-   * This prompt is sent to the LLM to guide memory extraction.
-   * Example: "Extract action items and decisions from this conversation."
-   */
+  /** Custom extraction prompt (only used when extractionStrategy is "custom") */
   customPrompt?: string;
-  /**
-   * Name for the summary view (default: "openclaw_user_summary").
-   *
-   * Summary views provide a rolling, LLM-generated summary of long-term memories.
-   * The summary is injected into context alongside on-demand memory tools.
-   */
+  /** Name for the summary view (default: "agent_user_summary") */
   summaryViewName?: string;
-  /**
-   * Rolling time window in days for the summary view (default: 30).
-   *
-   * Only memories from the last N days are included in the summary.
-   */
+  /** Rolling time window in days for the summary view (default: 30) */
   summaryTimeWindowDays?: number;
-  /**
-   * Fields to group by in the summary view (default: ["user_id"]).
-   *
-   * Each unique combination of these fields gets its own summary partition.
-   * Options: "user_id", "namespace"
-   */
+  /** Fields to group by in the summary view (default: ["user_id"]) */
   summaryGroupBy?: SummaryGroupByField[];
+  /** Custom description for the memory_recall tool */
+  recallDescription?: string;
+  /** Custom description for the memory_store tool */
+  storeDescription?: string;
+  /** Custom description for the memory_forget tool */
+  forgetDescription?: string;
 };
 
-const DEFAULT_SERVER_URL = "http://localhost:8000";
-const DEFAULT_TIMEOUT = 30000;
-const DEFAULT_MIN_SCORE = 0.3;
-const DEFAULT_RECALL_LIMIT = 3;
-const DEFAULT_NAMESPACE = "openclaw";
-const DEFAULT_USER_ID = "default";
-const DEFAULT_SUMMARY_VIEW_NAME = "openclaw_user_summary";
-const DEFAULT_SUMMARY_TIME_WINDOW_DAYS = 30;
-const DEFAULT_SUMMARY_GROUP_BY: SummaryGroupByField[] = ["user_id"];
+export const DEFAULT_SERVER_URL = "http://localhost:8000";
+export const DEFAULT_TIMEOUT = 30000;
+export const DEFAULT_MIN_SCORE = 0.3;
+export const DEFAULT_RECALL_LIMIT = 3;
+export const DEFAULT_NAMESPACE = "default";
+export const DEFAULT_USER_ID = "default";
+export const DEFAULT_SUMMARY_VIEW_NAME = "agent_user_summary";
+export const DEFAULT_SUMMARY_TIME_WINDOW_DAYS = 30;
+export const DEFAULT_SUMMARY_GROUP_BY: SummaryGroupByField[] = ["user_id"];
+export const DEFAULT_RECALL_DESCRIPTION =
+  "Search through long-term memories. Use when you need context about user preferences, past decisions, or previously discussed topics.";
+export const DEFAULT_STORE_DESCRIPTION =
+  "Save important information in long-term memory. Use for preferences, facts, decisions.";
+export const DEFAULT_FORGET_DESCRIPTION = "Delete specific memories. GDPR-compliant.";
 
 function assertAllowedKeys(
   value: Record<string, unknown>,
@@ -104,106 +97,130 @@ function resolveEnvVars(value: string): string {
   });
 }
 
-export const memoryConfigSchema = {
-  parse(value: unknown): MemoryConfig {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      throw new Error("memory config required");
-    }
-    const cfg = value as Record<string, unknown>;
-    assertAllowedKeys(
-      cfg,
-      [
-        "serverUrl",
-        "apiKey",
-        "bearerToken",
-        "namespace",
-        "userId",
-        "timeout",
-        "autoCapture",
-        "autoRecall",
-        "minScore",
-        "recallLimit",
-        "extractionStrategy",
-        "customPrompt",
-        "summaryViewName",
-        "summaryTimeWindowDays",
-        "summaryGroupBy",
-      ],
-      "memory config",
-    );
+const ALLOWED_CONFIG_KEYS = [
+  "serverUrl",
+  "apiKey",
+  "bearerToken",
+  "namespace",
+  "userId",
+  "workingMemorySessionId",
+  "timeout",
+  "autoCapture",
+  "autoRecall",
+  "minScore",
+  "recallLimit",
+  "extractionStrategy",
+  "customPrompt",
+  "summaryViewName",
+  "summaryTimeWindowDays",
+  "summaryGroupBy",
+  "recallDescription",
+  "storeDescription",
+  "forgetDescription",
+];
 
-    const serverUrl =
-      typeof cfg.serverUrl === "string" ? cfg.serverUrl : DEFAULT_SERVER_URL;
+const VALID_STRATEGIES = ["discrete", "summary", "preferences", "custom"] as const;
 
-    // Validate extraction strategy
-    const validStrategies = ["discrete", "summary", "preferences", "custom"] as const;
-    let extractionStrategy: MemoryStrategy | undefined;
-    if (typeof cfg.extractionStrategy === "string") {
-      if (!validStrategies.includes(cfg.extractionStrategy as MemoryStrategy)) {
-        throw new Error(
-          `Invalid extractionStrategy: ${cfg.extractionStrategy}. Must be one of: ${validStrategies.join(", ")}`,
-        );
-      }
-      extractionStrategy = cfg.extractionStrategy as MemoryStrategy;
-    }
+export function parseMemoryConfig(value: unknown): MemoryConfig {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("memory config required");
+  }
+  const cfg = value as Record<string, unknown>;
+  assertAllowedKeys(cfg, ALLOWED_CONFIG_KEYS, "memory config");
 
-    // Validate custom prompt
-    const customPrompt =
-      typeof cfg.customPrompt === "string" ? cfg.customPrompt : undefined;
-    if (extractionStrategy === "custom" && !customPrompt) {
+  const serverUrl =
+    typeof cfg.serverUrl === "string" ? cfg.serverUrl : DEFAULT_SERVER_URL;
+
+  // Validate extraction strategy
+  let extractionStrategy: MemoryStrategy | undefined;
+  if (typeof cfg.extractionStrategy === "string") {
+    if (!VALID_STRATEGIES.includes(cfg.extractionStrategy as MemoryStrategy)) {
       throw new Error(
-        'customPrompt is required when extractionStrategy is "custom"',
+        `Invalid extractionStrategy: ${cfg.extractionStrategy}. Must be one of: ${VALID_STRATEGIES.join(", ")}`,
       );
     }
+    extractionStrategy = cfg.extractionStrategy as MemoryStrategy;
+  }
 
-    // Parse and validate summaryGroupBy
-    let summaryGroupBy: SummaryGroupByField[] = DEFAULT_SUMMARY_GROUP_BY;
-    if (Array.isArray(cfg.summaryGroupBy)) {
-      const validFields: SummaryGroupByField[] = ["user_id", "namespace"];
-      const parsed = cfg.summaryGroupBy.filter(
-        (f): f is SummaryGroupByField =>
-          typeof f === "string" && validFields.includes(f as SummaryGroupByField),
-      );
-      if (parsed.length > 0) {
-        summaryGroupBy = parsed;
-      }
+  // Validate custom prompt
+  const customPrompt =
+    typeof cfg.customPrompt === "string" ? cfg.customPrompt : undefined;
+  if (extractionStrategy === "custom" && !customPrompt) {
+    throw new Error(
+      'customPrompt is required when extractionStrategy is "custom"',
+    );
+  }
+
+  // Parse and validate summaryGroupBy
+  let summaryGroupBy: SummaryGroupByField[] = DEFAULT_SUMMARY_GROUP_BY;
+  if (Array.isArray(cfg.summaryGroupBy)) {
+    const validFields: SummaryGroupByField[] = ["user_id", "namespace"];
+    const parsed = cfg.summaryGroupBy.filter(
+      (f): f is SummaryGroupByField =>
+        typeof f === "string" && validFields.includes(f as SummaryGroupByField),
+    );
+    if (parsed.length > 0) {
+      summaryGroupBy = parsed;
     }
+  }
 
-    return {
-      serverUrl: resolveEnvVars(serverUrl),
-      apiKey: typeof cfg.apiKey === "string" ? resolveEnvVars(cfg.apiKey) : undefined,
-      bearerToken:
-        typeof cfg.bearerToken === "string" ? resolveEnvVars(cfg.bearerToken) : undefined,
-      namespace: typeof cfg.namespace === "string" ? cfg.namespace : DEFAULT_NAMESPACE,
-      userId: typeof cfg.userId === "string" ? cfg.userId : DEFAULT_USER_ID,
-      timeout:
-        typeof cfg.timeout === "number" && Number.isFinite(cfg.timeout)
-          ? cfg.timeout
-          : DEFAULT_TIMEOUT,
-      autoCapture: cfg.autoCapture !== false,
-      autoRecall: cfg.autoRecall !== false,
-      minScore:
-        typeof cfg.minScore === "number" && Number.isFinite(cfg.minScore)
-          ? Math.max(0, Math.min(1, cfg.minScore))
-          : DEFAULT_MIN_SCORE,
-      recallLimit:
-        typeof cfg.recallLimit === "number" && Number.isFinite(cfg.recallLimit)
-          ? Math.max(1, Math.floor(cfg.recallLimit))
-          : DEFAULT_RECALL_LIMIT,
-      extractionStrategy,
-      customPrompt,
-      summaryViewName:
-        typeof cfg.summaryViewName === "string"
-          ? cfg.summaryViewName
-          : DEFAULT_SUMMARY_VIEW_NAME,
-      summaryTimeWindowDays:
-        typeof cfg.summaryTimeWindowDays === "number" &&
-        Number.isFinite(cfg.summaryTimeWindowDays)
-          ? Math.max(1, Math.floor(cfg.summaryTimeWindowDays))
-          : DEFAULT_SUMMARY_TIME_WINDOW_DAYS,
-      summaryGroupBy,
-    };
-  },
+  return {
+    serverUrl: resolveEnvVars(serverUrl),
+    apiKey: typeof cfg.apiKey === "string" ? resolveEnvVars(cfg.apiKey) : undefined,
+    bearerToken:
+      typeof cfg.bearerToken === "string" ? resolveEnvVars(cfg.bearerToken) : undefined,
+    namespace: typeof cfg.namespace === "string" ? cfg.namespace : DEFAULT_NAMESPACE,
+    // Default to undefined - only pass user_id when explicitly set
+    // (client library v0.3.x doesn't pass user_id on GET, causing key mismatch)
+    userId: typeof cfg.userId === "string" ? cfg.userId : undefined,
+    workingMemorySessionId:
+      typeof cfg.workingMemorySessionId === "string" ? cfg.workingMemorySessionId : undefined,
+    timeout:
+      typeof cfg.timeout === "number" && Number.isFinite(cfg.timeout)
+        ? cfg.timeout
+        : DEFAULT_TIMEOUT,
+    autoCapture: cfg.autoCapture !== false,
+    autoRecall: cfg.autoRecall !== false,
+    minScore:
+      typeof cfg.minScore === "number" && Number.isFinite(cfg.minScore)
+        ? Math.max(0, Math.min(1, cfg.minScore))
+        : DEFAULT_MIN_SCORE,
+    recallLimit:
+      typeof cfg.recallLimit === "number" && Number.isFinite(cfg.recallLimit)
+        ? Math.max(1, Math.floor(cfg.recallLimit))
+        : DEFAULT_RECALL_LIMIT,
+    extractionStrategy,
+    customPrompt,
+    summaryViewName:
+      typeof cfg.summaryViewName === "string"
+        ? cfg.summaryViewName
+        : DEFAULT_SUMMARY_VIEW_NAME,
+    summaryTimeWindowDays:
+      typeof cfg.summaryTimeWindowDays === "number" &&
+      Number.isFinite(cfg.summaryTimeWindowDays)
+        ? Math.max(1, Math.floor(cfg.summaryTimeWindowDays))
+        : DEFAULT_SUMMARY_TIME_WINDOW_DAYS,
+    summaryGroupBy,
+    recallDescription:
+      typeof cfg.recallDescription === "string"
+        ? cfg.recallDescription
+        : DEFAULT_RECALL_DESCRIPTION,
+    storeDescription:
+      typeof cfg.storeDescription === "string"
+        ? cfg.storeDescription
+        : DEFAULT_STORE_DESCRIPTION,
+    forgetDescription:
+      typeof cfg.forgetDescription === "string"
+        ? cfg.forgetDescription
+        : DEFAULT_FORGET_DESCRIPTION,
+  };
+}
+
+/**
+ * Config schema object compatible with OpenClaw plugin system.
+ */
+export const memoryConfigSchema = {
+  parse: parseMemoryConfig,
   uiHints: {
     serverUrl: {
       label: "Server URL",
@@ -232,6 +249,12 @@ export const memoryConfigSchema = {
       label: "User ID",
       placeholder: DEFAULT_USER_ID,
       help: "User ID for memory isolation (each user gets their own memories)",
+    },
+    workingMemorySessionId: {
+      label: "Working Memory Session ID",
+      placeholder: "my-session",
+      help: "Fixed session ID for working memory. If set, uses this instead of deriving from OpenClaw session. Useful for continuous memory across sessions.",
+      advanced: true,
     },
     timeout: {
       label: "Timeout (ms)",
@@ -292,6 +315,27 @@ export const memoryConfigSchema = {
       label: "Summary Group By",
       placeholder: "user_id",
       help: "Fields to partition summaries by: user_id, namespace, or both",
+      advanced: true,
+    },
+    recallDescription: {
+      label: "Recall Tool Description",
+      placeholder: DEFAULT_RECALL_DESCRIPTION,
+      help: "Description shown to the LLM for the memory_recall tool",
+      multiline: true,
+      advanced: true,
+    },
+    storeDescription: {
+      label: "Store Tool Description",
+      placeholder: DEFAULT_STORE_DESCRIPTION,
+      help: "Description shown to the LLM for the memory_store tool",
+      multiline: true,
+      advanced: true,
+    },
+    forgetDescription: {
+      label: "Forget Tool Description",
+      placeholder: DEFAULT_FORGET_DESCRIPTION,
+      help: "Description shown to the LLM for the memory_forget tool",
+      multiline: true,
       advanced: true,
     },
   },
