@@ -350,6 +350,10 @@
       "destination": "/start/hubs"
     },
     {
+      "source": "/images",
+      "destination": "/nodes/images"
+    },
+    {
       "source": "/imessage",
       "destination": "/channels/imessage"
     },
