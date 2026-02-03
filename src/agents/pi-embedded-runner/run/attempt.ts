@@ -944,7 +944,7 @@ export async function runEmbeddedAttempt(
       try {
         await withTimeout(sessionLock.release(), 5000, "session lock release");
       } catch (err) {
-        log.error(`session lock release failed: ${err}`);
+        log.error(`session lock release failed: ${String(err)}`);
       }
     }
   } finally {

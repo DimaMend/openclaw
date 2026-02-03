@@ -137,7 +137,9 @@ export async function acquireSessionWriteLock(params: {
     let released = false; // Track if this handle has been released (idempotent - fix for #3092)
     return {
       release: async () => {
-        if (released) return; // Idempotent: safe to call multiple times
+        if (released) {
+          return;
+        } // Idempotent: safe to call multiple times
         released = true;
         const current = HELD_LOCKS.get(normalizedSessionFile);
         if (!current) {
@@ -168,7 +170,9 @@ export async function acquireSessionWriteLock(params: {
       let released = false; // Track if this handle has been released (idempotent - fix for #3092)
       return {
         release: async () => {
-          if (released) return; // Idempotent: safe to call multiple times
+          if (released) {
+            return;
+          } // Idempotent: safe to call multiple times
           released = true;
           const current = HELD_LOCKS.get(normalizedSessionFile);
           if (!current) {
