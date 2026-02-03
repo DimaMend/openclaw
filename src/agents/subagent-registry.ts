@@ -7,7 +7,7 @@ import {
   loadSubagentRegistryFromDisk,
   saveSubagentRegistryToDisk,
 } from "./subagent-registry.store.js";
-import { resolveAgentTimeoutMs } from "./timeout.js";
+import { MAX_SET_TIMEOUT_MS, resolveAgentTimeoutMs } from "./timeout.js";
 
 export type SubagentRunRecord = {
   runId: string;
@@ -321,7 +321,10 @@ export function registerSubagentRun(params: {
 
 async function waitForSubagentCompletion(runId: string, waitTimeoutMs: number) {
   try {
-    const timeoutMs = Math.max(1, Math.floor(waitTimeoutMs));
+    const waitBufferMs = 10_000;
+    const maxWaitMs = MAX_SET_TIMEOUT_MS - waitBufferMs;
+    const timeoutMs = Math.min(maxWaitMs, Math.max(1, Math.floor(waitTimeoutMs)));
+    const callTimeoutMs = timeoutMs + waitBufferMs;
     const wait = await callGateway<{
       status?: string;
       startedAt?: number;
@@ -333,7 +336,7 @@ async function waitForSubagentCompletion(runId: string, waitTimeoutMs: number) {
         runId,
         timeoutMs,
       },
-      timeoutMs: timeoutMs + 10_000,
+      timeoutMs: callTimeoutMs,
     });
     if (wait?.status !== "ok" && wait?.status !== "error") {
       return;
