@@ -2,6 +2,7 @@ import { html, nothing } from "lit";
 import type { SkillMessageMap } from "../controllers/skills";
 import type { SkillStatusEntry, SkillStatusReport } from "../types";
 import { clampText } from "../format";
+import { t } from "../i18n";
 
 type SkillGroup = {
   id: string;
@@ -60,8 +61,8 @@ export function renderSkills(props: SkillsProps) {
   const filter = props.filter.trim().toLowerCase();
   const filtered = filter
     ? skills.filter((skill) =>
-        [skill.name, skill.description, skill.source].join(" ").toLowerCase().includes(filter),
-      )
+      [skill.name, skill.description, skill.source].join(" ").toLowerCase().includes(filter),
+    )
     : skills;
   const groups = groupSkills(filtered);
 
@@ -69,42 +70,40 @@ export function renderSkills(props: SkillsProps) {
     <section class="card">
       <div class="row" style="justify-content: space-between;">
         <div>
-          <div class="card-title">Skills</div>
-          <div class="card-sub">Bundled, managed, and workspace skills.</div>
+          <div class="card-title">${t().ui.views.skills.skills}</div>
+          <div class="card-sub">${t().ui.views.skills.skillsSub}</div>
         </div>
         <button class="btn" ?disabled=${props.loading} @click=${props.onRefresh}>
-          ${props.loading ? "Loading…" : "Refresh"}
+          ${props.loading ? t().ui.views.skills.loading : t().ui.views.skills.refresh}
         </button>
       </div>
 
       <div class="filters" style="margin-top: 14px;">
         <label class="field" style="flex: 1;">
-          <span>Filter</span>
+          <span>${t().ui.views.skills.filter}</span>
           <input
             .value=${props.filter}
             @input=${(e: Event) => props.onFilterChange((e.target as HTMLInputElement).value)}
-            placeholder="Search skills"
+            placeholder="${t().ui.views.skills.searchPlaceholder}"
           />
         </label>
-        <div class="muted">${filtered.length} shown</div>
+        <div class="muted">${t().ui.views.skills.shownCount(filtered.length)}</div>
       </div>
 
-      ${
-        props.error
-          ? html`<div class="callout danger" style="margin-top: 12px;">${props.error}</div>`
-          : nothing
-      }
+      ${props.error
+      ? html`<div class="callout danger" style="margin-top: 12px;">${props.error}</div>`
+      : nothing
+    }
 
-      ${
-        filtered.length === 0
-          ? html`
-              <div class="muted" style="margin-top: 16px">No skills found.</div>
+      ${filtered.length === 0
+      ? html`
+              <div class="muted" style="margin-top: 16px">${t().ui.views.skills.noSkills}</div>
             `
-          : html`
+      : html`
             <div class="agent-skills-groups" style="margin-top: 16px;">
               ${groups.map((group) => {
-                const collapsedByDefault = group.id === "workspace" || group.id === "built-in";
-                return html`
+        const collapsedByDefault = group.id === "workspace" || group.id === "built-in";
+        return html`
                   <details class="agent-skills-group" ?open=${!collapsedByDefault}>
                     <summary class="agent-skills-header">
                       <span>${group.label}</span>
@@ -115,10 +114,10 @@ export function renderSkills(props: SkillsProps) {
                     </div>
                   </details>
                 `;
-              })}
+      })}
             </div>
           `
-      }
+    }
     </section>
   `;
 }
@@ -136,10 +135,10 @@ function renderSkill(skill: SkillStatusEntry, props: SkillsProps) {
   ];
   const reasons: string[] = [];
   if (skill.disabled) {
-    reasons.push("disabled");
+    reasons.push(t().ui.views.skills.disabled);
   }
   if (skill.blockedByAllowlist) {
-    reasons.push("blocked by allowlist");
+    reasons.push(t().ui.views.skills.blocked);
   }
   return html`
     <div class="list-item">
@@ -151,34 +150,31 @@ function renderSkill(skill: SkillStatusEntry, props: SkillsProps) {
         <div class="chip-row" style="margin-top: 6px;">
           <span class="chip">${skill.source}</span>
           <span class="chip ${skill.eligible ? "chip-ok" : "chip-warn"}">
-            ${skill.eligible ? "eligible" : "blocked"}
+            ${skill.eligible ? t().ui.views.skills.eligible : t().ui.views.skills.blocked}
           </span>
-          ${
-            skill.disabled
-              ? html`
-                  <span class="chip chip-warn">disabled</span>
+          ${skill.disabled
+      ? html`
+                <span class="chip chip-warn">${t().ui.views.skills.disabled}</span>
                 `
-              : nothing
-          }
+      : nothing
+    }
         </div>
-        ${
-          missing.length > 0
-            ? html`
+        ${missing.length > 0
+      ? html`
               <div class="muted" style="margin-top: 6px;">
-                Missing: ${missing.join(", ")}
+                ${t().ui.views.skills.missing(missing.join(", "))}
               </div>
             `
-            : nothing
-        }
-        ${
-          reasons.length > 0
-            ? html`
+      : nothing
+    }
+        ${reasons.length > 0
+      ? html`
               <div class="muted" style="margin-top: 6px;">
-                Reason: ${reasons.join(", ")}
+                ${t().ui.views.skills.reason(reasons.join(", "))}
               </div>
             `
-            : nothing
-        }
+      : nothing
+    }
       </div>
       <div class="list-meta">
         <div class="row" style="justify-content: flex-end; flex-wrap: wrap;">
@@ -187,44 +183,40 @@ function renderSkill(skill: SkillStatusEntry, props: SkillsProps) {
             ?disabled=${busy}
             @click=${() => props.onToggle(skill.skillKey, skill.disabled)}
           >
-            ${skill.disabled ? "Enable" : "Disable"}
+            ${skill.disabled ? t().ui.views.skills.enable : t().ui.views.skills.disable}
           </button>
-          ${
-            canInstall
-              ? html`<button
+          ${canInstall
+      ? html`<button
                 class="btn"
                 ?disabled=${busy}
                 @click=${() => props.onInstall(skill.skillKey, skill.name, skill.install[0].id)}
               >
-                ${busy ? "Installing…" : skill.install[0].label}
+                ${busy ? t().ui.views.skills.installing : skill.install[0].label}
               </button>`
-              : nothing
-          }
+      : nothing
+    }
         </div>
-        ${
-          message
-            ? html`<div
+        ${message
+      ? html`<div
               class="muted"
-              style="margin-top: 8px; color: ${
-                message.kind === "error"
-                  ? "var(--danger-color, #d14343)"
-                  : "var(--success-color, #0a7f5a)"
-              };"
+              style="margin-top: 8px; color: ${message.kind === "error"
+          ? "var(--danger-color, #d14343)"
+          : "var(--success-color, #0a7f5a)"
+        };"
             >
               ${message.message}
             </div>`
-            : nothing
-        }
-        ${
-          skill.primaryEnv
-            ? html`
+      : nothing
+    }
+        ${skill.primaryEnv
+      ? html`
               <div class="field" style="margin-top: 10px;">
-                <span>API key</span>
+                <span>${t().ui.views.skills.apiKey}</span>
                 <input
                   type="password"
                   .value=${apiKey}
                   @input=${(e: Event) =>
-                    props.onEdit(skill.skillKey, (e.target as HTMLInputElement).value)}
+          props.onEdit(skill.skillKey, (e.target as HTMLInputElement).value)}
                 />
               </div>
               <button
@@ -233,11 +225,11 @@ function renderSkill(skill: SkillStatusEntry, props: SkillsProps) {
                 ?disabled=${busy}
                 @click=${() => props.onSaveKey(skill.skillKey)}
               >
-                Save key
+                ${t().ui.views.skills.saveKey}
               </button>
             `
-            : nothing
-        }
+      : nothing
+    }
       </div>
     </div>
   `;

@@ -16,7 +16,10 @@ import {
   inferBasePath,
   syncTabWithLocation,
   syncThemeWithSettings,
+  refreshActiveTab,
+  type SettingsHost,
 } from "./app-settings";
+import { initI18n, setLocale } from "./i18n";
 
 type LifecycleHost = {
   basePath: string;
@@ -31,6 +34,8 @@ type LifecycleHost = {
   logsEntries: unknown[];
   popStateHandler: () => void;
   topbarObserver: ResizeObserver | null;
+  settings: { language?: "en" | "zh-CN" };
+  configSnapshot: { config?: { language?: "en" | "zh-CN" } } | null;
 };
 
 export function handleConnected(host: LifecycleHost) {
@@ -39,6 +44,7 @@ export function handleConnected(host: LifecycleHost) {
   syncTabWithLocation(host as unknown as Parameters<typeof syncTabWithLocation>[0], true);
   syncThemeWithSettings(host as unknown as Parameters<typeof syncThemeWithSettings>[0]);
   attachThemeListener(host as unknown as Parameters<typeof attachThemeListener>[0]);
+  initI18n(host.settings.language);
   window.addEventListener("popstate", host.popStateHandler);
   connectGateway(host as unknown as Parameters<typeof connectGateway>[0]);
   startNodesPolling(host as unknown as Parameters<typeof startNodesPolling>[0]);
@@ -90,6 +96,17 @@ export function handleUpdated(host: LifecycleHost, changed: Map<PropertyKey, unk
         host as unknown as Parameters<typeof scheduleLogsScroll>[0],
         changed.has("tab") || changed.has("logsAutoFollow"),
       );
+    }
+  }
+
+  if (changed.has("configSnapshot") && host.configSnapshot?.config) {
+    const config = host.configSnapshot.config;
+    const ui = config.ui as { language?: "en" | "zh-CN" } | undefined;
+    const nextLang = ui?.language;
+    if (nextLang && nextLang !== host.settings.language) {
+      setLocale(nextLang);
+      // Force refresh tabs that have localized content if needed
+      void refreshActiveTab(host as unknown as SettingsHost);
     }
   }
 }

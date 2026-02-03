@@ -3,6 +3,7 @@ import type { GatewaySessionRow, SessionsListResult } from "../types";
 import { formatAgo } from "../format";
 import { pathForTab } from "../navigation";
 import { formatSessionTokens } from "../presenter";
+import { t } from "../i18n";
 
 export type SessionsProps = {
   loading: boolean;
@@ -35,9 +36,9 @@ export type SessionsProps = {
 const THINK_LEVELS = ["", "off", "minimal", "low", "medium", "high"] as const;
 const BINARY_THINK_LEVELS = ["", "off", "on"] as const;
 const VERBOSE_LEVELS = [
-  { value: "", label: "inherit" },
-  { value: "off", label: "off (explicit)" },
-  { value: "on", label: "on" },
+  { value: "", label: t().ui.views.sessions.inherit },
+  { value: "off", label: t().ui.views.sessions.offExplicit },
+  { value: "on", label: t().ui.views.sessions.on },
 ] as const;
 const REASONING_LEVELS = ["", "off", "on", "stream"] as const;
 
@@ -89,102 +90,100 @@ export function renderSessions(props: SessionsProps) {
     <section class="card">
       <div class="row" style="justify-content: space-between;">
         <div>
-          <div class="card-title">Sessions</div>
-          <div class="card-sub">Active session keys and per-session overrides.</div>
+          <div class="card-title">${t().ui.views.sessions.sessions}</div>
+          <div class="card-sub">${t().ui.views.sessions.sessionsSub}</div>
         </div>
         <button class="btn" ?disabled=${props.loading} @click=${props.onRefresh}>
-          ${props.loading ? "Loading…" : "Refresh"}
+          ${props.loading ? t().ui.views.sessions.loading : t().ui.views.sessions.refresh}
         </button>
       </div>
 
       <div class="filters" style="margin-top: 14px;">
         <label class="field">
-          <span>Active within (minutes)</span>
+          <span>${t().ui.views.sessions.activeMinutes}</span>
           <input
             .value=${props.activeMinutes}
             @input=${(e: Event) =>
-              props.onFiltersChange({
-                activeMinutes: (e.target as HTMLInputElement).value,
-                limit: props.limit,
-                includeGlobal: props.includeGlobal,
-                includeUnknown: props.includeUnknown,
-              })}
+      props.onFiltersChange({
+        activeMinutes: (e.target as HTMLInputElement).value,
+        limit: props.limit,
+        includeGlobal: props.includeGlobal,
+        includeUnknown: props.includeUnknown,
+      })}
           />
         </label>
         <label class="field">
-          <span>Limit</span>
+          <span>${t().ui.views.sessions.limit}</span>
           <input
             .value=${props.limit}
             @input=${(e: Event) =>
-              props.onFiltersChange({
-                activeMinutes: props.activeMinutes,
-                limit: (e.target as HTMLInputElement).value,
-                includeGlobal: props.includeGlobal,
-                includeUnknown: props.includeUnknown,
-              })}
+      props.onFiltersChange({
+        activeMinutes: props.activeMinutes,
+        limit: (e.target as HTMLInputElement).value,
+        includeGlobal: props.includeGlobal,
+        includeUnknown: props.includeUnknown,
+      })}
           />
         </label>
         <label class="field checkbox">
-          <span>Include global</span>
+          <span>${t().ui.views.sessions.includeGlobal}</span>
           <input
             type="checkbox"
             .checked=${props.includeGlobal}
             @change=${(e: Event) =>
-              props.onFiltersChange({
-                activeMinutes: props.activeMinutes,
-                limit: props.limit,
-                includeGlobal: (e.target as HTMLInputElement).checked,
-                includeUnknown: props.includeUnknown,
-              })}
+      props.onFiltersChange({
+        activeMinutes: props.activeMinutes,
+        limit: props.limit,
+        includeGlobal: (e.target as HTMLInputElement).checked,
+        includeUnknown: props.includeUnknown,
+      })}
           />
         </label>
         <label class="field checkbox">
-          <span>Include unknown</span>
+          <span>${t().ui.views.sessions.includeUnknown}</span>
           <input
             type="checkbox"
             .checked=${props.includeUnknown}
             @change=${(e: Event) =>
-              props.onFiltersChange({
-                activeMinutes: props.activeMinutes,
-                limit: props.limit,
-                includeGlobal: props.includeGlobal,
-                includeUnknown: (e.target as HTMLInputElement).checked,
-              })}
+      props.onFiltersChange({
+        activeMinutes: props.activeMinutes,
+        limit: props.limit,
+        includeGlobal: props.includeGlobal,
+        includeUnknown: (e.target as HTMLInputElement).checked,
+      })}
           />
         </label>
       </div>
 
-      ${
-        props.error
-          ? html`<div class="callout danger" style="margin-top: 12px;">${props.error}</div>`
-          : nothing
-      }
+      ${props.error
+      ? html`<div class="callout danger" style="margin-top: 12px;">${props.error}</div>`
+      : nothing
+    }
 
       <div class="muted" style="margin-top: 12px;">
-        ${props.result ? `Store: ${props.result.path}` : ""}
+        ${props.result ? t().ui.views.sessions.storePath(props.result.path) : ""}
       </div>
 
       <div class="table" style="margin-top: 16px;">
         <div class="table-head">
-          <div>Key</div>
-          <div>Label</div>
-          <div>Kind</div>
-          <div>Updated</div>
-          <div>Tokens</div>
-          <div>Thinking</div>
-          <div>Verbose</div>
-          <div>Reasoning</div>
-          <div>Actions</div>
+          <div>${t().ui.views.sessions.table.key}</div>
+          <div>${t().ui.views.sessions.table.label}</div>
+          <div>${t().ui.views.sessions.table.kind}</div>
+          <div>${t().ui.views.sessions.table.updated}</div>
+          <div>${t().ui.views.sessions.table.tokens}</div>
+          <div>${t().ui.views.sessions.table.thinking}</div>
+          <div>${t().ui.views.sessions.table.verbose}</div>
+          <div>${t().ui.views.sessions.table.reasoning}</div>
+          <div>${t().ui.views.sessions.table.actions}</div>
         </div>
-        ${
-          rows.length === 0
-            ? html`
-                <div class="muted">No sessions found.</div>
+        ${rows.length === 0
+      ? html`
+                <div class="muted">${t().ui.views.sessions.noSessions}</div>
               `
-            : rows.map((row) =>
-                renderRow(row, props.basePath, props.onPatch, props.onDelete, props.loading),
-              )
-        }
+      : rows.map((row) =>
+        renderRow(row, props.basePath, props.onPatch, props.onDelete, props.loading),
+      )
+    }
       </div>
     </section>
   `;
@@ -197,7 +196,7 @@ function renderRow(
   onDelete: SessionsProps["onDelete"],
   disabled: boolean,
 ) {
-  const updated = row.updatedAt ? formatAgo(row.updatedAt) : "n/a";
+  const updated = row.updatedAt ? formatAgo(row.updatedAt) : t().ui.views.channels.na;
   const rawThinking = row.thinkingLevel ?? "";
   const isBinaryThinking = isBinaryThinkingProvider(row.modelProvider);
   const thinking = resolveThinkLevelDisplay(rawThinking, isBinaryThinking);
@@ -212,18 +211,17 @@ function renderRow(
 
   return html`
     <div class="table-row">
-      <div class="mono">${
-        canLink ? html`<a href=${chatUrl} class="session-link">${displayName}</a>` : displayName
-      }</div>
+      <div class="mono">${canLink ? html`<a href=${chatUrl} class="session-link">${displayName}</a>` : displayName
+    }</div>
       <div>
         <input
           .value=${row.label ?? ""}
           ?disabled=${disabled}
-          placeholder="(optional)"
+          placeholder="${t().ui.views.sessions.optionalPlaceholder}"
           @change=${(e: Event) => {
-            const value = (e.target as HTMLInputElement).value.trim();
-            onPatch(row.key, { label: value || null });
-          }}
+      const value = (e.target as HTMLInputElement).value.trim();
+      onPatch(row.key, { label: value || null });
+    }}
         />
       </div>
       <div>${row.kind}</div>
@@ -234,13 +232,13 @@ function renderRow(
           .value=${thinking}
           ?disabled=${disabled}
           @change=${(e: Event) => {
-            const value = (e.target as HTMLSelectElement).value;
-            onPatch(row.key, {
-              thinkingLevel: resolveThinkLevelPatchValue(value, isBinaryThinking),
-            });
-          }}
+      const value = (e.target as HTMLSelectElement).value;
+      onPatch(row.key, {
+        thinkingLevel: resolveThinkLevelPatchValue(value, isBinaryThinking),
+      });
+    }}
         >
-          ${thinkLevels.map((level) => html`<option value=${level}>${level || "inherit"}</option>`)}
+          ${thinkLevels.map((level) => html`<option value=${level}>${level || t().ui.views.sessions.inherit}</option>`)}
         </select>
       </div>
       <div>
@@ -248,13 +246,13 @@ function renderRow(
           .value=${verbose}
           ?disabled=${disabled}
           @change=${(e: Event) => {
-            const value = (e.target as HTMLSelectElement).value;
-            onPatch(row.key, { verboseLevel: value || null });
-          }}
+      const value = (e.target as HTMLSelectElement).value;
+      onPatch(row.key, { verboseLevel: value || null });
+    }}
         >
           ${VERBOSE_LEVELS.map(
-            (level) => html`<option value=${level.value}>${level.label}</option>`,
-          )}
+      (level) => html`<option value=${level.value}>${level.label}</option>`,
+    )}
         </select>
       </div>
       <div>
@@ -262,18 +260,18 @@ function renderRow(
           .value=${reasoning}
           ?disabled=${disabled}
           @change=${(e: Event) => {
-            const value = (e.target as HTMLSelectElement).value;
-            onPatch(row.key, { reasoningLevel: value || null });
-          }}
+      const value = (e.target as HTMLSelectElement).value;
+      onPatch(row.key, { reasoningLevel: value || null });
+    }}
         >
           ${REASONING_LEVELS.map(
-            (level) => html`<option value=${level}>${level || "inherit"}</option>`,
-          )}
+      (level) => html`<option value=${level}>${level || t().ui.views.sessions.inherit}</option>`,
+    )}
         </select>
       </div>
       <div>
         <button class="btn danger" ?disabled=${disabled} @click=${() => onDelete(row.key)}>
-          Delete
+          ${t().ui.views.sessions.delete}
         </button>
       </div>
     </div>

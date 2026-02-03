@@ -74,14 +74,17 @@ export async function runOnboardingWizard(
   const initialConfig: OpenClawConfig = snapshot.valid ? snapshot.config : {};
 
   // Language selection
-  const selectedLocale = await prompter.select<Locale>({
-    message: "Select Language / 选择语言",
-    options: [
-      { value: "en", label: "English" },
-      { value: "zh-CN", label: "简体中文" },
-    ],
-    initialValue: initialConfig.language ?? getLocale(),
-  });
+  let selectedLocale: Locale = initialConfig.language ?? getLocale();
+  if (!opts.nonInteractive && !(opts as any).yes) {
+    selectedLocale = await prompter.select<Locale>({
+      message: "Select Language / 选择语言",
+      options: [
+        { value: "en", label: "English" },
+        { value: "zh-CN", label: "简体中文" },
+      ],
+      initialValue: selectedLocale,
+    });
+  }
   setLocale(selectedLocale);
 
   await prompter.intro(t().wizard.intro);

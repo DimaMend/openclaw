@@ -9,16 +9,16 @@ import { runOnboardingWizard } from "./onboarding.js";
 
 const setupChannels = vi.hoisted(() => vi.fn(async (cfg) => cfg));
 const setupSkills = vi.hoisted(() => vi.fn(async (cfg) => cfg));
-const healthCommand = vi.hoisted(() => vi.fn(async () => {}));
-const ensureWorkspaceAndSessions = vi.hoisted(() => vi.fn(async () => {}));
-const writeConfigFile = vi.hoisted(() => vi.fn(async () => {}));
+const healthCommand = vi.hoisted(() => vi.fn(async () => { }));
+const ensureWorkspaceAndSessions = vi.hoisted(() => vi.fn(async () => { }));
+const writeConfigFile = vi.hoisted(() => vi.fn(async () => { }));
 const readConfigFileSnapshot = vi.hoisted(() =>
   vi.fn(async () => ({ exists: false, valid: true, config: {} })),
 );
-const ensureSystemdUserLingerInteractive = vi.hoisted(() => vi.fn(async () => {}));
+const ensureSystemdUserLingerInteractive = vi.hoisted(() => vi.fn(async () => { }));
 const isSystemdUserServiceAvailable = vi.hoisted(() => vi.fn(async () => true));
 const ensureControlUiAssetsBuilt = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
-const runTui = vi.hoisted(() => vi.fn(async () => {}));
+const runTui = vi.hoisted(() => vi.fn(async () => { }));
 
 vi.mock("../commands/onboard-channels.js", () => ({
   setupChannels,
@@ -86,11 +86,14 @@ describe("runOnboardingWizard", () => {
       legacyIssues: [{ path: "routing.allowFrom", message: "Legacy key" }],
     });
 
-    const select: WizardPrompter["select"] = vi.fn(async () => "quickstart");
+    const select: WizardPrompter["select"] = vi.fn(async (opts) => {
+      if (typeof opts.message === "string" && opts.message.includes("Select Language")) return "en";
+      return "quickstart";
+    });
     const prompter: WizardPrompter = {
-      intro: vi.fn(async () => {}),
-      outro: vi.fn(async () => {}),
-      note: vi.fn(async () => {}),
+      intro: vi.fn(async () => { }),
+      outro: vi.fn(async () => { }),
+      note: vi.fn(async () => { }),
       select,
       multiselect: vi.fn(async () => []),
       text: vi.fn(async () => ""),
@@ -109,6 +112,7 @@ describe("runOnboardingWizard", () => {
     await expect(
       runOnboardingWizard(
         {
+          nonInteractive: true,
           acceptRisk: true,
           flow: "quickstart",
           authChoice: "skip",
@@ -128,12 +132,15 @@ describe("runOnboardingWizard", () => {
   });
 
   it("skips prompts and setup steps when flags are set", async () => {
-    const select: WizardPrompter["select"] = vi.fn(async () => "quickstart");
+    const select: WizardPrompter["select"] = vi.fn(async (opts) => {
+      if (typeof opts.message === "string" && opts.message.includes("Select Language")) return "en";
+      return "quickstart";
+    });
     const multiselect: WizardPrompter["multiselect"] = vi.fn(async () => []);
     const prompter: WizardPrompter = {
-      intro: vi.fn(async () => {}),
-      outro: vi.fn(async () => {}),
-      note: vi.fn(async () => {}),
+      intro: vi.fn(async () => { }),
+      outro: vi.fn(async () => { }),
+      note: vi.fn(async () => { }),
       select,
       multiselect,
       text: vi.fn(async () => ""),
@@ -150,6 +157,7 @@ describe("runOnboardingWizard", () => {
 
     await runOnboardingWizard(
       {
+        nonInteractive: true,
         acceptRisk: true,
         flow: "quickstart",
         authChoice: "skip",
@@ -177,6 +185,7 @@ describe("runOnboardingWizard", () => {
     await fs.writeFile(path.join(workspaceDir, DEFAULT_BOOTSTRAP_FILENAME), "{}");
 
     const select: WizardPrompter["select"] = vi.fn(async (opts) => {
+      if (typeof opts.message === "string" && opts.message.includes("Select Language")) return "en";
       if (opts.message === "How do you want to hatch your bot?") {
         return "tui";
       }
@@ -184,9 +193,9 @@ describe("runOnboardingWizard", () => {
     });
 
     const prompter: WizardPrompter = {
-      intro: vi.fn(async () => {}),
-      outro: vi.fn(async () => {}),
-      note: vi.fn(async () => {}),
+      intro: vi.fn(async () => { }),
+      outro: vi.fn(async () => { }),
+      note: vi.fn(async () => { }),
       select,
       multiselect: vi.fn(async () => []),
       text: vi.fn(async () => ""),
@@ -234,6 +243,7 @@ describe("runOnboardingWizard", () => {
     const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-onboard-"));
 
     const select: WizardPrompter["select"] = vi.fn(async (opts) => {
+      if (typeof opts.message === "string" && opts.message.includes("Select Language")) return "en";
       if (opts.message === "How do you want to hatch your bot?") {
         return "tui";
       }
@@ -241,9 +251,9 @@ describe("runOnboardingWizard", () => {
     });
 
     const prompter: WizardPrompter = {
-      intro: vi.fn(async () => {}),
-      outro: vi.fn(async () => {}),
-      note: vi.fn(async () => {}),
+      intro: vi.fn(async () => { }),
+      outro: vi.fn(async () => { }),
+      note: vi.fn(async () => { }),
       select,
       multiselect: vi.fn(async () => []),
       text: vi.fn(async () => ""),
@@ -290,12 +300,17 @@ describe("runOnboardingWizard", () => {
     delete process.env.BRAVE_API_KEY;
 
     try {
-      const note: WizardPrompter["note"] = vi.fn(async () => {});
+      const note: WizardPrompter["note"] = vi.fn(async () => { });
       const prompter: WizardPrompter = {
-        intro: vi.fn(async () => {}),
-        outro: vi.fn(async () => {}),
+        intro: vi.fn(async () => { }),
+        outro: vi.fn(async () => { }),
         note,
-        select: vi.fn(async () => "quickstart"),
+        select: vi.fn(async (opts) => {
+          if (typeof opts.message === "string" && opts.message.includes("Select Language")) {
+            return "en";
+          }
+          return "quickstart";
+        }),
         multiselect: vi.fn(async () => []),
         text: vi.fn(async () => ""),
         confirm: vi.fn(async () => false),

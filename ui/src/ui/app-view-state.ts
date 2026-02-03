@@ -25,8 +25,10 @@ import type {
   SessionsListResult,
   SkillStatusReport,
   StatusSummary,
+  ConfigUiHints,
 } from "./types";
 import type { ChatAttachment, ChatQueueItem, CronFormState } from "./ui-types";
+import type { CompactionIndicatorStatus } from "./views/chat";
 import type { NostrProfileFormState } from "./views/channels.nostr-profile-form";
 
 export type AppViewState = {
@@ -86,7 +88,7 @@ export type AppViewState = {
   configSnapshot: ConfigSnapshot | null;
   configSchema: unknown;
   configSchemaLoading: boolean;
-  configUiHints: Record<string, unknown>;
+  configUiHints: ConfigUiHints;
   configForm: Record<string, unknown> | null;
   configFormOriginal: Record<string, unknown> | null;
   configFormMode: "form" | "raw";
@@ -223,4 +225,37 @@ export type AppViewState = {
   handleLogsLevelFilterToggle: (level: LogLevel) => void;
   handleLogsAutoFollowToggle: (next: boolean) => void;
   handleCallDebugMethod: (method: string, params: string) => Promise<void>;
+
+  applySessionKey: string;
+  configSchemaVersion: string;
+  logsCursor: string | null;
+  logsLastFetchAt: number | null;
+  logsLimit: number;
+  logsMaxBytes: number;
+
+  // Missing properties added to fix build
+  resetToolStream: () => void;
+  resetChatScroll: () => void;
+  chatStreamStartedAt: number | null;
+  refreshSessionsAfterChat: Set<string>;
+  compactionStatus: CompactionIndicatorStatus | null;
+  handleChatScroll: (event: Event) => void;
+  handleSendChat: (text?: string, opts?: { restoreDraft?: boolean }) => Promise<void>;
+  handleAbortChat: () => Promise<void>;
+  removeQueuedMessage: (id: string) => void;
+
+  sidebarOpen: boolean;
+  sidebarContent: string | null;
+  sidebarError: string | null;
+  splitRatio: number;
+  handleOpenSidebar: (content: string) => void;
+  handleCloseSidebar: () => void;
+  handleSplitRatioChange: (ratio: number) => void;
+
+  configSearchQuery: string;
+  configActiveSection: string | null;
+  configActiveSubsection: string | null;
+
+  exportLogs: () => void;
+  handleLogsScroll: (event: Event) => void;
 };

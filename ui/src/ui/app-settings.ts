@@ -32,9 +32,11 @@ import {
 import { saveSettings, type UiSettings } from "./storage";
 import { resolveTheme, type ResolvedTheme, type ThemeMode } from "./theme";
 import { startThemeTransition, type ThemeTransitionContext } from "./theme-transition";
+import { setLocale } from "./i18n";
 
-type SettingsHost = {
+export type SettingsHost = {
   settings: UiSettings;
+  password: string;
   theme: ThemeMode;
   themeResolved: ResolvedTheme;
   applySessionKey: string;
@@ -61,6 +63,9 @@ export function applySettings(host: SettingsHost, next: UiSettings) {
   if (next.theme !== host.theme) {
     host.theme = next.theme;
     applyResolvedTheme(host, resolveTheme(next.theme));
+  }
+  if (normalized.language) {
+    setLocale(normalized.language);
   }
   host.applySessionKey = host.settings.lastActiveSessionKey;
 }

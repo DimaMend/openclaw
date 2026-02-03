@@ -1,4 +1,5 @@
 import type { IconName } from "./icons.js";
+import { t } from "./i18n.js";
 
 export const TAB_GROUPS = [
   { label: "Chat", tabs: ["chat"] },
@@ -156,27 +157,27 @@ export function titleForTab(tab: Tab) {
     case "agents":
       return "Agents";
     case "overview":
-      return "Overview";
+      return t().ui.tabs.overview;
     case "channels":
-      return "Channels";
+      return t().ui.tabs.channels;
     case "instances":
-      return "Instances";
+      return t().ui.tabs.instances;
     case "sessions":
-      return "Sessions";
+      return t().ui.tabs.sessions;
     case "cron":
-      return "Cron Jobs";
+      return t().ui.tabs.cron;
     case "skills":
-      return "Skills";
+      return t().ui.tabs.skills;
     case "nodes":
-      return "Nodes";
+      return t().ui.tabs.nodes;
     case "chat":
-      return "Chat";
+      return t().ui.tabs.chat;
     case "config":
-      return "Config";
+      return t().ui.tabs.config;
     case "debug":
-      return "Debug";
+      return t().ui.tabs.debug;
     case "logs":
-      return "Logs";
+      return t().ui.tabs.logs;
     default:
       return "Control";
   }
@@ -187,27 +188,27 @@ export function subtitleForTab(tab: Tab) {
     case "agents":
       return "Manage agent workspaces, tools, and identities.";
     case "overview":
-      return "Gateway status, entry points, and a fast health read.";
+      return t().ui.subtitles.overview;
     case "channels":
-      return "Manage channels and settings.";
+      return t().ui.subtitles.channels;
     case "instances":
-      return "Presence beacons from connected clients and nodes.";
+      return t().ui.subtitles.instances;
     case "sessions":
-      return "Inspect active sessions and adjust per-session defaults.";
+      return t().ui.subtitles.sessions;
     case "cron":
-      return "Schedule wakeups and recurring agent runs.";
+      return t().ui.subtitles.cron;
     case "skills":
-      return "Manage skill availability and API key injection.";
+      return t().ui.subtitles.skills;
     case "nodes":
-      return "Paired devices, capabilities, and command exposure.";
+      return t().ui.subtitles.nodes;
     case "chat":
-      return "Direct gateway chat session for quick interventions.";
+      return t().ui.subtitles.chat;
     case "config":
-      return "Edit ~/.openclaw/openclaw.json safely.";
+      return t().ui.subtitles.config;
     case "debug":
-      return "Gateway snapshots, events, and manual RPC calls.";
+      return t().ui.subtitles.debug;
     case "logs":
-      return "Live tail of the gateway file logs.";
+      return t().ui.subtitles.logs;
     default:
       return "";
   }

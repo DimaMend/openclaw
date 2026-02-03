@@ -1,6 +1,7 @@
 import { html } from "lit";
 import type { ConfigUiHints } from "../types";
 import type { ChannelsProps } from "./channels.types";
+import { t } from "../i18n";
 import { analyzeConfigSchema, renderNode, schemaType, type JsonSchema } from "./config-form";
 
 type ChannelConfigFormProps = {
@@ -122,15 +123,15 @@ export function renderChannelConfigForm(props: ChannelConfigFormProps) {
   return html`
     <div class="config-form">
       ${renderNode({
-        schema: node,
-        value,
-        path: ["channels", props.channelId],
-        hints: props.uiHints,
-        unsupported: new Set(analysis.unsupportedPaths),
-        disabled: props.disabled,
-        showLabel: false,
-        onPatch: props.onPatch,
-      })}
+    schema: node,
+    value,
+    path: ["channels", props.channelId],
+    hints: props.uiHints,
+    unsupported: new Set(analysis.unsupportedPaths),
+    disabled: props.disabled,
+    showLabel: false,
+    onPatch: props.onPatch,
+  })}
     </div>
     ${renderExtraChannelFields(value)}
   `;
@@ -141,34 +142,33 @@ export function renderChannelConfigSection(params: { channelId: string; props: C
   const disabled = props.configSaving || props.configSchemaLoading;
   return html`
     <div style="margin-top: 16px;">
-      ${
-        props.configSchemaLoading
-          ? html`
-              <div class="muted">Loading config schema…</div>
+      ${props.configSchemaLoading
+      ? html`
+              <div class="muted">${t().ui.views.config.loadingSchema}</div>
             `
-          : renderChannelConfigForm({
-              channelId,
-              configValue: props.configForm,
-              schema: props.configSchema,
-              uiHints: props.configUiHints,
-              disabled,
-              onPatch: props.onConfigPatch,
-            })
-      }
+      : renderChannelConfigForm({
+        channelId,
+        configValue: props.configForm,
+        schema: props.configSchema,
+        uiHints: props.configUiHints,
+        disabled,
+        onPatch: props.onConfigPatch,
+      })
+    }
       <div class="row" style="margin-top: 12px;">
         <button
           class="btn primary"
           ?disabled=${disabled || !props.configFormDirty}
           @click=${() => props.onConfigSave()}
         >
-          ${props.configSaving ? "Saving…" : "Save"}
+          ${props.configSaving ? t().ui.views.config.saving : t().ui.views.config.save}
         </button>
         <button
           class="btn"
           ?disabled=${disabled}
           @click=${() => props.onConfigReload()}
         >
-          Reload
+          ${t().ui.views.config.reload}
         </button>
       </div>
     </div>
