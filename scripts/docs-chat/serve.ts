@@ -17,6 +17,7 @@ const port = Number(process.env.PORT || 3001);
 // Rate limiting configuration
 const RATE_LIMIT = Number(process.env.RATE_LIMIT || 20); // requests per window
 const RATE_WINDOW_MS = Number(process.env.RATE_WINDOW_MS || 60_000); // 1 minute
+const TRUST_PROXY = process.env.TRUST_PROXY === "1"; // only trust X-Forwarded-For behind a proxy
 const MAX_MESSAGE_LENGTH = 2000; // characters
 const MAX_BODY_SIZE = 8192; // bytes
 
@@ -55,17 +56,18 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number; rese
 }
 
 /**
- * Extract client IP from request, handling proxies.
+ * Extract client IP from request. Only trusts proxy headers when TRUST_PROXY=1.
  */
 function getClientIP(req: http.IncomingMessage): string {
-  // Check common proxy headers (trust these only if behind a known proxy)
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0].trim();
-  }
-  const realIp = req.headers["x-real-ip"];
-  if (typeof realIp === "string") {
-    return realIp.trim();
+  if (TRUST_PROXY) {
+    const forwarded = req.headers["x-forwarded-for"];
+    if (typeof forwarded === "string") {
+      return forwarded.split(",")[0].trim();
+    }
+    const realIp = req.headers["x-real-ip"];
+    if (typeof realIp === "string") {
+      return realIp.trim();
+    }
   }
   return req.socket.remoteAddress || "unknown";
 }

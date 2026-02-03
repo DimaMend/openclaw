@@ -130,6 +130,7 @@ OPENAI_API_KEY=sk-... pnpm docs:chat:serve:vector
 | `PORT`           | `3001`  | Server port                                      |
 | `RATE_LIMIT`     | `20`    | Max requests per window per IP (Upstash only)    |
 | `RATE_WINDOW_MS` | `60000` | Rate limit window in milliseconds (Upstash only) |
+| `TRUST_PROXY`    | `0`     | Set to `1` to trust `X-Forwarded-For` (behind a reverse proxy) |
 
 > **Note:** Rate limiting is only enforced in Upstash (production) mode. Local
 > development with LanceDB has no rate limits.
