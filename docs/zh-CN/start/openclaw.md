@@ -104,7 +104,7 @@ openclaw gateway --port 18789
 
 OpenClaw 从其工作区目录读取操作指令和"记忆"。
 
-默认情况下，OpenClaw 使用 `~/.openclaw/workspace` 作为智能体工作区，并会在设置/首次智能体运行时自动创建它（以及初始的 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`）。`BOOTSTRAP.md` 仅在工作区全新创建时生成（删除后不会再次出现）。
+默认情况下，OpenClaw 使用 `~/.openclaw/workspace` 作为智能体工作区，并会在设置/首次智能体运行时自动创建它（以及初始的 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md`、`USER.md`、`HEARTBEAT.md`）。`BOOTSTRAP.md` 仅在工作区全新创建时生成（删除后不会再次出现）。`MEMORY.md` 是可选的，仅在私有会话中加载。
 
 提示：将此文件夹视为 OpenClaw 的"记忆"，并将其设为 git 仓库（最好是私有的），以便你的 `AGENTS.md` + 记忆文件得到备份。如果安装了 git，全新工作区会自动初始化。
 
