@@ -102,37 +102,75 @@ function rewriteAssistantToolCallIds(params: {
   resolve: (id: string) => string;
 }): Extract<AgentMessage, { role: "assistant" }> {
   const content = params.message.content;
-  if (!Array.isArray(content)) {
-    return params.message;
-  }
+  const rawToolCalls = (params.message as { tool_calls?: unknown }).tool_calls;
+  const rawToolCallsAlt = (params.message as { toolCalls?: unknown }).toolCalls;
+  const toolCalls = Array.isArray(rawToolCalls)
+    ? rawToolCalls
+    : Array.isArray(rawToolCallsAlt)
+      ? rawToolCallsAlt
+      : null;
 
   let changed = false;
-  const next = content.map((block) => {
-    if (!block || typeof block !== "object") {
-      return block;
+  let nextContent = content;
+  if (Array.isArray(content)) {
+    const next = content.map((block) => {
+      if (!block || typeof block !== "object") {
+        return block;
+      }
+      const rec = block as { type?: unknown; id?: unknown };
+      const type = rec.type;
+      const id = rec.id;
+      if (
+        (type !== "functionCall" && type !== "toolUse" && type !== "toolCall") ||
+        typeof id !== "string" ||
+        !id
+      ) {
+        return block;
+      }
+      const nextId = params.resolve(id);
+      if (nextId === id) {
+        return block;
+      }
+      changed = true;
+      return { ...(block as unknown as Record<string, unknown>), id: nextId };
+    });
+    if (changed) {
+      nextContent = next as typeof content;
     }
-    const rec = block as { type?: unknown; id?: unknown };
-    const type = rec.type;
-    const id = rec.id;
-    if (
-      (type !== "functionCall" && type !== "toolUse" && type !== "toolCall") ||
-      typeof id !== "string" ||
-      !id
-    ) {
-      return block;
-    }
-    const nextId = params.resolve(id);
-    if (nextId === id) {
-      return block;
-    }
-    changed = true;
-    return { ...(block as unknown as Record<string, unknown>), id: nextId };
-  });
+  }
+
+  let nextToolCalls = toolCalls;
+  if (toolCalls) {
+    nextToolCalls = toolCalls.map((call) => {
+      if (!call || typeof call !== "object") {
+        return call;
+      }
+      const rec = call as { id?: unknown };
+      const id = rec.id;
+      if (typeof id !== "string" || !id) {
+        return call;
+      }
+      const nextId = params.resolve(id);
+      if (nextId === id) {
+        return call;
+      }
+      changed = true;
+      return { ...(call as Record<string, unknown>), id: nextId };
+    });
+  }
 
   if (!changed) {
     return params.message;
   }
-  return { ...params.message, content: next as typeof params.message.content };
+  return {
+    ...params.message,
+    ...(nextContent !== content ? { content: nextContent } : null),
+    ...(toolCalls
+      ? rawToolCalls
+        ? { tool_calls: nextToolCalls }
+        : { toolCalls: nextToolCalls }
+      : null),
+  } as Extract<AgentMessage, { role: "assistant" }>;
 }
 
 function rewriteToolResultIds(params: {
@@ -142,7 +180,10 @@ function rewriteToolResultIds(params: {
   const toolCallId =
     typeof params.message.toolCallId === "string" && params.message.toolCallId
       ? params.message.toolCallId
-      : undefined;
+      : typeof (params.message as { tool_call_id?: unknown }).tool_call_id === "string" &&
+          (params.message as { tool_call_id?: unknown }).tool_call_id
+        ? (params.message as { tool_call_id: string }).tool_call_id
+        : undefined;
   const toolUseId = (params.message as { toolUseId?: unknown }).toolUseId;
   const toolUseIdStr = typeof toolUseId === "string" && toolUseId ? toolUseId : undefined;
 
@@ -153,11 +194,19 @@ function rewriteToolResultIds(params: {
     return params.message;
   }
 
-  return {
-    ...params.message,
-    ...(nextToolCallId && { toolCallId: nextToolCallId }),
-    ...(nextToolUseId && { toolUseId: nextToolUseId }),
-  } as Extract<AgentMessage, { role: "toolResult" }>;
+  const nextMessage: Record<string, unknown> = { ...params.message };
+  if (nextToolCallId) {
+    if (typeof (params.message as { tool_call_id?: unknown }).tool_call_id === "string") {
+      nextMessage.tool_call_id = nextToolCallId;
+    }
+    if (typeof params.message.toolCallId === "string") {
+      nextMessage.toolCallId = nextToolCallId;
+    }
+  }
+  if (nextToolUseId) {
+    nextMessage.toolUseId = nextToolUseId;
+  }
+  return nextMessage as Extract<AgentMessage, { role: "toolResult" }>;
 }
 
 /**
@@ -204,7 +253,7 @@ export function sanitizeToolCallIdsForCloudCodeAssist(
       }
       return next;
     }
-    if (role === "toolResult") {
+    if (role === "toolResult" || role === "tool") {
       const next = rewriteToolResultIds({
         message: msg as Extract<AgentMessage, { role: "toolResult" }>,
         resolve,
