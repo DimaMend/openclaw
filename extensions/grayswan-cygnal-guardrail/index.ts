@@ -7,7 +7,6 @@
 
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import {
-  emptyPluginConfigSchema,
   type BaseStageConfig,
   type GuardrailBaseConfig,
   type GuardrailEvaluation,
@@ -381,13 +380,7 @@ const grayswanPlugin = createGuardrailPlugin<GrayswanGuardrailConfig>({
   },
 });
 
-// Apply the config schema
-const pluginWithSchema = {
-  ...grayswanPlugin,
-  configSchema: emptyPluginConfigSchema(),
-};
-
-export default pluginWithSchema;
+export default grayswanPlugin;
 
 // Export types for external use
 export type { GrayswanGuardrailConfig, GrayswanStageConfig };

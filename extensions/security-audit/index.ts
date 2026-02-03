@@ -9,7 +9,6 @@
 import os from "node:os";
 import path from "node:path";
 import {
-  emptyPluginConfigSchema,
   type BaseStageConfig,
   type GuardrailBaseConfig,
   type GuardrailEvaluation,
@@ -594,13 +593,7 @@ const securityAuditPlugin = createGuardrailPlugin<SecurityAuditConfig>({
   },
 });
 
-// Apply config schema
-const pluginWithSchema = {
-  ...securityAuditPlugin,
-  configSchema: emptyPluginConfigSchema(),
-};
-
-export default pluginWithSchema;
+export default securityAuditPlugin;
 
 // Export for testing
 export {

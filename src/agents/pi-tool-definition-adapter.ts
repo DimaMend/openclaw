@@ -147,10 +147,11 @@ export function toToolDefinitions(
 
         // Run before_tool_call hooks
         if (hookRunner?.hasHooks("before_tool_call") && hookOptions && toolContext) {
+          const safeToolCallId = toolCallId ?? `unknown-${Date.now()}`;
           const hookResult = await hookRunner.runBeforeToolCall(
             {
               toolName: normalizedName,
-              toolCallId: String(toolCallId ?? ""),
+              toolCallId: String(safeToolCallId),
               params: effectiveParams as Record<string, unknown>,
               messages: hookOptions.getMessages(),
               systemPrompt: hookOptions.systemPrompt,
@@ -177,10 +178,11 @@ export function toToolDefinitions(
 
           // Run after_tool_call hooks
           if (hookRunner?.hasHooks("after_tool_call") && hookOptions && toolContext) {
+            const safeToolCallId = toolCallId ?? `unknown-${Date.now()}`;
             const hookResult = await hookRunner.runAfterToolCall(
               {
                 toolName: normalizedName,
-                toolCallId: String(toolCallId ?? ""),
+                toolCallId: String(safeToolCallId),
                 params: effectiveParams as Record<string, unknown>,
                 result,
                 messages: hookOptions.getMessages(),
@@ -228,10 +230,11 @@ export function toToolDefinitions(
 
           // Run after_tool_call hooks even for errors
           if (hookRunner?.hasHooks("after_tool_call") && hookOptions && toolContext) {
+            const safeToolCallId = toolCallId ?? `unknown-${Date.now()}`;
             const hookResult = await hookRunner.runAfterToolCall(
               {
                 toolName: normalizedName,
-                toolCallId: String(toolCallId ?? ""),
+                toolCallId: String(safeToolCallId),
                 params: effectiveParams as Record<string, unknown>,
                 result: errorResult,
                 messages: hookOptions.getMessages(),
@@ -303,10 +306,11 @@ export function toClientToolDefinitions(
         if (hookOptions) {
           // Run before_tool_call guardrail hooks
           if (hookRunner?.hasHooks("before_tool_call") && toolContext) {
+            const safeToolCallId = toolCallId ?? `unknown-${Date.now()}`;
             const hookResult = await hookRunner.runBeforeToolCall(
               {
                 toolName: normalizedName,
-                toolCallId: String(toolCallId ?? ""),
+                toolCallId: String(safeToolCallId),
                 params: effectiveParams as Record<string, unknown>,
                 messages: hookOptions.getMessages(),
                 systemPrompt: hookOptions.systemPrompt,
@@ -354,10 +358,11 @@ export function toClientToolDefinitions(
 
         // Run after_tool_call hooks
         if (hookRunner?.hasHooks("after_tool_call") && hookOptions && toolContext) {
+          const safeToolCallId = toolCallId ?? `unknown-${Date.now()}`;
           const hookResult = await hookRunner.runAfterToolCall(
             {
               toolName: normalizedName,
-              toolCallId: String(toolCallId ?? ""),
+              toolCallId: String(safeToolCallId),
               params: effectiveParams as Record<string, unknown>,
               result,
               messages: hookOptions.getMessages(),
