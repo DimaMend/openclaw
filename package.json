@@ -226,6 +226,7 @@
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
+    "@google/gemini-cli": "^0.26.0",
     "@napi-rs/canvas": "^0.1.89",
     "node-llama-cpp": "3.15.1"
   },
