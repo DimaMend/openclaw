@@ -10,6 +10,7 @@ import {
 } from "openclaw/plugin-sdk";
 import type { CoreConfig, ReplyToMode } from "../../types.js";
 import type { MatrixRawEvent, RoomMessageEventContent } from "./types.js";
+import { fetchEventSummary } from "../actions/summary.js";
 import {
   formatPollAsText,
   isPollStartType,
@@ -496,6 +497,53 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
       // DEBUG: Log session key
       console.log("[matrix-thread-debug] sessionKey:", route.sessionKey);
 
+      // Fetch thread root context for new thread sessions
+      let threadStarterBody: string | undefined;
+      let threadLabel: string | undefined;
+      let parentSessionKey: string | undefined;
+
+      if (threadRootId) {
+        // Check if this is a new thread session (no prior history)
+        const existingSession = core.channel.session.readSessionUpdatedAt({
+          storePath: core.channel.session.resolveStorePath(cfg.session?.store, {
+            agentId: baseRoute.agentId,
+          }),
+          sessionKey: route.sessionKey,
+        });
+
+        // Only fetch thread root for new sessions (avoid repeated API calls)
+        if (existingSession === undefined) {
+          try {
+            const rootEvent = await fetchEventSummary(client, roomId, threadRootId);
+            if (rootEvent?.body) {
+              // Get the sender's display name for the thread root
+              const rootSenderName = rootEvent.sender
+                ? await getMemberDisplayName(roomId, rootEvent.sender)
+                : undefined;
+
+              threadStarterBody = core.channel.reply.formatAgentEnvelope({
+                channel: "Matrix",
+                from: rootSenderName ?? rootEvent.sender ?? "Unknown",
+                timestamp: rootEvent.timestamp,
+                envelope: core.channel.reply.resolveEnvelopeFormatOptions(cfg),
+                body: rootEvent.body,
+              });
+
+              threadLabel = `Matrix thread in ${roomName ?? roomId}`;
+              parentSessionKey = baseRoute.sessionKey;
+
+              console.log("[matrix-thread-debug] fetched thread root:", {
+                threadRootId,
+                rootSender: rootEvent.sender,
+                rootBody: rootEvent.body?.slice(0, 100),
+              });
+            }
+          } catch (err) {
+            console.log("[matrix-thread-debug] failed to fetch thread root:", err);
+          }
+        }
+      }
+
       const envelopeFrom = isDirectMessage ? senderName : (roomName ?? roomId);
       const textWithId = threadRootId
         ? `${bodyText}\n[matrix event id: ${messageId} room: ${roomId} thread: ${threadRootId}]`
@@ -549,6 +597,9 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
         CommandSource: "text" as const,
         OriginatingChannel: "matrix" as const,
         OriginatingTo: `room:${roomId}`,
+        ThreadStarterBody: threadStarterBody,
+        ThreadLabel: threadLabel,
+        ParentSessionKey: parentSessionKey,
       });
 
       await core.channel.session.recordInboundSession({
