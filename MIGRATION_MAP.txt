@@ -1,0 +1,114 @@
+# MIGRATION_MAP.txt
+# Generated: 2026-02-02
+# Purpose: Track all file moves from public layer to internal behavioral core
+# Format: OLD_PATH -> NEW_PATH
+# Verification: Every entry must have matching SHA-256 hash pre/post move
+
+# ============================================================================
+# PRIMARY CONFIG TEMPLATES (8 files)
+# Source: docs/reference/templates/
+# ============================================================================
+
+docs/reference/templates/SOUL.md -> internal/behavioral-core/soul/SOUL.md
+docs/reference/templates/AGENTS.md -> internal/behavioral-core/agents/AGENTS.md
+docs/reference/templates/TOOLS.md -> internal/behavioral-core/tools/TOOLS.md
+docs/reference/templates/IDENTITY.md -> internal/behavioral-core/identity/IDENTITY.md
+docs/reference/templates/USER.md -> internal/behavioral-core/user/USER.md
+docs/reference/templates/HEARTBEAT.md -> internal/behavioral-core/heartbeat/HEARTBEAT.md
+docs/reference/templates/BOOTSTRAP.md -> internal/behavioral-core/bootstrap/BOOTSTRAP.md
+
+# Repository-level AGENTS.md (symlink target for CLAUDE.md)
+AGENTS.md -> internal/behavioral-core/agents/REPO_AGENTS.md
+
+# ============================================================================
+# HOOK DEFINITIONS (4 config files + 1 implementation)
+# soul-evil: FULL ISOLATION (implementation + config)
+# others: CONFIG ONLY (HOOK.md moves, .ts stays in public layer)
+# ============================================================================
+
+# soul-evil - FULL ISOLATION (Priority Zero threat)
+src/hooks/bundled/soul-evil/HOOK.md -> internal/behavioral-core/hooks/bundled/soul-evil-HOOK.md
+src/hooks/soul-evil.ts -> internal/behavioral-core/hooks/bundled/soul-evil.ts
+
+# Other hooks - CONFIG ONLY
+src/hooks/bundled/session-memory/HOOK.md -> internal/behavioral-core/hooks/bundled/session-memory-HOOK.md
+src/hooks/bundled/boot-md/HOOK.md -> internal/behavioral-core/hooks/bundled/boot-md-HOOK.md
+src/hooks/bundled/command-logger/HOOK.md -> internal/behavioral-core/hooks/bundled/command-logger-HOOK.md
+
+# ============================================================================
+# SKILL DEFINITIONS (52 files)
+# Categorized into: communication, productivity, development, integration, utility
+# ============================================================================
+
+# Communication skills (7)
+skills/discord/SKILL.md -> internal/behavioral-core/skills/communication/discord-SKILL.md
+skills/slack/SKILL.md -> internal/behavioral-core/skills/communication/slack-SKILL.md
+skills/imsg/SKILL.md -> internal/behavioral-core/skills/communication/imsg-SKILL.md
+skills/bluebubbles/SKILL.md -> internal/behavioral-core/skills/communication/bluebubbles-SKILL.md
+skills/himalaya/SKILL.md -> internal/behavioral-core/skills/communication/himalaya-SKILL.md
+skills/wacli/SKILL.md -> internal/behavioral-core/skills/communication/wacli-SKILL.md
+skills/voice-call/SKILL.md -> internal/behavioral-core/skills/communication/voice-call-SKILL.md
+
+# Productivity skills (9)
+skills/apple-notes/SKILL.md -> internal/behavioral-core/skills/productivity/apple-notes-SKILL.md
+skills/apple-reminders/SKILL.md -> internal/behavioral-core/skills/productivity/apple-reminders-SKILL.md
+skills/bear-notes/SKILL.md -> internal/behavioral-core/skills/productivity/bear-notes-SKILL.md
+skills/notion/SKILL.md -> internal/behavioral-core/skills/productivity/notion-SKILL.md
+skills/obsidian/SKILL.md -> internal/behavioral-core/skills/productivity/obsidian-SKILL.md
+skills/things-mac/SKILL.md -> internal/behavioral-core/skills/productivity/things-mac-SKILL.md
+skills/trello/SKILL.md -> internal/behavioral-core/skills/productivity/trello-SKILL.md
+skills/session-logs/SKILL.md -> internal/behavioral-core/skills/productivity/session-logs-SKILL.md
+skills/summarize/SKILL.md -> internal/behavioral-core/skills/productivity/summarize-SKILL.md
+
+# Development skills (5)
+skills/github/SKILL.md -> internal/behavioral-core/skills/development/github-SKILL.md
+skills/coding-agent/SKILL.md -> internal/behavioral-core/skills/development/coding-agent-SKILL.md
+skills/skill-creator/SKILL.md -> internal/behavioral-core/skills/development/skill-creator-SKILL.md
+skills/tmux/SKILL.md -> internal/behavioral-core/skills/development/tmux-SKILL.md
+skills/canvas/SKILL.md -> internal/behavioral-core/skills/development/canvas-SKILL.md
+
+# Integration skills (18)
+skills/1password/SKILL.md -> internal/behavioral-core/skills/integration/1password-SKILL.md
+skills/gemini/SKILL.md -> internal/behavioral-core/skills/integration/gemini-SKILL.md
+skills/openai-image-gen/SKILL.md -> internal/behavioral-core/skills/integration/openai-image-gen-SKILL.md
+skills/openai-whisper/SKILL.md -> internal/behavioral-core/skills/integration/openai-whisper-SKILL.md
+skills/openai-whisper-api/SKILL.md -> internal/behavioral-core/skills/integration/openai-whisper-api-SKILL.md
+skills/oracle/SKILL.md -> internal/behavioral-core/skills/integration/oracle-SKILL.md
+skills/clawdhub/SKILL.md -> internal/behavioral-core/skills/integration/clawdhub-SKILL.md
+skills/weather/SKILL.md -> internal/behavioral-core/skills/integration/weather-SKILL.md
+skills/goplaces/SKILL.md -> internal/behavioral-core/skills/integration/goplaces-SKILL.md
+skills/local-places/SKILL.md -> internal/behavioral-core/skills/integration/local-places-SKILL.md
+skills/food-order/SKILL.md -> internal/behavioral-core/skills/integration/food-order-SKILL.md
+skills/ordercli/SKILL.md -> internal/behavioral-core/skills/integration/ordercli-SKILL.md
+skills/spotify-player/SKILL.md -> internal/behavioral-core/skills/integration/spotify-player-SKILL.md
+skills/sonoscli/SKILL.md -> internal/behavioral-core/skills/integration/sonoscli-SKILL.md
+skills/openhue/SKILL.md -> internal/behavioral-core/skills/integration/openhue-SKILL.md
+skills/blogwatcher/SKILL.md -> internal/behavioral-core/skills/integration/blogwatcher-SKILL.md
+skills/mcporter/SKILL.md -> internal/behavioral-core/skills/integration/mcporter-SKILL.md
+skills/sherpa-onnx-tts/SKILL.md -> internal/behavioral-core/skills/integration/sherpa-onnx-tts-SKILL.md
+
+# Utility skills (13)
+skills/bird/SKILL.md -> internal/behavioral-core/skills/utility/bird-SKILL.md
+skills/blucli/SKILL.md -> internal/behavioral-core/skills/utility/blucli-SKILL.md
+skills/camsnap/SKILL.md -> internal/behavioral-core/skills/utility/camsnap-SKILL.md
+skills/eightctl/SKILL.md -> internal/behavioral-core/skills/utility/eightctl-SKILL.md
+skills/gifgrep/SKILL.md -> internal/behavioral-core/skills/utility/gifgrep-SKILL.md
+skills/gog/SKILL.md -> internal/behavioral-core/skills/utility/gog-SKILL.md
+skills/model-usage/SKILL.md -> internal/behavioral-core/skills/utility/model-usage-SKILL.md
+skills/nano-banana-pro/SKILL.md -> internal/behavioral-core/skills/utility/nano-banana-pro-SKILL.md
+skills/nano-pdf/SKILL.md -> internal/behavioral-core/skills/utility/nano-pdf-SKILL.md
+skills/peekaboo/SKILL.md -> internal/behavioral-core/skills/utility/peekaboo-SKILL.md
+skills/sag/SKILL.md -> internal/behavioral-core/skills/utility/sag-SKILL.md
+skills/songsee/SKILL.md -> internal/behavioral-core/skills/utility/songsee-SKILL.md
+skills/video-frames/SKILL.md -> internal/behavioral-core/skills/utility/video-frames-SKILL.md
+
+# ============================================================================
+# MIGRATION SUMMARY
+# ============================================================================
+# Primary templates: 8
+# Hooks (config): 4
+# Hooks (implementation - soul-evil): 1
+# Skills: 52
+# ---
+# TOTAL FILES MIGRATED: 65
+# ============================================================================
