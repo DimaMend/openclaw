@@ -20,7 +20,6 @@ export function createWebSendApi(params: {
       sendOptions?: ActiveWebSendOptions,
     ): Promise<{ messageId: string }> => {
       const jid = toWhatsappJid(to);
-      const mentions = extractMentions(text);
       let payload: AnyMessageContent;
       if (mediaBuffer && mediaType) {
         if (mediaType.startsWith("image/")) {
@@ -28,7 +27,7 @@ export function createWebSendApi(params: {
             image: mediaBuffer,
             caption: text || undefined,
             mimetype: mediaType,
-            mentions,
+            mentions: extractMentions(text),
           };
         } else if (mediaType.startsWith("audio/")) {
           payload = { audio: mediaBuffer, ptt: true, mimetype: mediaType };
@@ -39,7 +38,7 @@ export function createWebSendApi(params: {
             caption: text || undefined,
             mimetype: mediaType,
             ...(gifPlayback ? { gifPlayback: true } : {}),
-            mentions,
+            mentions: extractMentions(text),
           };
         } else {
           payload = {
@@ -47,11 +46,11 @@ export function createWebSendApi(params: {
             fileName: "file",
             caption: text || undefined,
             mimetype: mediaType,
-            mentions,
+            mentions: extractMentions(text),
           };
         }
       } else {
-        payload = { text, mentions };
+        payload = { text, mentions: extractMentions(text) };
       }
       const result = await params.sock.sendMessage(jid, payload);
       const accountId = sendOptions?.accountId ?? params.defaultAccountId;

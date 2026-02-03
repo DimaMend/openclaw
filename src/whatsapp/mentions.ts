@@ -13,5 +13,5 @@ export function extractMentions(text: string | undefined | null): string[] {
   while ((match = phoneRegex.exec(text)) !== null) {
     mentions.push(`${match[1]}@s.whatsapp.net`);
   }
-  return mentions;
+  return [...new Set(mentions)];
 }

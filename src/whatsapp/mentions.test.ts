@@ -35,6 +35,12 @@ describe("extractMentions", () => {
     expect(extractMentions("@1234567890123456")).toEqual(["123456789012345@s.whatsapp.net"]);
   });
 
+  it("de-duplicates repeated mentions", () => {
+    expect(extractMentions("@5541999990000 hey @5541999990000")).toEqual([
+      "5541999990000@s.whatsapp.net",
+    ]);
+  });
+
   it("extracts mention from caption-like text", () => {
     expect(extractMentions("Check this image @5541999990000!")).toEqual([
       "5541999990000@s.whatsapp.net",
