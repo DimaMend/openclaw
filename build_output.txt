@@ -1,0 +1,14 @@
+
+> openclaw@2026.2.1 build /app
+> pnpm canvas:a2ui:bundle && tsc -p tsconfig.json --noEmit false && node --import tsx scripts/canvas-a2ui-copy.ts && node --import tsx scripts/copy-hook-metadata.ts && node --import tsx scripts/write-build-info.ts
+
+
+> openclaw@2026.2.1 canvas:a2ui:bundle /app
+> bash scripts/bundle-a2ui.sh
+
+A2UI bundle up to date; skipping.
+[copy-hook-metadata] Copied boot-md/HOOK.md
+[copy-hook-metadata] Copied command-logger/HOOK.md
+[copy-hook-metadata] Copied session-memory/HOOK.md
+[copy-hook-metadata] Copied soul-evil/HOOK.md
+[copy-hook-metadata] Done

@@ -1,0 +1,6 @@
+
+> openclaw@2026.2.1 lint /app
+> oxlint --type-aware --tsconfig tsconfig.oxlint.json
+
+Found 0 warnings and 0 errors.
+Finished in 19.1s on 3062 files with 132 rules using 4 threads.
