@@ -53,6 +53,16 @@ describe("isContextOverflowError", () => {
     }
   });
 
+  it("matches 'prompt too large' error", () => {
+    const samples = [
+      "prompt too large for the model",
+      "Context overflow: prompt too large for the model. Try again with less input or a larger-context model.",
+    ];
+    for (const sample of samples) {
+      expect(isContextOverflowError(sample)).toBe(true);
+    }
+  });
+
   it("ignores unrelated errors", () => {
     expect(isContextOverflowError("rate limit exceeded")).toBe(false);
     expect(isContextOverflowError("request size exceeds upload limit")).toBe(false);
