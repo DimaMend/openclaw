@@ -56,23 +56,36 @@ The index is stored locally in `scripts/docs-chat/.lancedb/`.
 
 ### 1. Create Upstash Vector Index
 
-1. Go to [Upstash Console](https://console.upstash.com/)
-2. Create a new Vector index with:
-   - **Dimensions:** 3072 (for `text-embedding-3-large`)
-   - **Distance Metric:** Cosine
-3. Copy the REST URL and token
+**Go to [Upstash Console](https://console.upstash.com/) and create a new Vector index with these settings**:
 
-### 2. Environment Variables
+```
+| Setting                   | Value  | Why                                           |
+| ------------------------- | ------ | --------------------------------------------- |
+| **Index Type**            | DENSE  | We generate embeddings externally with OpenAI |
+| **Dense Embedding Model** | None   | We provide pre-computed vectors from OpenAI   |
+| **Dimensions**            | 3072   | Matches `text-embedding-3-large` output       |
+| **Similarity Metric**     | Cosine | Standard for semantic similarity              |
+```
 
+> **Important:** Select "None" for the embedding model. If you select a BGE model,
+> Upstash will expect raw text and generate embeddings itself, which conflicts
+> with our architecture that uses OpenAI's `text-embedding-3-large`.
+
+### 2. Copy `REST URL` and token from the index details page
+
+### 3. Setup Environment
+
+```md
 | Variable                    | Required | Description                          |
 | --------------------------- | -------- | ------------------------------------ |
 | `OPENAI_API_KEY`            | Yes      | OpenAI API key for embeddings + chat |
 | `UPSTASH_VECTOR_REST_URL`   | No\*     | Upstash Vector REST endpoint         |
 | `UPSTASH_VECTOR_REST_TOKEN` | No\*     | Upstash Vector REST token            |
+```
 
-\* Required for Upstash mode; omit both for LanceDB mode.
+> _\* Required for Upstash mode; omit both for LanceDB mode._
 
-### 3. Build the Vector Index
+### 4. Build Vector Index
 
 ```bash
 OPENAI_API_KEY=sk-... \
@@ -81,9 +94,9 @@ UPSTASH_VECTOR_REST_TOKEN=... \
 pnpm docs:chat:index:vector
 ```
 
-This generates embeddings for all doc chunks and upserts them to Upstash Vector.
+> _This generates embeddings for all doc chunks and upserts them to Upstash Vector._
 
-### 4. Deploy to Vercel
+### 5. Deploy to Vercel
 
 ```bash
 cd scripts/docs-chat
@@ -91,7 +104,7 @@ npm install
 vercel
 ```
 
-Set the environment variables in the Vercel dashboard.
+> _Set the environment variables in the Vercel dashboard._
 
 ## Local Development
 
@@ -108,18 +121,20 @@ pnpm docs:chat:serve:vector
 OPENAI_API_KEY=sk-... pnpm docs:chat:serve:vector
 ```
 
-Defaults to `http://localhost:3001`. Optional environment variables:
+> _Defaults to `http://localhost:3001`_
 
-| Variable         | Default | Description                                    |
-| ---------------- | ------- | ---------------------------------------------- |
-| `PORT`           | `3001`  | Server port                                    |
-| `RATE_LIMIT`     | `20`    | Max requests per window per IP (Upstash only)  |
+**Optional environment variables**:
+
+| Variable         | Default | Description                                      |
+| ---------------- | ------- | ------------------------------------------------ |
+| `PORT`           | `3001`  | Server port                                      |
+| `RATE_LIMIT`     | `20`    | Max requests per window per IP (Upstash only)    |
 | `RATE_WINDOW_MS` | `60000` | Rate limit window in milliseconds (Upstash only) |
 
 > **Note:** Rate limiting is only enforced in Upstash (production) mode. Local
-development with LanceDB has no rate limits.
+> development with LanceDB has no rate limits.
 
-### Health check
+### Health Check
 
 ```bash
 curl http://localhost:3001/health
@@ -141,23 +156,25 @@ window.DOCS_CHAT_API_URL = "https://your-project.vercel.app";
 
 ## API Endpoints
 
-### POST /chat
+### `POST /chat`
 
-Send a message and receive a streaming response.
+- Send a message and receive a streaming response.
 
-**Request:**
+#### **Request**
 
 ```json
 { "message": "How do I configure the gateway?" }
 ```
 
-**Response:** Streaming text/plain with the AI response.
+#### **Response:**
 
-### GET /health
+- Streaming `text/plain` with the AI response.
+
+### `GET /health`
 
 Check API health and vector count.
 
-**Response:**
+#### **Response:**
 
 ```json
 { "ok": true, "chunks": 847, "mode": "upstash-vector" }
@@ -165,9 +182,9 @@ Check API health and vector count.
 
 ## Legacy Pipelines
 
-### Keyword-based search
+### Keyword-Based Search
 
-The keyword-based implementation is still available for backward compatibility:
+**The keyword-based implementation is still available for backward compatibility**:
 
 ```bash
 pnpm docs:chat:index    # Build keyword index
