@@ -176,6 +176,37 @@ describe("sanitizeToolUseResultPairing", () => {
     expect(result.added).toHaveLength(1);
     expect(result.added[0]?.toolCallId).toBe("call_normal");
   });
+
+  it("drops orphan tool results that follow an aborted assistant message", () => {
+    // When an assistant message is aborted, any tool results that follow should be
+    // dropped as orphans (since we skip extracting tool calls from aborted messages).
+    // This addresses the edge case where a partial tool result was persisted before abort.
+    const input = [
+      {
+        role: "assistant",
+        content: [{ type: "toolCall", id: "call_aborted", name: "exec", arguments: {} }],
+        stopReason: "aborted",
+      },
+      {
+        role: "toolResult",
+        toolCallId: "call_aborted",
+        toolName: "exec",
+        content: [{ type: "text", text: "partial result" }],
+        isError: false,
+      },
+      { role: "user", content: "retrying" },
+    ] as AgentMessage[];
+
+    const result = repairToolUseResultPairing(input);
+
+    // The orphan tool result should be dropped
+    expect(result.droppedOrphanCount).toBe(1);
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages[0]?.role).toBe("assistant");
+    expect(result.messages[1]?.role).toBe("user");
+    // No synthetic results should be added
+    expect(result.added).toHaveLength(0);
+  });
 });
 
 describe("sanitizeToolCallInputs", () => {
