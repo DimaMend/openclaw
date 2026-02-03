@@ -11,18 +11,40 @@ const HOT_CONTAINER_WINDOW_MS = 5 * 60 * 1000;
 
 export function execDocker(args: string[], opts?: { allowFailure?: boolean }) {
   return new Promise<{ stdout: string; stderr: string; code: number }>((resolve, reject) => {
-    const child = spawn("docker", args, {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn("docker", args, {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message.includes("ENOENT")
+          ? "Docker is not installed or not in PATH. Install Docker to use sandbox mode."
+          : `Failed to spawn docker: ${err instanceof Error ? err.message : String(err)}`;
+      reject(new Error(message));
+      return;
+    }
     let stdout = "";
     let stderr = "";
+    let resolved = false;
     child.stdout?.on("data", (chunk) => {
       stdout += chunk.toString();
     });
     child.stderr?.on("data", (chunk) => {
       stderr += chunk.toString();
     });
+    child.on("error", (err) => {
+      if (resolved) return;
+      resolved = true;
+      const message =
+        (err as NodeJS.ErrnoException).code === "ENOENT"
+          ? "Docker is not installed or not in PATH. Install Docker to use sandbox mode."
+          : `Failed to execute docker: ${err.message}`;
+      reject(new Error(message));
+    });
     child.on("close", (code) => {
+      if (resolved) return;
+      resolved = true;
       const exitCode = code ?? 0;
       if (exitCode !== 0 && !opts?.allowFailure) {
         reject(new Error(stderr.trim() || `docker ${args.join(" ")} failed`));
