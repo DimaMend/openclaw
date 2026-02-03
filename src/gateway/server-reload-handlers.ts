@@ -64,7 +64,6 @@ export function createGatewayReloadHandlers(params: {
     resetDirectoryCache();
 
     if (plan.restartCron) {
-      // Clear the store cache before rebuilding to prevent stale data
       clearCronStoreCache(state.cronState.storePath);
       state.cronState.cron.stop();
       nextState.cronState = buildGatewayCronService({
@@ -72,7 +71,7 @@ export function createGatewayReloadHandlers(params: {
         deps: params.deps,
         broadcast: params.broadcast,
       });
-      void nextState.cronState.cron
+      await nextState.cronState.cron
         .start()
         .catch((err) => params.logCron.error(`failed to start: ${String(err)}`));
     }
