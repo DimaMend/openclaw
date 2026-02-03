@@ -120,20 +120,22 @@ export async function browserProfiles(baseUrl?: string): Promise<ProfileStatus[]
 
 export async function browserStart(baseUrl?: string, opts?: { profile?: string }): Promise<void> {
   const q = buildProfileQuery(opts?.profile);
+  const body = opts?.profile ? { profile: opts.profile } : undefined;
   await fetchBrowserJson(withBaseUrl(baseUrl, `/start${q}`), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ profile: opts?.profile }),
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
     timeoutMs: 15000,
   });
 }
 
 export async function browserStop(baseUrl?: string, opts?: { profile?: string }): Promise<void> {
   const q = buildProfileQuery(opts?.profile);
+  const body = opts?.profile ? { profile: opts.profile } : undefined;
   await fetchBrowserJson(withBaseUrl(baseUrl, `/stop${q}`), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ profile: opts?.profile }),
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
     timeoutMs: 15000,
   });
 }
@@ -143,12 +145,13 @@ export async function browserResetProfile(
   opts?: { profile?: string },
 ): Promise<BrowserResetProfileResult> {
   const q = buildProfileQuery(opts?.profile);
+  const body = opts?.profile ? { profile: opts.profile } : undefined;
   return await fetchBrowserJson<BrowserResetProfileResult>(
     withBaseUrl(baseUrl, `/reset-profile${q}`),
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profile: opts?.profile }),
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
       timeoutMs: 20000,
     },
   );
