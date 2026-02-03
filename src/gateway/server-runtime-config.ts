@@ -26,6 +26,7 @@ export type GatewayRuntimeConfig = {
   tailscaleMode: "off" | "serve" | "funnel";
   hooksConfig: ReturnType<typeof resolveHooksConfig>;
   canvasHostEnabled: boolean;
+  canvasHostAdvertisedUrl?: string;
 };
 
 export async function resolveGatewayRuntimeConfig(params: {
@@ -78,6 +79,7 @@ export async function resolveGatewayRuntimeConfig(params: {
   const hooksConfig = resolveHooksConfig(params.cfg);
   const canvasHostEnabled =
     process.env.OPENCLAW_SKIP_CANVAS_HOST !== "1" && params.cfg.canvasHost?.enabled !== false;
+  const canvasHostAdvertisedUrl = params.cfg.canvasHost?.advertisedUrl;
 
   assertGatewayAuthConfigured(resolvedAuth);
   if (tailscaleMode === "funnel" && authMode !== "password") {
@@ -109,5 +111,6 @@ export async function resolveGatewayRuntimeConfig(params: {
     tailscaleMode,
     hooksConfig,
     canvasHostEnabled,
+    canvasHostAdvertisedUrl,
   };
 }

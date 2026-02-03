@@ -259,6 +259,7 @@ export async function startGatewayServer(
   } = runtimeConfig;
   let hooksConfig = runtimeConfig.hooksConfig;
   const canvasHostEnabled = runtimeConfig.canvasHostEnabled;
+  const canvasHostAdvertisedUrl = runtimeConfig.canvasHostAdvertisedUrl;
 
   const wizardRunner = opts.wizardRunner ?? runOnboardingWizard;
   const { wizardSessions, findRunningWizard, purgeWizardSession } = createWizardSessionTracker();
@@ -430,6 +431,7 @@ export async function startGatewayServer(
     gatewayHost: bindHost ?? undefined,
     canvasHostEnabled: Boolean(canvasHost),
     canvasHostServerPort,
+    canvasHostAdvertisedUrl,
     resolvedAuth,
     gatewayMethods,
     events: GATEWAY_EVENTS,
