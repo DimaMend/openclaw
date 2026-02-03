@@ -153,10 +153,10 @@ function resolveFallbackCandidates(params: {
 }): ModelCandidate[] {
   const primary = params.cfg
     ? resolveConfiguredModelRef({
-        cfg: params.cfg,
-        defaultProvider: DEFAULT_PROVIDER,
-        defaultModel: DEFAULT_MODEL,
-      })
+      cfg: params.cfg,
+      defaultProvider: DEFAULT_PROVIDER,
+      defaultModel: DEFAULT_MODEL,
+    })
     : null;
   const defaultProvider = primary?.provider ?? DEFAULT_PROVIDER;
   const defaultModel = primary?.model ?? DEFAULT_MODEL;
@@ -263,8 +263,11 @@ export async function runWithModelFallback<T>(params: {
       });
       const isAnyProfileAvailable = profileIds.some((id) => !isProfileInCooldown(authStore, id));
 
-      if (profileIds.length > 0 && !isAnyProfileAvailable) {
+      if (profileIds.length > 0 && !isAnyProfileAvailable && i > 0) {
         // All profiles for this provider are in cooldown; skip without attempting
+        // BUT only if this isn't the first candidate we are trying in this run.
+        // This allows trying a model that was specifically requested or is next in line
+        // even if the provider is technically in cooldown from a previous interaction.
         attempts.push({
           provider: candidate.provider,
           model: candidate.model,
@@ -321,13 +324,12 @@ export async function runWithModelFallback<T>(params: {
   const summary =
     attempts.length > 0
       ? attempts
-          .map(
-            (attempt) =>
-              `${attempt.provider}/${attempt.model}: ${attempt.error}${
-                attempt.reason ? ` (${attempt.reason})` : ""
-              }`,
-          )
-          .join(" | ")
+        .map(
+          (attempt) =>
+            `${attempt.provider}/${attempt.model}: ${attempt.error}${attempt.reason ? ` (${attempt.reason})` : ""
+            }`,
+        )
+        .join(" | ")
       : "unknown";
   throw new Error(`All models failed (${attempts.length || candidates.length}): ${summary}`, {
     cause: lastError instanceof Error ? lastError : undefined,
@@ -401,8 +403,8 @@ export async function runWithImageModelFallback<T>(params: {
   const summary =
     attempts.length > 0
       ? attempts
-          .map((attempt) => `${attempt.provider}/${attempt.model}: ${attempt.error}`)
-          .join(" | ")
+        .map((attempt) => `${attempt.provider}/${attempt.model}: ${attempt.error}`)
+        .join(" | ")
       : "unknown";
   throw new Error(`All image models failed (${attempts.length || candidates.length}): ${summary}`, {
     cause: lastError instanceof Error ? lastError : undefined,
