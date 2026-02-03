@@ -246,6 +246,7 @@ export async function monitorWebInbox(options: {
         body = [body, locationText].filter(Boolean).join("\n").trim();
       }
       // --- Poll vote detection ---
+      let pollVoteData: WebInboundMessage["pollVote"] | undefined;
       const rawMsg = msg.message as Record<string, unknown> | undefined;
       const pollUpdate = rawMsg?.pollUpdateMessage as
         | {
@@ -276,6 +277,12 @@ export async function monitorWebInbox(options: {
             );
             const selectedNames = matchPollOptions(decrypted.selectedOptions ?? [], storedPoll);
             body = `[poll vote] "${storedPoll.question}" → ${selectedNames.join(", ")}`;
+            pollVoteData = {
+              pollMsgId: creationMsgId,
+              question: storedPoll.question,
+              selectedOptions: selectedNames,
+              allOptions: storedPoll.options,
+            };
           } catch (err) {
             logVerbose(`Poll vote decrypt failed: ${String(err)}`);
             continue;
@@ -368,6 +375,7 @@ export async function monitorWebInbox(options: {
         sendMedia,
         mediaPath,
         mediaType,
+        pollVote: pollVoteData,
       };
       try {
         const task = Promise.resolve(debouncer.enqueue(inboundMessage));
