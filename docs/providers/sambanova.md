@@ -35,7 +35,7 @@ clawdbot onboard --sambanova-api-key "$SAMBANOVA_API_KEY"
 All models run at FP16 or FP16/FP8 precision:
 
 - `sambanova/Llama-4-Maverick-17B-128E-Instruct` - Llama 4 17B
-- `sambanova/Meta-Llama-3.1-8B-Instruct` - Llama 3.1 8B
+- `sambanova/Meta-Llama-3.3-70B-Instruct` - Llama 3.3 70B
 - `sambanova/DeepSeek-V3.1-Terminus` - Deepseek V3.1 Terminus
 - `sambanova/gpt-oss-120b` - GPT OSS 120B
 

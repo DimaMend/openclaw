@@ -2685,7 +2685,7 @@ clawdbot onboard --auth-choice sambanova-api-key
       model: { primary: "sambanova/Llama-4-Maverick-17B-128E-Instruct" },
       models: {
         "sambanova/Llama-4-Maverick-17B-128E-Instruct": { alias: "Llama 4 17B" },
-        "sambanova/Meta-Llama-3.1-8B-Instruct": { alias: "Llama 3 8B" },
+        "sambanova/Meta-Llama-3.3-70B-Instruct": { alias: "Llama 3.3 70B" },
         "sambanova/DeepSeek-V3.1-Terminus": { alias: "Deepseek V3.1 Terminus" },
         "sambanova/gpt-oss-120b": { alias: "GPT OSS 120B" },
       },
@@ -2700,7 +2700,7 @@ clawdbot onboard --auth-choice sambanova-api-key
         api: "openai-completions",
         models: [
           { id: "sambanova/Llama-4-Maverick-17B-128E-Instruct", name: "Llama 4 17B (SAMBANOVA)" },
-          { id: "sambanova/Meta-Llama-3.1-8B-Instruct", name: "Llama 3 8B (SAMBANOVA)" },
+          { id: "sambanova/Meta-Llama-3.3-70B-Instruct", name: "Llama 3.3 70B (SAMBANOVA)" },
           { id: "sambanova/DeepSeek-V3.1-Terminus", name: "Deepseek V3.1 Terminus (SAMBANOVA)" },
           { id: "sambanova/gpt-oss-120b", name: "Gpt OSS 120B (SAMBANOVA)" },
         ],

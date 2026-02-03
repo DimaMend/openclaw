@@ -410,7 +410,7 @@ function buildSambanovaProvider(): ProviderConfig {
     api: "openai-completions",
     models: [
       {
-        id: "sambanova/Llama-4-Maverick-17B-128E-Instruct",
+        id: "Llama-4-Maverick-17B-128E-Instruct",
         name: "Llama 4 17B",
         reasoning: false,
         input: ["text"],
@@ -419,8 +419,8 @@ function buildSambanovaProvider(): ProviderConfig {
         maxTokens: SAMBANOVA_DEFAULT_MAX_TOKENS,
       },
       {
-        id: "sambanova/Meta-Llama-3.1-8B-Instruct",
-        name: "Llama 3.1 8B",
+        id: "Meta-Llama-3.3-70B-Instruct",
+        name: "Llama 3.3 70B",
         reasoning: false,
         input: ["text"],
         cost: SAMBANOVA_DEFAULT_COST,
@@ -428,7 +428,7 @@ function buildSambanovaProvider(): ProviderConfig {
         maxTokens: SAMBANOVA_DEFAULT_MAX_TOKENS,
       },
       {
-        id: "sambanova/DeepSeek-V3.1-Terminus",
+        id: "DeepSeek-V3.1-Terminus",
         name: "Deepseek V3 Terminus",
         reasoning: false,
         input: ["text"],
@@ -437,7 +437,7 @@ function buildSambanovaProvider(): ProviderConfig {
         maxTokens: SAMBANOVA_DEFAULT_MAX_TOKENS,
       },
       {
-        id: "sambanova/gpt-oss-120b",
+        id: "gpt-oss-120b",
         name: "GPT OSS 120B",
         reasoning: false,
         input: ["text"],
