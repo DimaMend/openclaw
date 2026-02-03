@@ -101,7 +101,7 @@ function resolveClient(account: ResolvedZulipAccount): ZulipClient {
 export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise<void> {
   const core = getZulipRuntime();
   const runtime = resolveRuntime(opts);
-  const cfg = (opts.config ?? core.config.loadConfig()) as OpenClawConfig;
+  const cfg = opts.config ?? core.config.loadConfig();
 
   const account = resolveZulipAccount({ cfg, accountId: opts.accountId });
   const client = resolveClient(account);
@@ -114,8 +114,14 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
     logger.debug?.(message);
   };
 
-  const allowTextCommands = core.channel.commands.shouldHandleTextCommands({ cfg, surface: "zulip" });
-  const historyLimit = Math.max(0, cfg.messages?.groupChat?.historyLimit ?? DEFAULT_GROUP_HISTORY_LIMIT);
+  const allowTextCommands = core.channel.commands.shouldHandleTextCommands({
+    cfg,
+    surface: "zulip",
+  });
+  const historyLimit = Math.max(
+    0,
+    cfg.messages?.groupChat?.historyLimit ?? DEFAULT_GROUP_HISTORY_LIMIT,
+  );
   const channelHistories = new Map<string, HistoryEntry[]>();
 
   const defaultGroupPolicy = (cfg as any).channels?.defaults?.groupPolicy;
@@ -136,7 +142,6 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
 
   opts.statusSink?.({ connected: true, lastConnectedAt: Date.now(), lastError: null });
   runtime.log?.(`zulip connected: ${client.email} @ ${client.baseUrl}`);
-
 
   const handleMessage = async (message: ZulipMessage) => {
     if (!message.sender_email) {
@@ -166,20 +171,13 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       groupAllowFrom.length ? groupAllowFrom : effectiveAllowFrom,
     );
 
-    // Ack reaction (👀) on any inbound message we accept.
-    try {
-      await reactEyes(client, message.id);
-    } catch {
-      // Best-effort; ignore reaction failures.
-    }
-
     if (isDm) {
-      if (dmPolicy === "disabled") {
+      if (dmPolicy == "disabled") {
         logVerboseMessage(`zulip: drop dm (dmPolicy=disabled sender=${senderEmail})`);
         return;
       }
-      if (dmPolicy !== "open" && !senderAllowedDm) {
-        if (dmPolicy === "pairing") {
+      if (dmPolicy != "open" && !senderAllowedDm) {
+        if (dmPolicy == "pairing") {
           const { code, created } = await core.channel.pairing.upsertPairingRequest({
             channel: "zulip",
             id: senderEmail,
@@ -223,20 +221,32 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       }
     }
 
+    // Ack reaction (👀) only for messages we are going to process (post-gating).
+    try {
+      await reactEyes(client, message.id);
+    } catch {
+      // best-effort
+    }
     const useAccessGroups = (cfg as any).commands?.useAccessGroups !== false;
     const commandGate = resolveControlCommandGate({
       useAccessGroups,
-      authorizers: [{ configured: effectiveAllowFrom.length > 0, allowed: senderAllowedDm }],
+      authorizers: [{ configured: effectiveAllowFrom.length > 0, allowed: senderAllowedGroup }],
       allowTextCommands,
       hasControlCommand,
     });
-    const commandAuthorized = isDm ? (dmPolicy === "open" || senderAllowedDm) : commandGate.commandAuthorized;
+    const commandAuthorized = isDm
+      ? dmPolicy === "open" || senderAllowedDm
+      : commandGate.commandAuthorized;
 
     if (!isDm && commandGate.shouldBlock) {
       return;
     }
 
-    core.channel.activity.record({ channel: "zulip", accountId: account.accountId, direction: "inbound" });
+    core.channel.activity.record({
+      channel: "zulip",
+      accountId: account.accountId,
+      direction: "inbound",
+    });
 
     const groupLabel =
       message.type === "stream"
@@ -257,7 +267,9 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       ? `${route.sessionKey}:${message.stream_id ?? message.display_recipient ?? "stream"}:${message.topic ?? message.subject ?? ""}`
       : null;
 
-    const fromLabel = isDm ? senderName : `${senderName} @ ${(message.display_recipient ?? "stream")}`;
+    const fromLabel = isDm
+      ? senderName
+      : `${senderName} @ ${message.display_recipient ?? "stream"}`;
     const body = core.channel.reply.formatInboundEnvelope({
       channel: "Zulip",
       from: fromLabel,
@@ -288,11 +300,20 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
 
     const to = isDm ? buildPrivateReplyTarget(message) : buildStreamReplyTarget(message);
 
+    // Ack reaction (👀) only for messages we are going to process (post-gating).
+    try {
+      await reactEyes(client, message.id);
+    } catch {
+      // best-effort
+    }
+
     const ctxPayload = core.channel.reply.finalizeInboundContext({
       Body: combinedBody,
       RawBody: rawText,
       CommandBody: rawText,
-      From: isDm ? `zulip:${senderEmail}` : `zulip:stream:${message.stream_id ?? message.display_recipient ?? ""}`,
+      From: isDm
+        ? `zulip:${senderEmail}`
+        : `zulip:stream:${message.stream_id ?? message.display_recipient ?? ""}`,
       To: to,
       SessionKey: route.sessionKey,
       ParentSessionKey: route.mainSessionKey,
@@ -348,15 +369,15 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
     }
 
     try {
-    await core.channel.reply.dispatchReplyFromConfig({
-      ctx: ctxPayload,
-      cfg,
-      dispatcher,
-      replyOptions: {
-        ...replyOptions,
-        onModelSelected: prefixContext.onModelSelected,
-      },
-    });
+      await core.channel.reply.dispatchReplyFromConfig({
+        ctx: ctxPayload,
+        cfg,
+        dispatcher,
+        replyOptions: {
+          ...replyOptions,
+          onModelSelected: prefixContext.onModelSelected,
+        },
+      });
     } finally {
       if (typingUserId != null) {
         try {
@@ -370,7 +391,11 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
     markDispatchIdle();
 
     if (historyKey) {
-      clearHistoryEntriesIfEnabled({ historyMap: channelHistories, historyKey, limit: historyLimit });
+      clearHistoryEntriesIfEnabled({
+        historyMap: channelHistories,
+        historyKey,
+        limit: historyLimit,
+      });
     }
 
     opts.statusSink?.({ lastInboundAt: Date.now() });
@@ -402,7 +427,10 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
       // Re-register after errors.
       await new Promise((resolve) => setTimeout(resolve, 2000));
       try {
-        const reg = await zulipRegister(client, { eventTypes: ["message"], allPublicStreams: false });
+        const reg = await zulipRegister(client, {
+          eventTypes: ["message"],
+          allPublicStreams: false,
+        });
         queueId = reg.queue_id;
         lastEventId = reg.last_event_id;
         opts.statusSink?.({ connected: true, lastConnectedAt: Date.now(), lastError: null });

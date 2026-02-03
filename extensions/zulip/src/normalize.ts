@@ -54,7 +54,7 @@ export function parseZulipTarget(raw: string): ZulipTarget {
   // stream:<stream>/<topic>
   if (/^stream:/i.test(prefixed)) {
     const rest = prefixed.replace(/^stream:/i, "").trim();
-    const [streamRaw, topicRaw] = rest.split(/\s*[/#:]\s*/, 2);
+    const [streamRaw, topicRaw] = rest.split(/\s*\/\s*/, 2);
     const stream = streamRaw?.trim();
     const topic = topicRaw?.trim();
     if (!stream || !topic) {
