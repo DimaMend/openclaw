@@ -1,4 +1,3 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import * as webhookModule from "./webhook.js";
 
