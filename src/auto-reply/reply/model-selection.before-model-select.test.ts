@@ -144,29 +144,7 @@ describe("createModelSelectionState before_model_select hook integration", () =>
     expect(state.model).toBe("gpt-4o-mini");
   });
 
-  it("applies partial hook result (provider only)", async () => {
-    const cfg = {
-      agents: {
-        defaults: {
-          models: {
-            "openai/gpt-4o-mini": {},
-            "anthropic/gpt-4o-mini": {},
-          },
-        },
-      },
-    } as OpenClawConfig;
-
-    mockRunBeforeModelSelect.mockResolvedValue({
-      provider: "anthropic",
-    });
-
-    const state = await resolveState({ cfg });
-
-    expect(state.provider).toBe("anthropic");
-    expect(state.model).toBe("gpt-4o-mini");
-  });
-
-  it("applies partial hook result (model only)", async () => {
+  it("applies partial hook result (model only, provider unchanged)", async () => {
     const cfg = {
       agents: {
         defaults: {
@@ -186,6 +164,29 @@ describe("createModelSelectionState before_model_select hook integration", () =>
 
     expect(state.provider).toBe("openai");
     expect(state.model).toBe("gpt-4o");
+  });
+
+  it("applies partial hook result (provider only, uses default model)", async () => {
+    const cfg = {
+      agents: {
+        defaults: {
+          models: {
+            "openai/gpt-4o-mini": {},
+            "anthropic/claude-sonnet-4-20250514": {},
+          },
+        },
+      },
+    } as OpenClawConfig;
+
+    mockRunBeforeModelSelect.mockResolvedValue({
+      provider: "anthropic",
+      model: "claude-sonnet-4-20250514",
+    });
+
+    const state = await resolveState({ cfg });
+
+    expect(state.provider).toBe("anthropic");
+    expect(state.model).toBe("claude-sonnet-4-20250514");
   });
 
   it("passes allowedModelKeys set to hook event", async () => {
@@ -210,8 +211,8 @@ describe("createModelSelectionState before_model_select hook integration", () =>
     );
 
     const eventArg = mockRunBeforeModelSelect.mock.calls[0][0];
-    expect(eventArg.allowedModelKeys.has("openai:gpt-4o-mini")).toBe(true);
-    expect(eventArg.allowedModelKeys.has("anthropic:claude-sonnet-4-20250514")).toBe(true);
-    expect(eventArg.allowedModelKeys.has("anthropic:claude-opus-4-5")).toBe(false);
+    expect(eventArg.allowedModelKeys.has("openai/gpt-4o-mini")).toBe(true);
+    expect(eventArg.allowedModelKeys.has("anthropic/claude-sonnet-4-20250514")).toBe(true);
+    expect(eventArg.allowedModelKeys.has("anthropic/claude-opus-4-5")).toBe(false);
   });
 });

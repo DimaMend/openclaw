@@ -13,6 +13,7 @@ import {
   resolveThinkingDefault,
 } from "../../agents/model-selection.js";
 import { type SessionEntry, updateSessionStore } from "../../config/sessions.js";
+import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { applyModelOverrideToSessionEntry } from "../../sessions/model-overrides.js";
 import { resolveThreadParentSessionKey } from "../../sessions/session-key-utils.js";
 
@@ -271,6 +272,7 @@ export async function createModelSelectionState(params: {
   provider: string;
   model: string;
   hasModelDirective: boolean;
+  prompt?: string;
 }): Promise<ModelSelectionState> {
   const {
     cfg,
@@ -349,6 +351,30 @@ export async function createModelSelectionState(params: {
     if (allowedModelKeys.size === 0 || allowedModelKeys.has(key)) {
       provider = candidateProvider;
       model = storedOverride.model;
+    }
+  }
+
+  const hookRunner = getGlobalHookRunner();
+  if (hookRunner) {
+    const hookEvent = {
+      provider,
+      model,
+      sessionKey,
+      allowedModelKeys,
+      prompt: params.prompt,
+    };
+    const hookCtx = { sessionKey };
+    const hookResult = await hookRunner.runBeforeModelSelect(hookEvent, hookCtx);
+    if (hookResult) {
+      const candidateProvider = hookResult.provider ?? provider;
+      const candidateModel = hookResult.model ?? model;
+      if (candidateModel) {
+        const key = modelKey(candidateProvider, candidateModel);
+        if (allowedModelKeys.size === 0 || allowedModelKeys.has(key)) {
+          provider = candidateProvider;
+          model = candidateModel;
+        }
+      }
     }
   }
 
