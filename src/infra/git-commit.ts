@@ -122,7 +122,9 @@ export const resolveUpstreamCommitHash = (options: { cwd?: string } = {}): strin
         const packed = fs.readFileSync(packedRefsPath, "utf-8");
         const lines = packed.split("\n");
         for (const line of lines) {
-          if (line.startsWith("#") || !line.trim()) continue;
+          if (line.startsWith("#") || !line.trim()) {
+            continue;
+          }
           const [hash, refName] = line.split(/\s+/);
           if (refName === upstreamRef) {
             return formatCommit(hash);
