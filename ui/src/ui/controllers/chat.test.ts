@@ -4,19 +4,20 @@ import { handleChatEvent, sendChatMessage, type ChatEventPayload, type ChatState
 
 function createState(overrides: Partial<ChatState> = {}): ChatState {
   return {
-    client: null,
-    connected: true,
-    sessionKey: "main",
+    chatAttachments: [],
     chatLoading: false,
-    chatMessages: [],
-    chatThinkingLevel: null,
-    chatSending: false,
     chatMessage: "",
     chatAttachments: [],
+    chatMessages: [],
     chatRunId: null,
+    chatSending: false,
     chatStream: null,
     chatStreamStartedAt: null,
+    chatThinkingLevel: null,
+    client: null,
+    connected: true,
     lastError: null,
+    sessionKey: "main",
     ...overrides,
   };
 }
