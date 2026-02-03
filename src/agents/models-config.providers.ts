@@ -527,7 +527,7 @@ export async function resolveImplicitProviders(params: {
   if (nebiusTokenFactoryKey) {
     const apiKeyForConfig =
       nebiusTokenFactoryEnv?.source.match(/(?:env: |shell env: )([A-Z0-9_]+)/)?.[1] ??
-      nebiusTokenFactoryProfileKey;
+      (nebiusTokenFactoryProfileKey ? "auth-profile:nebius-token-factory" : undefined);
     providers["nebius-token-factory"] = {
       ...(await buildNebiusTokenFactoryProvider(nebiusTokenFactoryKey)),
       apiKey: apiKeyForConfig,
