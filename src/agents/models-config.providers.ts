@@ -530,6 +530,8 @@ export async function resolveImplicitProviders(params: {
       (nebiusTokenFactoryProfileKey ? "auth-profile:nebius-token-factory" : undefined);
     providers["nebius-token-factory"] = {
       ...(await buildNebiusTokenFactoryProvider(nebiusTokenFactoryKey)),
+      // apiKey here is intentionally a reference (env var name or profile marker) to avoid
+      // writing secrets into config; callers must resolve real credentials via env/auth store.
       apiKey: apiKeyForConfig,
     };
   }

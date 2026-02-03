@@ -312,6 +312,7 @@ export async function applyNonInteractiveAuthChoice(params: {
       flagValue: opts.nebiusTokenFactoryApiKey,
       flagName: "--nebius-token-factory-api-key",
       envVar: "NEBIUS_TOKEN_FACTORY",
+      envVarFallbacks: ["NEBIUS_API_KEY"],
       runtime,
     });
     if (!resolved) {
