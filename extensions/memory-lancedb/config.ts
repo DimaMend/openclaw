@@ -2,6 +2,15 @@ import fs from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+export type RerankerType = "rrf" | "linear";
+
+export type HybridConfig = {
+  enabled?: boolean; // default: true
+  reranker?: RerankerType; // default: "rrf" (RRF is only available reranker in JS SDK)
+  vectorWeight?: number; // 0-1, default: 0.7 (only used with "linear" reranker)
+  textWeight?: number; // 0-1, default: 0.3 (only used with "linear" reranker)
+};
+
 export type MemoryConfig = {
   embedding: {
     provider: "openai";
@@ -11,6 +20,7 @@ export type MemoryConfig = {
   dbPath?: string;
   autoCapture?: boolean;
   autoRecall?: boolean;
+  hybrid?: HybridConfig;
 };
 
 export const MEMORY_CATEGORIES = ["preference", "fact", "decision", "entity", "other"] as const;
@@ -83,13 +93,45 @@ function resolveEmbeddingModel(embedding: Record<string, unknown>): string {
   return model;
 }
 
+/**
+ * Clamps a number to the range [0, 1] and handles edge cases (NaN, Infinity).
+ * Returns the default value if input is invalid.
+ */
+function clampWeight(value: unknown, defaultValue: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return defaultValue;
+  }
+  return Math.max(0, Math.min(1, value));
+}
+
+function parseHybridConfig(hybrid: unknown): HybridConfig {
+  if (!hybrid || typeof hybrid !== "object" || Array.isArray(hybrid)) {
+    return { enabled: true, reranker: "rrf", vectorWeight: 0.7, textWeight: 0.3 };
+  }
+  const h = hybrid as Record<string, unknown>;
+  assertAllowedKeys(h, ["enabled", "reranker", "vectorWeight", "textWeight"], "hybrid config");
+
+  const reranker = h.reranker === "linear" ? "linear" : "rrf";
+
+  return {
+    enabled: h.enabled !== false,
+    reranker,
+    vectorWeight: clampWeight(h.vectorWeight, 0.7),
+    textWeight: clampWeight(h.textWeight, 0.3),
+  };
+}
+
 export const memoryConfigSchema = {
   parse(value: unknown): MemoryConfig {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       throw new Error("memory config required");
     }
     const cfg = value as Record<string, unknown>;
-    assertAllowedKeys(cfg, ["embedding", "dbPath", "autoCapture", "autoRecall"], "memory config");
+    assertAllowedKeys(
+      cfg,
+      ["embedding", "dbPath", "autoCapture", "autoRecall", "hybrid"],
+      "memory config",
+    );
 
     const embedding = cfg.embedding as Record<string, unknown> | undefined;
     if (!embedding || typeof embedding.apiKey !== "string") {
@@ -108,6 +150,7 @@ export const memoryConfigSchema = {
       dbPath: typeof cfg.dbPath === "string" ? cfg.dbPath : DEFAULT_DB_PATH,
       autoCapture: cfg.autoCapture !== false,
       autoRecall: cfg.autoRecall !== false,
+      hybrid: parseHybridConfig(cfg.hybrid),
     };
   },
   uiHints: {
@@ -134,6 +177,28 @@ export const memoryConfigSchema = {
     autoRecall: {
       label: "Auto-Recall",
       help: "Automatically inject relevant memories into context",
+    },
+    "hybrid.enabled": {
+      label: "Hybrid Search",
+      help: "Combine vector search with BM25 keyword search for better recall",
+    },
+    "hybrid.reranker": {
+      label: "Reranker",
+      placeholder: "rrf",
+      help: "Reranking algorithm: 'rrf' (Reciprocal Rank Fusion) or 'linear' (weighted combination)",
+      advanced: true,
+    },
+    "hybrid.vectorWeight": {
+      label: "Vector Weight",
+      placeholder: "0.7",
+      help: "Weight for semantic vector search (0-1, only used with 'linear' reranker)",
+      advanced: true,
+    },
+    "hybrid.textWeight": {
+      label: "Text Weight",
+      placeholder: "0.3",
+      help: "Weight for BM25 keyword search (0-1, only used with 'linear' reranker)",
+      advanced: true,
     },
   },
 };
