@@ -3,6 +3,7 @@ import { setWebSocketServer } from './realtime/hooks'
 import { bridgeGatewayEvents } from './gateway/gateway-events-bridge'
 import { GatewayHealthMonitor } from './gateway/health-monitor'
 import { SessionSyncService } from './gateway/session-sync'
+import { getProactiveActionsEngine } from './automation/proactive-actions'
 import type { Payload } from 'payload'
 import type { Server } from 'http'
 
@@ -14,12 +15,14 @@ import type { Server } from 'http'
  * - Gateway event bridge (gateway ↔ WebSocket ↔ database)
  * - Session sync (gateway sessions → database)
  * - Health monitoring (detect crashed processes)
+ * - Proactive actions (scheduled tasks, monitoring, follow-ups)
  */
 
 // Singleton instances
 let wsServer: ClawNetWebSocketServer | null = null
 let healthMonitor: GatewayHealthMonitor | null = null
 let sessionSync: SessionSyncService | null = null
+let proactiveActions: ReturnType<typeof getProactiveActionsEngine> | null = null
 
 /**
  * Initialize all ClawNet services
@@ -49,7 +52,11 @@ export async function initializeClawNetServices(
     healthMonitor.start()
     payload.logger.info('✓ Health monitor started')
 
-    // 5. Auto-start bots marked as active
+    // 5. Initialize proactive actions engine
+    proactiveActions = getProactiveActionsEngine(payload)
+    payload.logger.info('✓ Proactive actions engine initialized')
+
+    // 6. Auto-start bots marked as active
     await autoStartActiveBots(payload)
 
     payload.logger.info('✅ All ClawNet services initialized successfully')
@@ -92,6 +99,11 @@ async function autoStartActiveBots(payload: Payload): Promise<void> {
         if (sessionSync) {
           await sessionSync.watchBotSessions(bot.id, bot.agentId)
         }
+
+        // Initialize proactive actions for this bot
+        if (proactiveActions) {
+          await proactiveActions.initializeBotActions(bot)
+        }
       } catch (error) {
         payload.logger.error(
           `Failed to auto-start bot ${bot.agentId}: ${error}`
@@ -120,25 +132,39 @@ export async function shutdownClawNetServices(payload: Payload): Promise<void> {
   payload.logger.info('Shutting down ClawNet services...')
 
   try {
-    // 1. Stop health monitor
+    // 1. Stop proactive actions
+    if (proactiveActions) {
+      // Stop all scheduled tasks
+      const activeBots = await payload.find({
+        collection: 'bots',
+        where: { status: { equals: 'active' } }
+      })
+
+      for (const bot of activeBots.docs) {
+        proactiveActions.stopBotActions(bot.id)
+      }
+      payload.logger.info('✓ Proactive actions stopped')
+    }
+
+    // 2. Stop health monitor
     if (healthMonitor) {
       healthMonitor.stop()
       payload.logger.info('✓ Health monitor stopped')
     }
 
-    // 2. Stop session sync watchers
+    // 3. Stop session sync watchers
     if (sessionSync) {
       sessionSync.stopAllWatchers()
       payload.logger.info('✓ Session sync stopped')
     }
 
-    // 3. Stop all gateway processes
+    // 4. Stop all gateway processes
     const { getOrchestrator } = await import('./gateway/orchestrator')
     const orchestrator = getOrchestrator()
     await orchestrator.stopAll()
     payload.logger.info('✓ All gateway processes stopped')
 
-    // 4. Shutdown WebSocket server
+    // 5. Shutdown WebSocket server
     if (wsServer) {
       await wsServer.shutdown()
       payload.logger.info('✓ WebSocket server shut down')
@@ -162,4 +188,13 @@ export function getWebSocketServerInstance(): ClawNetWebSocketServer | null {
  */
 export function getSessionSyncInstance(): SessionSyncService | null {
   return sessionSync
+}
+
+/**
+ * Get proactive actions engine instance
+ */
+export function getProactiveActionsInstance(): ReturnType<
+  typeof getProactiveActionsEngine
+> | null {
+  return proactiveActions
 }

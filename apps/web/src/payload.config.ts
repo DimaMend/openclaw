@@ -67,6 +67,14 @@ import {
   getMarketplaceListings
 } from './endpoints/blockchain-secure'
 
+// Endpoints - Webhooks (Incoming Messages)
+import { handleTelegramWebhook, setTelegramWebhook } from './endpoints/webhooks/telegram'
+import { handleDiscordWebhook } from './endpoints/webhooks/discord'
+import { handleSlackWebhook } from './endpoints/webhooks/slack'
+
+// Endpoints - Gateway Communication
+import { deliverResponse } from './endpoints/gateway/deliver-response'
+
 // Middleware - Security
 import { authenticate, requireAdmin } from './middleware/authenticate'
 import {
@@ -339,6 +347,35 @@ export default buildConfig({
       path: '/ap/users/:username/following',
       method: 'get',
       handler: getActorFollowing
+    },
+
+    // Webhooks - Incoming Messages from Chat Platforms
+    {
+      path: '/webhooks/telegram/:accountId?',
+      method: 'post',
+      handler: handleTelegramWebhook
+    },
+    {
+      path: '/webhooks/telegram/setup',
+      method: 'post',
+      handler: [authenticate, requireAdmin, setTelegramWebhook]
+    },
+    {
+      path: '/webhooks/discord/:accountId?',
+      method: 'post',
+      handler: handleDiscordWebhook
+    },
+    {
+      path: '/webhooks/slack/:accountId?',
+      method: 'post',
+      handler: handleSlackWebhook
+    },
+
+    // Gateway Communication - Response Delivery
+    {
+      path: '/gateway/deliver-response',
+      method: 'post',
+      handler: deliverResponse
     }
   ],
   sharp: true
