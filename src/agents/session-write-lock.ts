@@ -51,7 +51,7 @@ function isAlive(pid: number): boolean {
  * Used during process exit when async operations aren't reliable.
  */
 function releaseAllLocksSync(): void {
-  for (const [sessionFile, held] of HELD_LOCKS) {
+  for (const [sessionFile, held] of [...HELD_LOCKS]) {
     try {
       if (typeof held.handle.close === "function") {
         void held.handle.close().catch(() => {});
@@ -228,7 +228,7 @@ export async function acquireSessionWriteLock(params: {
  * appear valid for up to `staleMs` (30 min).
  */
 export async function releaseAllSessionWriteLocks(): Promise<void> {
-  for (const [sessionFile, held] of HELD_LOCKS) {
+  for (const [sessionFile, held] of [...HELD_LOCKS]) {
     try {
       await held.handle.close();
     } catch {
