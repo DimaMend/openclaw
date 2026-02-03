@@ -119,6 +119,29 @@ function sanitizeAntigravityThinkingBlocks(messages: AgentMessage[]): AgentMessa
   return touched ? out : messages;
 }
 
+function isDeliveryMirrorMessage(message: AgentMessage): boolean {
+  return (
+    message &&
+    typeof message === "object" &&
+    (message as { role?: unknown }).role === "assistant" &&
+    (message as { model?: unknown }).model === "delivery-mirror" &&
+    (message as { provider?: unknown }).provider === "openclaw"
+  );
+}
+
+function filterDeliveryMirrorMessages(messages: AgentMessage[]): AgentMessage[] {
+  let touched = false;
+  const out: AgentMessage[] = [];
+  for (const msg of messages) {
+    if (isDeliveryMirrorMessage(msg)) {
+      touched = true;
+      continue;
+    }
+    out.push(msg);
+  }
+  return touched ? out : messages;
+}
+
 function findUnsupportedSchemaKeywords(schema: unknown, path: string): string[] {
   if (!schema || typeof schema !== "object") {
     return [];
@@ -339,13 +362,18 @@ export async function sanitizeSessionHistory(params: {
       provider: params.provider,
       modelId: params.modelId,
     });
-  const sanitizedImages = await sanitizeSessionMessagesImages(params.messages, "session:history", {
-    sanitizeMode: policy.sanitizeMode,
-    sanitizeToolCallIds: policy.sanitizeToolCallIds,
-    toolCallIdMode: policy.toolCallIdMode,
-    preserveSignatures: policy.preserveSignatures,
-    sanitizeThoughtSignatures: policy.sanitizeThoughtSignatures,
-  });
+  const withoutDeliveryMirror = filterDeliveryMirrorMessages(params.messages);
+  const sanitizedImages = await sanitizeSessionMessagesImages(
+    withoutDeliveryMirror,
+    "session:history",
+    {
+      sanitizeMode: policy.sanitizeMode,
+      sanitizeToolCallIds: policy.sanitizeToolCallIds,
+      toolCallIdMode: policy.toolCallIdMode,
+      preserveSignatures: policy.preserveSignatures,
+      sanitizeThoughtSignatures: policy.sanitizeThoughtSignatures,
+    },
+  );
   const sanitizedThinking = policy.normalizeAntigravityThinkingBlocks
     ? sanitizeAntigravityThinkingBlocks(sanitizedImages)
     : sanitizedImages;
