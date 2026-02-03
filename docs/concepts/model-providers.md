@@ -185,7 +185,7 @@ Kimi Coding uses Moonshot AI's Anthropic-compatible endpoint:
 
 - Provider: `nebius-token-factory`
 - Auth: `NEBIUS_TOKEN_FACTORY`
-- Example model: `nebius/zai-org/GLM-4.7-FP8` (defaults and model list auto-discovered)
+- Example model: `nebius-token-factory/zai-org/GLM-4.7-FP8` (defaults and model list auto-discovered)
 - Base URL: `https://api.tokenfactory.nebius.com/v1/`
 - CLI: `openclaw onboard --auth-choice nebius-token-factory-api-key --nebius-token-factory-api-key "$NEBIUS_TOKEN_FACTORY"`
 
