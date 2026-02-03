@@ -49,7 +49,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       removeAckAfterReply: false,
     });
     // oxlint-disable-next-line typescript/no-explicit-any
-    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
+    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any; // oxlint-disable-line typescript/no-explicit-any
 
     const account: ResolvedSlackAccount = {
       accountId: "default",
@@ -119,7 +119,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       removeAckAfterReply: false,
     });
     // oxlint-disable-next-line typescript/no-explicit-any
-    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
+    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any; // oxlint-disable-line typescript/no-explicit-any
 
     const account: ResolvedSlackAccount = {
       accountId: "default",
@@ -187,7 +187,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       mediaMaxBytes: 1024,
       removeAckAfterReply: false,
     });
-    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
+    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any; // oxlint-disable-line typescript/no-explicit-any
 
     const account: ResolvedSlackAccount = {
       accountId: "default",
@@ -260,7 +260,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       mediaMaxBytes: 1024,
       removeAckAfterReply: false,
     });
-    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
+    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any; // oxlint-disable-line typescript/no-explicit-any
 
     const account: ResolvedSlackAccount = {
       accountId: "default",
@@ -331,7 +331,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       mediaMaxBytes: 1024,
       removeAckAfterReply: false,
     });
-    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
+    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any; // oxlint-disable-line typescript/no-explicit-any
 
     const account: ResolvedSlackAccount = {
       accountId: "default",
