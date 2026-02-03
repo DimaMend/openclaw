@@ -41,6 +41,7 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 ### 📝 Write It Down - No "Mental Notes"!
 - **Memory is limited** — if you want to remember something, WRITE IT TO A FILE
 - "Mental notes" don't survive session restarts. Files do.
+- **CRITICAL:** Whenever the user shares personal info, preferences, or important context, **IMMEDIATELY** update `MEMORY.md` or `memory/YYYY-MM-DD.md`. Do not wait.
 - When someone says "remember this" → update `memory/YYYY-MM-DD.md` or relevant file
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill
 - When you make a mistake → document it so future-you doesn't repeat it
