@@ -38,7 +38,7 @@ export async function launchOpenClawFirefox(
   const exe = resolveFirefoxExecutableForPlatform(process.platform);
   if (!exe) {
     throw new Error(
-      "No Firefox installation found. Install Firefox or set browser.executablePath.",
+      "No Firefox installation found. Install Firefox or run `npx playwright install firefox`.",
     );
   }
 
@@ -63,7 +63,7 @@ export async function launchOpenClawFirefox(
     await context.newPage();
   }
 
-  const pid = extractPid(context);
+  const pid = extractPidFromContext(context);
 
   log.info(`openclaw firefox started (${exe.kind}) profile "${profile.name}" (pid ${pid})`);
 
@@ -79,6 +79,7 @@ export async function launchOpenClawFirefox(
     startedAt,
     proc,
     engine: "firefox",
+    profileName: profile.name,
   };
 }
 
@@ -86,20 +87,14 @@ export async function launchOpenClawFirefox(
  * Stop a running Firefox instance.
  */
 export async function stopOpenClawFirefox(running: RunningBrowser): Promise<void> {
-  const context = firefoxContexts.get(findProfileForContext(running) ?? "");
+  const context = firefoxContexts.get(running.profileName);
   if (context) {
     try {
       await context.close();
     } catch {
       // ignore
     }
-    // Clean up the map entry
-    for (const [key, ctx] of firefoxContexts) {
-      if (ctx === context) {
-        firefoxContexts.delete(key);
-        break;
-      }
-    }
+    firefoxContexts.delete(running.profileName);
   }
   // Also try killing the process directly
   try {
@@ -128,29 +123,6 @@ export async function isFirefoxReachable(profileName: string): Promise<boolean> 
   } catch {
     return false;
   }
-}
-
-function findProfileForContext(running: RunningBrowser): string | null {
-  for (const [name, ctx] of firefoxContexts) {
-    // Match by user data dir since that's unique per profile
-    if (running.userDataDir.includes(name)) {
-      return name;
-    }
-    // Also try by pid (context may have inner process access)
-    try {
-      const pid = extractPidFromContext(ctx);
-      if (pid === running.pid) {
-        return name;
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return null;
-}
-
-function extractPid(context: BrowserContext): number {
-  return extractPidFromContext(context);
 }
 
 function extractPidFromContext(context: BrowserContext): number {

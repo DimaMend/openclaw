@@ -118,6 +118,8 @@ function findPlaywrightBundledFirefox(): BrowserExecutable | null {
         path.join(cacheDir, entry, "firefox", "Nightly.app", "Contents", "MacOS", "firefox"),
         // Linux
         path.join(cacheDir, entry, "firefox", "firefox"),
+        // Windows
+        path.join(cacheDir, entry, "firefox", "firefox.exe"),
       ];
       for (const candidate of candidates) {
         if (exists(candidate)) {

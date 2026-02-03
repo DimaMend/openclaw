@@ -36,18 +36,31 @@ export async function snapshotAriaViaPlaywright(opts: {
       .split("\n")
       .slice(0, limit);
     // Convert the text-based ariaSnapshot into AriaSnapshotNode[] format
+    const refs: Record<string, { role: string; name?: string; nth?: number }> = {};
     const nodes: AriaSnapshotNode[] = lines
       .filter((line) => line.trim())
       .map((line, idx) => {
         const trimmed = line.replace(/^[\s-]*/, "");
         const match = trimmed.match(/^(\w+)\s*(?:"([^"]*)")?/);
+        const ref = `e${idx + 1}`;
+        const role = match?.[1] ?? "generic";
+        const name = match?.[2] ?? "";
+        refs[ref] = { role, name: name || undefined };
         return {
-          ref: `e${idx + 1}`,
-          role: match?.[1] ?? "generic",
-          name: match?.[2] ?? "",
+          ref,
+          role,
+          name,
           depth: Math.floor((line.length - line.trimStart().length) / 2),
         };
       });
+    // Store refs so refLocator() can resolve them for subsequent actions
+    storeRoleRefsForTarget({
+      page,
+      cdpUrl: opts.cdpUrl,
+      targetId: opts.targetId,
+      refs,
+      mode: "role",
+    });
     return { nodes: nodes.slice(0, limit) };
   }
 

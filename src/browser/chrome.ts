@@ -307,6 +307,7 @@ export async function launchOpenClawChrome(
     startedAt,
     proc,
     engine: "chromium" as const,
+    profileName: profile.name,
   };
 }
 

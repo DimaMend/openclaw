@@ -118,6 +118,8 @@ vi.mock("./chrome.js", () => ({
       cdpPort: profile.cdpPort,
       startedAt: Date.now(),
       proc,
+      engine: "chromium",
+      profileName: "openclaw",
     };
   }),
   resolveOpenClawUserDataDir: vi.fn(() => "/tmp/openclaw"),
