@@ -1,7 +1,12 @@
 import type { HistoryEntry } from "../../auto-reply/reply/history.js";
 import type { ReplyPayload } from "../../auto-reply/types.js";
 import type { OpenClawConfig } from "../../config/config.js";
-import type { DmPolicy, GroupPolicy, SignalReactionNotificationMode } from "../../config/types.js";
+import type {
+  DmPolicy,
+  GroupPolicy,
+  SignalReactionNotificationMode,
+  SignalReactionTriggerMode,
+} from "../../config/types.js";
 import type { RuntimeEnv } from "../../runtime.js";
 import type { SignalSender } from "../identity.js";
 
@@ -78,6 +83,7 @@ export type SignalEventHandlerDeps = {
   groupAllowFrom: string[];
   groupPolicy: GroupPolicy;
   reactionMode: SignalReactionNotificationMode;
+  reactionTriggerMode: SignalReactionTriggerMode;
   reactionAllowlist: string[];
   mediaMaxBytes: number;
   ignoreAttachments: boolean;

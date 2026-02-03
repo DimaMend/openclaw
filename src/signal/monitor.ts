@@ -310,6 +310,7 @@ export async function monitorSignalProvider(opts: MonitorSignalOpts = {}): Promi
   const defaultGroupPolicy = cfg.channels?.defaults?.groupPolicy;
   const groupPolicy = accountInfo.config.groupPolicy ?? defaultGroupPolicy ?? "allowlist";
   const reactionMode = accountInfo.config.reactionNotifications ?? "own";
+  const reactionTriggerMode = accountInfo.config.reactionTriggerMode ?? "off";
   const reactionAllowlist = normalizeAllowList(accountInfo.config.reactionAllowlist);
   const mediaMaxBytes = (opts.mediaMaxMb ?? accountInfo.config.mediaMaxMb ?? 8) * 1024 * 1024;
   const ignoreAttachments = opts.ignoreAttachments ?? accountInfo.config.ignoreAttachments ?? false;
@@ -372,6 +373,7 @@ export async function monitorSignalProvider(opts: MonitorSignalOpts = {}): Promi
       groupAllowFrom,
       groupPolicy,
       reactionMode,
+      reactionTriggerMode,
       reactionAllowlist,
       mediaMaxBytes,
       ignoreAttachments,

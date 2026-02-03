@@ -580,6 +580,7 @@ export const SignalAccountSchemaBase = z
     mediaMaxMb: z.number().int().positive().optional(),
     reactionNotifications: z.enum(["off", "own", "all", "allowlist"]).optional(),
     reactionAllowlist: z.array(z.union([z.string(), z.number()])).optional(),
+    reactionTriggerMode: z.enum(["off", "dm", "all"]).optional(),
     actions: z
       .object({
         reactions: z.boolean().optional(),
