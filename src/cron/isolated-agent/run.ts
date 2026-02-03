@@ -196,6 +196,7 @@ export async function runCronIsolatedAgentTurn(params: {
   }
 
   // Extract and validate payload fallbacks (if provided).
+  // Fallbacks are normalized to canonical "provider/model" format to ensure consistent resolution.
   const payloadFallbacksRaw =
     params.job.payload.kind === "agentTurn" ? params.job.payload.fallbacks : undefined;
   let payloadFallbacks: string[] | undefined;
@@ -203,7 +204,7 @@ export async function runCronIsolatedAgentTurn(params: {
     if (!Array.isArray(payloadFallbacksRaw)) {
       return { status: "error", error: "invalid fallbacks: expected array" };
     }
-    // Validate each fallback entry.
+    const normalized: string[] = [];
     for (const fb of payloadFallbacksRaw) {
       if (typeof fb !== "string") {
         return { status: "error", error: "invalid fallbacks: expected array of strings" };
@@ -216,10 +217,11 @@ export async function runCronIsolatedAgentTurn(params: {
         defaultModel: resolvedDefault.model,
       });
       if ("error" in resolvedFb) {
-        return { status: "error", error: `fallback ${resolvedFb.error}` };
+        return { status: "error", error: `fallback: ${resolvedFb.error}` };
       }
+      normalized.push(resolvedFb.key);
     }
-    payloadFallbacks = payloadFallbacksRaw;
+    payloadFallbacks = normalized;
   }
 
   const now = Date.now();
