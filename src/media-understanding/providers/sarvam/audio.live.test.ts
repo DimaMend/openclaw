@@ -6,8 +6,8 @@ const SARVAM_KEY = process.env.SARVAM_API_KEY ?? "";
 const SARVAM_MODEL = process.env.SARVAM_MODEL?.trim() || "saarika:v2.5";
 const SARVAM_BASE_URL = process.env.SARVAM_BASE_URL?.trim();
 
-// Sample audio URL - using a public domain Hindi audio sample
-// Users can override with their own test audio URL
+// Sample audio URL - using a public domain audio sample
+// NOTE: For reliable ASR tests, provide a speech sample via SARVAM_SAMPLE_URL env var
 const SAMPLE_URL =
   process.env.SARVAM_SAMPLE_URL?.trim() ||
   "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
