@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { transcribeSarvamAudio, DEFAULT_SARVAM_AUDIO_MODEL } from "./audio.js";
 
 const resolveRequestUrl = (input: RequestInfo | URL) => {
