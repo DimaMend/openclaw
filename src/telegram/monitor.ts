@@ -25,7 +25,7 @@ export type MonitorTelegramOpts = {
   webhookPath?: string;
   webhookPort?: number;
   webhookSecret?: string;
-  /** Webhook handler timeout in milliseconds. Default: Infinity (no timeout). */
+  /** Webhook handler timeout in milliseconds. Omit to use grammY default (10s). */
   webhookTimeoutMs?: number;
   proxyFetch?: typeof fetch;
   webhookUrl?: string;
