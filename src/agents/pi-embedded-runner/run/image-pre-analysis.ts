@@ -87,7 +87,9 @@ export async function analyzeImagesWithImageModel(params: {
   // Analyze each image
   for (let i = 0; i < images.length; i++) {
     const image = images[i];
-    if (!image || image.type !== "image") continue;
+    if (!image || image.type !== "image") {
+      continue;
+    }
 
     const imageLabel = images.length > 1 ? `Image ${i + 1}` : "Image";
 
