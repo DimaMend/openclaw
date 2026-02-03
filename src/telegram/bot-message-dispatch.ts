@@ -1,6 +1,4 @@
 import { resolveAgentDir } from "../agents/agent-scope.js";
-import { createPlaceholderController } from "../auto-reply/reply/placeholder.js";
-import { sendMessageTelegram, deleteMessageTelegram, editMessageTelegram } from "./send.js";
 // @ts-nocheck
 import {
   findModelInCatalog,
@@ -11,6 +9,7 @@ import { resolveDefaultModelForAgent } from "../agents/model-selection.js";
 import { EmbeddedBlockChunker } from "../agents/pi-embedded-block-chunker.js";
 import { resolveChunkMode } from "../auto-reply/chunk.js";
 import { clearHistoryEntriesIfEnabled } from "../auto-reply/reply/history.js";
+import { createPlaceholderController } from "../auto-reply/reply/placeholder.js";
 import { dispatchReplyWithBufferedBlockDispatcher } from "../auto-reply/reply/provider-dispatcher.js";
 import { removeAckReactionAfterReply } from "../channels/ack-reactions.js";
 import { logAckFailure, logTypingFailure } from "../channels/logging.js";
@@ -22,6 +21,7 @@ import { danger, logVerbose } from "../globals.js";
 import { deliverReplies } from "./bot/delivery.js";
 import { resolveTelegramDraftStreamingChunking } from "./draft-chunking.js";
 import { createTelegramDraftStream } from "./draft-stream.js";
+import { sendMessageTelegram, deleteMessageTelegram, editMessageTelegram } from "./send.js";
 import { cacheSticker, describeStickerImage } from "./sticker-cache.js";
 
 const EMPTY_RESPONSE_FALLBACK = "No response generated. Please try again.";

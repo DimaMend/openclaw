@@ -145,10 +145,12 @@ export const TelegramAccountSchemaBase = z
         toolDisplay: z
           .record(
             z.string(),
-            z.object({
-              emoji: z.string().optional(),
-              label: z.string().optional(),
-            }).strict()
+            z
+              .object({
+                emoji: z.string().optional(),
+                label: z.string().optional(),
+              })
+              .strict(),
           )
           .optional(),
       })
