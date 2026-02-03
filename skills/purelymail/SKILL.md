@@ -76,10 +76,13 @@ After adding a domain, configure these DNS records:
 
 | Type | Name | Value |
 |------|------|-------|
-| MX | @ | mx.purelymail.com (priority 10) |
+| MX | @ | mailserver.purelymail.com (priority 50) |
 | TXT | @ | v=spf1 include:_spf.purelymail.com ~all |
-| TXT | _dmarc | v=DMARC1; p=quarantine; rua=mailto:dmarc@purelymail.com |
-| CNAME | purelymail._domainkey | (check dashboard for domain-specific value) |
+| TXT | @ | purelymail_ownership_proof=... (get from PurelyMail dashboard) |
+| CNAME | purelymail1._domainkey | key1.dkimroot.purelymail.com |
+| CNAME | purelymail2._domainkey | key2.dkimroot.purelymail.com |
+| CNAME | purelymail3._domainkey | key3.dkimroot.purelymail.com |
+| CNAME | _dmarc | dmarcroot.purelymail.com |
 
 ## API Reference
 
