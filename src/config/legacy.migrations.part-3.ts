@@ -40,7 +40,7 @@ export const LEGACY_CONFIG_MIGRATIONS_PART_3: LegacyConfigMigration[] = [
           if (typeof acc.token === "string" && acc.botToken === undefined) {
             acc.botToken = acc.token;
             delete acc.token;
-            changes.push(`Moved channels.telegram.accounts.${accountId}.token → botToken.`);
+            changes.push(`Moved channels.telegram.accounts["${accountId}"].token → botToken.`);
           }
         }
       }

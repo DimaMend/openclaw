@@ -258,7 +258,7 @@ describe("legacy config detection", () => {
     });
     expect(res.ok).toBe(false);
     if (!res.ok) {
-      expect(res.issues[0]?.path).toBe("channels.telegram.token");
+      expect(res.issues.some((i) => i.path === "channels.telegram.token")).toBe(true);
     }
   });
   it("migrates channels.telegram.token to botToken", async () => {
@@ -277,8 +277,18 @@ describe("legacy config detection", () => {
     const res = migrateLegacyConfig({
       channels: { telegram: { accounts: { work: { token: "456:DEF" } } } },
     });
-    expect(res.changes).toContain("Moved channels.telegram.accounts.work.token → botToken.");
+    expect(res.changes).toContain('Moved channels.telegram.accounts["work"].token → botToken.');
     expect(res.config?.channels?.telegram?.accounts?.work?.botToken).toBe("456:DEF");
+  });
+  it("does not overwrite existing botToken when token is also present", async () => {
+    vi.resetModules();
+    const { migrateLegacyConfig } = await import("./config.js");
+    const res = migrateLegacyConfig({
+      channels: { telegram: { token: "old:token", botToken: "existing:token" } },
+    });
+    expect(res.changes).not.toContain(
+      "Moved channels.telegram.token → channels.telegram.botToken.",
+    );
   });
   it("keeps gateway.bind tailnet", async () => {
     vi.resetModules();
