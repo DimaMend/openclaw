@@ -75,12 +75,15 @@ export async function markAuthProfileUsed(params: {
       const existing = freshStore.usageStats[profileId] ?? {};
 
       if (modelId) {
-        // Clear only the specific model's cooldown
+        // Clear the specific model's cooldown and provider-level cooldown
+        // (successful use proves auth is working)
         const modelCooldowns = { ...existing.modelCooldowns };
         delete modelCooldowns[modelId];
         freshStore.usageStats[profileId] = {
           ...existing,
           lastUsed: Date.now(),
+          errorCount: 0,
+          cooldownUntil: undefined,
           modelCooldowns: Object.keys(modelCooldowns).length > 0 ? modelCooldowns : undefined,
         };
       } else {
@@ -111,12 +114,15 @@ export async function markAuthProfileUsed(params: {
   const existing = store.usageStats[profileId] ?? {};
 
   if (modelId) {
-    // Clear only the specific model's cooldown
+    // Clear the specific model's cooldown and provider-level cooldown
+    // (successful use proves auth is working)
     const modelCooldowns = { ...existing.modelCooldowns };
     delete modelCooldowns[modelId];
     store.usageStats[profileId] = {
       ...existing,
       lastUsed: Date.now(),
+      errorCount: 0,
+      cooldownUntil: undefined,
       modelCooldowns: Object.keys(modelCooldowns).length > 0 ? modelCooldowns : undefined,
     };
   } else {
