@@ -445,6 +445,8 @@ export type PluginHookSessionEndEvent = {
   sessionId: string;
   messageCount: number;
   durationMs?: number;
+  sessionFile?: string;
+  sessionFileBytes?: number;
 };
 
 // Gateway context

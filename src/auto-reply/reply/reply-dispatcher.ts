@@ -1,8 +1,12 @@
 import type { HumanDelayConfig } from "../../config/types.js";
-import type { PluginHookMessageContext } from "../../plugins/types.js";
+import type {
+  PluginHookMessageContext,
+  PluginHookMessageSendingResult,
+} from "../../plugins/types.js";
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
 import type { ResponsePrefixContext } from "./response-prefix-template.js";
 import type { TypingController } from "./typing.js";
+import { logVerbose } from "../../globals.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { sleep } from "../../utils.js";
@@ -166,14 +170,19 @@ export function createReplyDispatcher(options: ReplyDispatcherOptions): ReplyDis
             kind,
             hasMedia: Boolean(normalized.mediaUrl) || (normalized.mediaUrls?.length ?? 0) > 0,
           };
-          const hookResult = await hookRunner.runMessageSending(
-            {
-              to: hookTarget,
-              content: hookContent,
-              metadata,
-            },
-            hookContext,
-          );
+          let hookResult: PluginHookMessageSendingResult | void;
+          try {
+            hookResult = await hookRunner.runMessageSending(
+              {
+                to: hookTarget,
+                content: hookContent,
+                metadata,
+              },
+              hookContext,
+            );
+          } catch (err) {
+            logVerbose(`hooks: message_sending failed: ${formatErrorMessage(err)}`);
+          }
           if (hookResult?.cancel) {
             if (hookRunner.hasHooks("message_sent")) {
               void hookRunner.runMessageSent(

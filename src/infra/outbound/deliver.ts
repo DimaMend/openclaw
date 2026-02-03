@@ -3,7 +3,10 @@ import type { ChannelOutboundAdapter } from "../../channels/plugins/types.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { sendMessageDiscord } from "../../discord/send.js";
 import type { sendMessageIMessage } from "../../imessage/send.js";
-import type { PluginHookMessageContext } from "../../plugins/types.js";
+import type {
+  PluginHookMessageContext,
+  PluginHookMessageSendingResult,
+} from "../../plugins/types.js";
 import type { sendMessageSlack } from "../../slack/send.js";
 import type { sendMessageTelegram } from "../../telegram/send.js";
 import type { sendMessageWhatsApp } from "../../web/outbound.js";
@@ -22,6 +25,7 @@ import {
   appendAssistantMessageToSessionTranscript,
   resolveMirroredTranscriptText,
 } from "../../config/sessions.js";
+import { logVerbose } from "../../globals.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { markdownToSignalTextChunks, type SignalTextStyleRange } from "../../signal/format.js";
 import { sendMessageSignal } from "../../signal/send.js";
@@ -345,14 +349,19 @@ export async function deliverOutboundPayloads(params: {
         replyToId: params.replyToId ?? undefined,
         hasMedia: payloadSummary.mediaUrls.length > 0,
       };
-      const hookResult = await hookRunner.runMessageSending(
-        {
-          to,
-          content: hookContent,
-          metadata,
-        },
-        hookContext,
-      );
+      let hookResult: PluginHookMessageSendingResult | void;
+      try {
+        hookResult = await hookRunner.runMessageSending(
+          {
+            to,
+            content: hookContent,
+            metadata,
+          },
+          hookContext,
+        );
+      } catch (err) {
+        logVerbose(`hooks: message_sending failed: ${formatErrorMessage(err)}`);
+      }
       if (hookResult?.cancel) {
         if (hookRunner.hasHooks("message_sent")) {
           void hookRunner.runMessageSent(

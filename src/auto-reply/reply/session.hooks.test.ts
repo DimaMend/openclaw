@@ -65,7 +65,11 @@ describe("initSessionState hooks", () => {
     await vi.waitFor(() => expect(hookMocks.runner.runSessionStart).toHaveBeenCalled());
 
     expect(hookMocks.runner.runSessionEnd).toHaveBeenCalledWith(
-      { sessionId: previousSessionId, messageCount: 2 },
+      expect.objectContaining({
+        sessionId: previousSessionId,
+        messageCount: 2,
+        sessionFile: path.join(root, "prev.jsonl"),
+      }),
       { agentId: "main", sessionId: previousSessionId },
     );
     expect(hookMocks.runner.runSessionStart).toHaveBeenCalledWith(

@@ -27,6 +27,7 @@ import {
   type SessionScope,
   updateSessionStore,
 } from "../../config/sessions.js";
+import { logVerbose } from "../../globals.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { normalizeMainKey } from "../../routing/session-key.js";
 import { normalizeSessionDeliveryFields } from "../../utils/delivery-context.js";
@@ -357,6 +358,13 @@ export async function initSessionState(params: {
     previousSessionId !== sessionEntry.sessionId
   ) {
     void (async () => {
+      const sessionFile = resolveSessionFilePath(previousSessionId, entry, { agentId });
+      const sessionFileBytes = sessionFile
+        ? await fs.promises
+            .stat(sessionFile)
+            .then((stat) => stat.size)
+            .catch(() => undefined)
+        : undefined;
       const messageCount = await countSessionMessages({
         sessionId: previousSessionId,
         entry,
@@ -366,25 +374,33 @@ export async function initSessionState(params: {
         {
           sessionId: previousSessionId,
           messageCount,
+          sessionFile,
+          sessionFileBytes,
         },
         {
           agentId,
           sessionId: previousSessionId,
         },
       );
-    })();
+    })().catch((err) => {
+      logVerbose(`hooks: session_end failed: ${String(err)}`);
+    });
   }
   if (hookRunner?.hasHooks("session_start") && isNewSession) {
-    void hookRunner.runSessionStart(
-      {
-        sessionId: sessionEntry.sessionId,
-        resumedFrom,
-      },
-      {
-        agentId,
-        sessionId: sessionEntry.sessionId,
-      },
-    );
+    void hookRunner
+      .runSessionStart(
+        {
+          sessionId: sessionEntry.sessionId,
+          resumedFrom,
+        },
+        {
+          agentId,
+          sessionId: sessionEntry.sessionId,
+        },
+      )
+      .catch((err) => {
+        logVerbose(`hooks: session_start failed: ${String(err)}`);
+      });
   }
 
   const sessionCtx: TemplateContext = {

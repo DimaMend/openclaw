@@ -44,37 +44,41 @@ export function wrapToolWithHookRunner(tool: AnyAgentTool, ctxBase: HookContextB
       let hookParams = toParamsRecord(params);
 
       if (hasBefore) {
-        const before = await hookRunner.runBeforeToolCall(
-          {
-            toolName,
-            toolCallId: callId,
-            params: hookParams,
-          },
-          ctx,
-        );
-        if (before?.params && typeof before.params === "object") {
-          callParams = before.params;
-          hookParams = toParamsRecord(before.params);
-        }
-        if (before?.block) {
-          const reason = before.blockReason?.trim() || DEFAULT_BLOCK_REASON;
-          if (hasAfter) {
-            void hookRunner
-              .runAfterToolCall(
-                {
-                  toolName,
-                  toolCallId: callId,
-                  params: hookParams,
-                  error: reason,
-                  durationMs: 0,
-                },
-                ctx,
-              )
-              .catch((err) => {
-                logVerbose(`hooks: after_tool_call failed: ${formatErrorMessage(err)}`);
-              });
+        try {
+          const before = await hookRunner.runBeforeToolCall(
+            {
+              toolName,
+              toolCallId: callId,
+              params: hookParams,
+            },
+            ctx,
+          );
+          if (before?.params && typeof before.params === "object") {
+            callParams = before.params;
+            hookParams = toParamsRecord(before.params);
           }
-          throw new Error(reason);
+          if (before?.block) {
+            const reason = before.blockReason?.trim() || DEFAULT_BLOCK_REASON;
+            if (hasAfter) {
+              void hookRunner
+                .runAfterToolCall(
+                  {
+                    toolName,
+                    toolCallId: callId,
+                    params: hookParams,
+                    error: reason,
+                    durationMs: 0,
+                  },
+                  ctx,
+                )
+                .catch((err) => {
+                  logVerbose(`hooks: after_tool_call failed: ${formatErrorMessage(err)}`);
+                });
+            }
+            throw new Error(reason);
+          }
+        } catch (err) {
+          logVerbose(`hooks: before_tool_call failed: ${formatErrorMessage(err)}`);
         }
       }
 
