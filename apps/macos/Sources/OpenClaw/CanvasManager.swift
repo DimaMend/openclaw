@@ -184,6 +184,18 @@ final class CanvasManager {
 
     private func maybeAutoNavigateToA2UI(controller: CanvasWindowController, a2uiUrl: String?) {
         guard let a2uiUrl else { return }
+        
+        // FIX: Prevent reload if already at the target URL (prevents A2UI flash-then-disappear bug)
+        // When gateway emits a snapshot after A2UI push, this guard prevents the page from reloading
+        // and clearing the just-rendered A2UI content.
+        if self.lastAutoA2UIUrl == a2uiUrl,
+           let current = controller.currentTarget?.trimmingCharacters(in: .whitespacesAndNewlines),
+           current == a2uiUrl
+        {
+            Self.logger.debug("canvas auto-nav skipped; already at target URL")
+            return
+        }
+        
         let shouldNavigate = controller.shouldAutoNavigateToA2UI(lastAutoTarget: self.lastAutoA2UIUrl)
         guard shouldNavigate else {
             Self.logger.debug("canvas auto-nav skipped; target unchanged")
