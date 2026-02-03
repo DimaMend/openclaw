@@ -340,7 +340,9 @@ export function resolveDiscordReplyDeliveryPlan(params: {
     deliverTarget = `channel:${params.threadChannel.id}`;
     replyTarget = deliverTarget;
   }
-  const allowReference = deliverTarget === originalReplyTarget;
+  // Allow reply references when staying in same channel or when in an existing thread
+  // (but not when creating a new thread, since we're posting inside it)
+  const allowReference = deliverTarget === originalReplyTarget || params.threadChannel !== null;
   const replyReference = createReplyReferencePlanner({
     replyToMode: allowReference ? params.replyToMode : "off",
     existingId: params.threadChannel ? params.messageId : undefined,
