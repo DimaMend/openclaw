@@ -1,0 +1,161 @@
+#!/bin/bash
+# Railway CLI helper - simplified interface for common operations
+
+set -euo pipefail
+
+usage() {
+    cat << 'EOF'
+Railway helper CLI
+
+USAGE:
+    rw <command> [options]
+
+COMMANDS:
+    status          Show project status
+    up              Deploy current directory
+    logs            View logs (live)
+    vars            List environment variables
+    set <K=V>       Set environment variable
+    run <cmd>       Run command with Railway env
+    ssh             SSH into running service
+    open            Open project in browser
+    
+    init            Initialize new project
+    link            Link to existing project
+    db <type>       Add database (postgres, mysql, redis, mongo)
+    
+    help            Show this help
+
+EXAMPLES:
+    rw status               # Show project status
+    rw up                   # Deploy
+    rw logs                 # View live logs
+    rw set NODE_ENV=prod    # Set env variable
+    rw run npm start        # Run with Railway env
+    rw db postgres          # Add PostgreSQL
+EOF
+}
+
+cmd_status() {
+    echo "=== Railway Project Status ==="
+    railway status
+    echo ""
+    echo "=== Services ==="
+    railway service 2>/dev/null || echo "(no services)"
+    echo ""
+    echo "=== Environment Variables ==="
+    railway variables 2>/dev/null | head -20 || echo "(none set)"
+}
+
+cmd_up() {
+    echo "🚂 Deploying to Railway..."
+    railway up "$@"
+}
+
+cmd_logs() {
+    railway logs "$@"
+}
+
+cmd_vars() {
+    railway variables "$@"
+}
+
+cmd_set() {
+    if [[ $# -eq 0 ]]; then
+        echo "Error: variable required (KEY=value)"
+        exit 1
+    fi
+    railway variables set "$@"
+    echo "[OK] Variable(s) set"
+}
+
+cmd_run() {
+    if [[ $# -eq 0 ]]; then
+        echo "Error: command required"
+        echo "Usage: rw run <command>"
+        exit 1
+    fi
+    railway run "$@"
+}
+
+cmd_ssh() {
+    railway ssh "$@"
+}
+
+cmd_open() {
+    railway open
+}
+
+cmd_init() {
+    railway init "$@"
+}
+
+cmd_link() {
+    railway link "$@"
+}
+
+cmd_db() {
+    local db_type="${1:-}"
+    
+    case "$db_type" in
+        postgres|postgresql)
+            railway add --plugin postgresql
+            echo "[OK] PostgreSQL added"
+            ;;
+        mysql)
+            railway add --plugin mysql
+            echo "[OK] MySQL added"
+            ;;
+        redis)
+            railway add --plugin redis
+            echo "[OK] Redis added"
+            ;;
+        mongo|mongodb)
+            railway add --plugin mongodb
+            echo "[OK] MongoDB added"
+            ;;
+        "")
+            echo "Available databases:"
+            echo "  postgres  - PostgreSQL"
+            echo "  mysql     - MySQL"
+            echo "  redis     - Redis"
+            echo "  mongo     - MongoDB"
+            echo ""
+            echo "Usage: rw db <type>"
+            ;;
+        *)
+            echo "Unknown database: $db_type"
+            echo "Available: postgres, mysql, redis, mongo"
+            exit 1
+            ;;
+    esac
+}
+
+# Main
+if [[ $# -eq 0 ]]; then
+    usage
+    exit 0
+fi
+
+command="$1"
+shift
+
+case "$command" in
+    status)  cmd_status "$@" ;;
+    up)      cmd_up "$@" ;;
+    logs)    cmd_logs "$@" ;;
+    vars)    cmd_vars "$@" ;;
+    set)     cmd_set "$@" ;;
+    run)     cmd_run "$@" ;;
+    ssh)     cmd_ssh "$@" ;;
+    open)    cmd_open "$@" ;;
+    init)    cmd_init "$@" ;;
+    link)    cmd_link "$@" ;;
+    db)      cmd_db "$@" ;;
+    help|-h|--help) usage ;;
+    *)
+        echo "Unknown command: $command"
+        echo "Run 'rw help' for usage"
+        exit 1
+        ;;
+esac
