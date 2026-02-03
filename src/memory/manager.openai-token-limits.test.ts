@@ -1,4 +1,4 @@
-import { countTokens, encode } from "gpt-tokenizer/encoding/cl100k_base";
+import { countTokens, decode, encode } from "gpt-tokenizer/encoding/cl100k_base";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -119,12 +119,12 @@ describe("memory openai embedding token limits", () => {
     }
   });
 
-  it("does not split chunks under 8192 tokens", async () => {
-    // Create content that fits exactly within the limit
-    const perWord = encode("test ").length;
-    const repetitions = Math.floor(8192 / perWord);
-    const content = "test ".repeat(repetitions);
-    expect(countTokens(content)).toBeLessThanOrEqual(8192);
+  it("does not split chunks at exactly 8192 tokens", async () => {
+    // Build content of exactly 8192 cl100k tokens to catch off-by-one regressions
+    const encoded = encode("test ".repeat(10000));
+    const exactSlice = encoded.slice(0, 8192);
+    const content = decode(exactSlice);
+    expect(countTokens(content)).toBe(8192);
 
     await fs.writeFile(path.join(workspaceDir, "memory", "2026-02-06.md"), content);
 

@@ -104,7 +104,7 @@ const EMBEDDING_QUERY_TIMEOUT_LOCAL_MS = 5 * 60_000;
 const EMBEDDING_BATCH_TIMEOUT_REMOTE_MS = 2 * 60_000;
 const EMBEDDING_BATCH_TIMEOUT_LOCAL_MS = 10 * 60_000;
 const OPENAI_EMBEDDING_MAX_TOKENS = 8192;
-const OPENAI_EMBEDDING_DEBUG_OVERHEAD_PER_ITEM = 1;
+const OPENAI_EMBEDDING_OVERHEAD_PER_ITEM = 1;
 
 const log = createSubsystemLogger("memory");
 const debugEmbeddings = isTruthyEnvValue(process.env.OPENCLAW_DEBUG_MEMORY_EMBEDDINGS);
@@ -1694,8 +1694,7 @@ export class MemoryIndexManager implements MemorySearchManager {
       }
     }
     const avgTokens = Math.round(totalTokens / items);
-    const perItemOverhead =
-      this.provider.id === "openai" ? OPENAI_EMBEDDING_DEBUG_OVERHEAD_PER_ITEM : 0;
+    const perItemOverhead = this.provider.id === "openai" ? OPENAI_EMBEDDING_OVERHEAD_PER_ITEM : 0;
     const totalTokensWithOverhead = totalTokens + items * perItemOverhead;
     return {
       items,
@@ -1716,8 +1715,7 @@ export class MemoryIndexManager implements MemorySearchManager {
     let batchIndex = 0;
     const batchCap =
       this.provider.id === "openai" ? OPENAI_EMBEDDING_MAX_TOKENS : EMBEDDING_BATCH_MAX_TOKENS;
-    const perItemOverhead =
-      this.provider.id === "openai" ? OPENAI_EMBEDDING_DEBUG_OVERHEAD_PER_ITEM : 0;
+    const perItemOverhead = this.provider.id === "openai" ? OPENAI_EMBEDDING_OVERHEAD_PER_ITEM : 0;
 
     const flush = () => {
       if (current.length === 0) {
@@ -1824,8 +1822,8 @@ export class MemoryIndexManager implements MemorySearchManager {
       });
       for (let offset = 0; offset < encoded.length; offset += maxTokens) {
         const slice = encoded.slice(offset, offset + maxTokens);
-        const text = decodeTokensCl100k(slice).trim();
-        if (!text) {
+        const text = decodeTokensCl100k(slice);
+        if (!text.trim()) {
           continue;
         }
         out.push({
