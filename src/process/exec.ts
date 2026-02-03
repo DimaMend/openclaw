@@ -79,6 +79,18 @@ export type CommandOptions = {
 };
 
 /**
+ * Environment variables that are explicitly allowed through even if
+ * they match sensitive patterns. These are required for npm to work
+ * with private registries.
+ */
+const NPM_ALLOWLIST = new Set([
+  "NODE_AUTH_TOKEN",
+  "NPM_TOKEN",
+  "NPM_CONFIG_TOKEN",
+  "npm_config_token",
+]);
+
+/**
  * Sensitive environment variable patterns that should be filtered
  * when running npm install for hooks/plugins to prevent credential
  * exfiltration via malicious lifecycle scripts.
@@ -87,11 +99,16 @@ const SENSITIVE_ENV_PATTERNS = [
   // Generic sensitive patterns - match anywhere in the key name
   /SECRET/i,
   /PASSWORD/i,
-  /TOKEN/i,
   /CREDENTIAL/i,
   /API_KEY/i,
   /PRIVATE_KEY/i,
   /ACCESS_KEY/i,
+  // Token patterns - but exclude npm registry auth tokens (handled by allowlist)
+  /AUTH_TOKEN$/i, // Matches *_AUTH_TOKEN but NODE_AUTH_TOKEN is allowlisted
+  /ACCESS_TOKEN/i,
+  /REFRESH_TOKEN/i,
+  /BEARER_TOKEN/i,
+  /SESSION_TOKEN/i,
   // Specific provider prefixes
   /^OPENAI_/i,
   /^ANTHROPIC_/i,
@@ -127,6 +144,9 @@ const SENSITIVE_ENV_PATTERNS = [
  * Filters out sensitive credentials that could be exfiltrated by
  * malicious lifecycle scripts (preinstall, postinstall, etc.).
  *
+ * npm registry auth tokens (NODE_AUTH_TOKEN, NPM_TOKEN) are explicitly
+ * allowed to support private registries.
+ *
  * This is critical for security when installing hooks or plugins
  * from untrusted sources.
  */
@@ -137,6 +157,12 @@ export function sanitizeNpmInstallEnv(
 
   for (const [key, value] of Object.entries(env)) {
     if (value === undefined) {
+      continue;
+    }
+
+    // Allow npm registry auth tokens through (required for private registries)
+    if (NPM_ALLOWLIST.has(key)) {
+      result[key] = value;
       continue;
     }
 

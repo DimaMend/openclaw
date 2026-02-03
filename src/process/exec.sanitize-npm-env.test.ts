@@ -12,8 +12,6 @@ describe("sanitizeNpmInstallEnv", () => {
       AWS_SECRET_ACCESS_KEY: "aws-secret",
       AZURE_API_KEY: "azure-secret",
       GITHUB_TOKEN: "ghp_secret",
-      NPM_TOKEN: "npm_secret",
-      NODE_AUTH_TOKEN: "node-auth-secret",
       SAFE_VAR: "safe-value",
     });
 
@@ -29,16 +27,33 @@ describe("sanitizeNpmInstallEnv", () => {
     expect(env.AWS_SECRET_ACCESS_KEY).toBeUndefined();
     expect(env.AZURE_API_KEY).toBeUndefined();
     expect(env.GITHUB_TOKEN).toBeUndefined();
-    expect(env.NPM_TOKEN).toBeUndefined();
-    expect(env.NODE_AUTH_TOKEN).toBeUndefined();
   });
 
-  it("filters keys containing SECRET, TOKEN, KEY, PASSWORD patterns", () => {
+  it("preserves npm registry auth tokens for private registry support", () => {
+    const env = sanitizeNpmInstallEnv({
+      PATH: "/usr/bin",
+      NPM_TOKEN: "npm_secret",
+      NODE_AUTH_TOKEN: "node-auth-secret",
+      NPM_CONFIG_TOKEN: "npm-config-token",
+      npm_config_token: "npm-config-token-lower",
+      OTHER_AUTH_TOKEN: "should-be-filtered",
+    });
+
+    // npm auth tokens should be preserved (required for private registries)
+    expect(env.NPM_TOKEN).toBe("npm_secret");
+    expect(env.NODE_AUTH_TOKEN).toBe("node-auth-secret");
+    expect(env.NPM_CONFIG_TOKEN).toBe("npm-config-token");
+    expect(env.npm_config_token).toBe("npm-config-token-lower");
+
+    // Other *_AUTH_TOKEN vars should still be filtered
+    expect(env.OTHER_AUTH_TOKEN).toBeUndefined();
+  });
+
+  it("filters keys containing SECRET, KEY, PASSWORD, CREDENTIAL patterns", () => {
     const env = sanitizeNpmInstallEnv({
       PATH: "/usr/bin",
       MY_SECRET_VALUE: "secret",
       DATABASE_PASSWORD: "dbpass",
-      AUTH_TOKEN: "token",
       API_KEY: "key",
       SOME_CREDENTIAL: "cred",
       NORMAL_VAR: "normal",
@@ -49,9 +64,29 @@ describe("sanitizeNpmInstallEnv", () => {
 
     expect(env.MY_SECRET_VALUE).toBeUndefined();
     expect(env.DATABASE_PASSWORD).toBeUndefined();
-    expect(env.AUTH_TOKEN).toBeUndefined();
     expect(env.API_KEY).toBeUndefined();
     expect(env.SOME_CREDENTIAL).toBeUndefined();
+  });
+
+  it("filters token patterns except npm allowlisted ones", () => {
+    const env = sanitizeNpmInstallEnv({
+      PATH: "/usr/bin",
+      ACCESS_TOKEN: "access",
+      REFRESH_TOKEN: "refresh",
+      BEARER_TOKEN: "bearer",
+      SESSION_TOKEN: "session",
+      SOME_AUTH_TOKEN: "auth",
+      NODE_AUTH_TOKEN: "npm-auth", // allowlisted
+    });
+
+    expect(env.PATH).toBe("/usr/bin");
+    expect(env.NODE_AUTH_TOKEN).toBe("npm-auth"); // preserved
+
+    expect(env.ACCESS_TOKEN).toBeUndefined();
+    expect(env.REFRESH_TOKEN).toBeUndefined();
+    expect(env.BEARER_TOKEN).toBeUndefined();
+    expect(env.SESSION_TOKEN).toBeUndefined();
+    expect(env.SOME_AUTH_TOKEN).toBeUndefined();
   });
 
   it("filters common channel tokens (Discord, Slack, Telegram)", () => {
