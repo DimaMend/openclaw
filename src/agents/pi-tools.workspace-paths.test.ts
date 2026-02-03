@@ -1,8 +1,50 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { createOpenClawCodingTools } from "./pi-tools.js";
+
+const FALLBACK_CWD = process.env.GITHUB_WORKSPACE ?? process.cwd();
+
+afterEach(() => {
+  try {
+    process.chdir(FALLBACK_CWD);
+  } catch {
+    // best effort
+  }
+});
+
+function safeCwd(): string {
+  try {
+    return process.cwd();
+  } catch {
+    return FALLBACK_CWD;
+  }
+}
+
+function safeChdir(dir: string) {
+  try {
+    process.chdir(dir);
+  } catch {
+    if (dir !== FALLBACK_CWD) {
+      try {
+        process.chdir(FALLBACK_CWD);
+      } catch {
+        // best effort
+      }
+    }
+  }
+}
+
+async function withCwd<T>(dir: string, fn: () => Promise<T>) {
+  const prevCwd = safeCwd();
+  try {
+    safeChdir(dir);
+    return await fn();
+  } finally {
+    safeChdir(prevCwd);
+  }
+}
 
 async function withTempDir<T>(prefix: string, fn: (dir: string) => Promise<T>) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -22,22 +64,18 @@ describe("workspace path resolution", () => {
   it("reads relative paths against workspaceDir even after cwd changes", async () => {
     await withTempDir("openclaw-ws-", async (workspaceDir) => {
       await withTempDir("openclaw-cwd-", async (otherDir) => {
-        const prevCwd = process.cwd();
         const testFile = "read.txt";
         const contents = "workspace read ok";
         await fs.writeFile(path.join(workspaceDir, testFile), contents, "utf8");
 
-        process.chdir(otherDir);
-        try {
+        await withCwd(otherDir, async () => {
           const tools = createOpenClawCodingTools({ workspaceDir });
           const readTool = tools.find((tool) => tool.name === "read");
           expect(readTool).toBeDefined();
 
           const result = await readTool?.execute("ws-read", { path: testFile });
           expect(getTextContent(result)).toContain(contents);
-        } finally {
-          process.chdir(prevCwd);
-        }
+        });
       });
     });
   });
@@ -45,12 +83,10 @@ describe("workspace path resolution", () => {
   it("writes relative paths against workspaceDir even after cwd changes", async () => {
     await withTempDir("openclaw-ws-", async (workspaceDir) => {
       await withTempDir("openclaw-cwd-", async (otherDir) => {
-        const prevCwd = process.cwd();
         const testFile = "write.txt";
         const contents = "workspace write ok";
 
-        process.chdir(otherDir);
-        try {
+        await withCwd(otherDir, async () => {
           const tools = createOpenClawCodingTools({ workspaceDir });
           const writeTool = tools.find((tool) => tool.name === "write");
           expect(writeTool).toBeDefined();
@@ -62,9 +98,7 @@ describe("workspace path resolution", () => {
 
           const written = await fs.readFile(path.join(workspaceDir, testFile), "utf8");
           expect(written).toBe(contents);
-        } finally {
-          process.chdir(prevCwd);
-        }
+        });
       });
     });
   });
@@ -72,12 +106,10 @@ describe("workspace path resolution", () => {
   it("edits relative paths against workspaceDir even after cwd changes", async () => {
     await withTempDir("openclaw-ws-", async (workspaceDir) => {
       await withTempDir("openclaw-cwd-", async (otherDir) => {
-        const prevCwd = process.cwd();
         const testFile = "edit.txt";
         await fs.writeFile(path.join(workspaceDir, testFile), "hello world", "utf8");
 
-        process.chdir(otherDir);
-        try {
+        await withCwd(otherDir, async () => {
           const tools = createOpenClawCodingTools({ workspaceDir });
           const editTool = tools.find((tool) => tool.name === "edit");
           expect(editTool).toBeDefined();
@@ -90,9 +122,7 @@ describe("workspace path resolution", () => {
 
           const updated = await fs.readFile(path.join(workspaceDir, testFile), "utf8");
           expect(updated).toBe("hello openclaw");
-        } finally {
-          process.chdir(prevCwd);
-        }
+        });
       });
     });
   });
