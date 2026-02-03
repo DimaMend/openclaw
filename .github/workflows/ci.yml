@@ -685,7 +685,7 @@ jobs:
           exit 1
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts=false --config.engine-strict=false --config.enable-pre-post-scripts=true
 
       - name: Security audit
         run: |
@@ -693,9 +693,17 @@ jobs:
           if pnpm audit --audit-level=high 2>&1 | tee audit-output.txt; then
             echo "✅ No high/critical vulnerabilities found" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "❌ Vulnerabilities detected:" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ Vulnerabilities detected (see artifact for full report):" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
-            head -100 audit-output.txt >> "$GITHUB_STEP_SUMMARY"
+            tail -50 audit-output.txt >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+
+      - name: Upload audit report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report
+          path: audit-output.txt
+          retention-days: 7
