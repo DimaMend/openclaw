@@ -1100,7 +1100,7 @@ async function elevenLabsTTS(params: {
     return Buffer.from(await response.arrayBuffer());
   } catch (err) {
     // Sanitize error to prevent API key leakage in logs (CWE-532)
-    throw new Error(sanitizeTtsError(err));
+    throw new Error(sanitizeTtsError(err), { cause: err });
   } finally {
     clearTimeout(timeout);
   }
@@ -1149,7 +1149,7 @@ async function openaiTTS(params: {
     return Buffer.from(await response.arrayBuffer());
   } catch (err) {
     // Sanitize error to prevent API key leakage in logs (CWE-532)
-    throw new Error(sanitizeTtsError(err));
+    throw new Error(sanitizeTtsError(err), { cause: err });
   } finally {
     clearTimeout(timeout);
   }
