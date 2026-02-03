@@ -458,7 +458,7 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
         isThreadRoot: false, // @vector-im/matrix-bot-sdk doesn't have this info readily available
       });
 
-      const route = core.channel.routing.resolveAgentRoute({
+      const baseRoute = core.channel.routing.resolveAgentRoute({
         cfg,
         channel: "matrix",
         peer: {
@@ -466,8 +466,20 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
           id: isDirectMessage ? senderId : roomId,
         },
       });
+
+      // Append thread marker for session isolation (rooms only, not DMs)
+      const route = {
+        ...baseRoute,
+        sessionKey:
+          threadRootId && !isDirectMessage
+            ? `${baseRoute.sessionKey}:thread:${threadRootId}`
+            : baseRoute.sessionKey,
+      };
       const envelopeFrom = isDirectMessage ? senderName : (roomName ?? roomId);
-      const textWithId = `${bodyText}\n[matrix event id: ${messageId} room: ${roomId}]`;
+      const textWithId =
+        threadRootId && !isDirectMessage
+          ? `${bodyText}\n[matrix event id: ${messageId} room: ${roomId} thread: ${threadRootId}]`
+          : `${bodyText}\n[matrix event id: ${messageId} room: ${roomId}]`;
       const storePath = core.channel.session.resolveStorePath(cfg.session?.store, {
         agentId: route.agentId,
       });
@@ -494,7 +506,8 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
         To: `room:${roomId}`,
         SessionKey: route.sessionKey,
         AccountId: route.accountId,
-        ChatType: isDirectMessage ? "direct" : "channel",
+        ChatType:
+          threadRootId && !isDirectMessage ? "thread" : isDirectMessage ? "direct" : "channel",
         ConversationLabel: envelopeFrom,
         SenderName: senderName,
         SenderId: senderId,
