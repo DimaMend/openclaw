@@ -142,6 +142,61 @@ function filterDeliveryMirrorMessages(messages: AgentMessage[]): AgentMessage[] 
   return touched ? out : messages;
 }
 
+function hasToolCallBlocks(message: AgentMessage): boolean {
+  if (!message || typeof message !== "object" || message.role !== "assistant") {
+    return false;
+  }
+  const content = message.content;
+  if (!Array.isArray(content)) {
+    return false;
+  }
+  return content.some((block) => {
+    if (!block || typeof block !== "object") {
+      return false;
+    }
+    const rec = block as { type?: unknown };
+    return rec.type === "toolCall" || rec.type === "toolUse" || rec.type === "functionCall";
+  });
+}
+
+function isForeignToolUseMessage(
+  message: AgentMessage,
+  ctx: { provider?: string | null; modelApi?: string | null },
+): boolean {
+  if (!hasToolCallBlocks(message)) {
+    return false;
+  }
+  const normalize = (value: unknown) =>
+    typeof value === "string" ? value.trim().toLowerCase() : "";
+  const expectedProvider = normalize(ctx.provider);
+  const expectedApi = normalize(ctx.modelApi);
+  const msgProvider = normalize((message as { provider?: unknown }).provider);
+  const msgApi = normalize((message as { api?: unknown }).api);
+  if (expectedProvider && msgProvider && expectedProvider !== msgProvider) {
+    return true;
+  }
+  if (expectedApi && msgApi && expectedApi !== msgApi) {
+    return true;
+  }
+  return false;
+}
+
+function filterForeignToolUseMessages(
+  messages: AgentMessage[],
+  ctx: { provider?: string | null; modelApi?: string | null },
+): AgentMessage[] {
+  let touched = false;
+  const out: AgentMessage[] = [];
+  for (const msg of messages) {
+    if (isForeignToolUseMessage(msg, ctx)) {
+      touched = true;
+      continue;
+    }
+    out.push(msg);
+  }
+  return touched ? out : messages;
+}
+
 function findUnsupportedSchemaKeywords(schema: unknown, path: string): string[] {
   if (!schema || typeof schema !== "object") {
     return [];
@@ -363,8 +418,12 @@ export async function sanitizeSessionHistory(params: {
       modelId: params.modelId,
     });
   const withoutDeliveryMirror = filterDeliveryMirrorMessages(params.messages);
+  const withoutForeignToolUse = filterForeignToolUseMessages(withoutDeliveryMirror, {
+    provider: params.provider,
+    modelApi: params.modelApi,
+  });
   const sanitizedImages = await sanitizeSessionMessagesImages(
-    withoutDeliveryMirror,
+    withoutForeignToolUse,
     "session:history",
     {
       sanitizeMode: policy.sanitizeMode,
