@@ -388,6 +388,8 @@ export const OpenClawSchema = z
             token: z.string().optional(),
             password: z.string().optional(),
             allowTailscale: z.boolean().optional(),
+            trustLocalhost: z.boolean().optional(),
+            allowedHosts: z.array(z.string()).optional(),
           })
           .strict()
           .optional(),

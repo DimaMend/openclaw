@@ -25,7 +25,7 @@ import { upsertPresence } from "../../../infra/system-presence.js";
 import { loadVoiceWakeConfig } from "../../../infra/voicewake.js";
 import { rawDataToString } from "../../../infra/ws.js";
 import { isGatewayCliClient, isWebchatClient } from "../../../utils/message-channel.js";
-import { authorizeGatewayConnect, isLocalDirectRequest } from "../../auth.js";
+import { authorizeGatewayConnect, isLocalDirectRequest, validateHostHeader } from "../../auth.js";
 import { buildDeviceAuthPayload } from "../../device-auth.js";
 import { isLoopbackAddress, isTrustedProxyAddress, resolveGatewayClientIp } from "../../net.js";
 import { resolveNodeCommandAllowlist } from "../../node-command-policy.js";
@@ -206,6 +206,19 @@ export function attachGatewayWsMessageHandler(params: {
   const hostIsTailscaleServe = hostName.endsWith(".ts.net");
   const hostIsLocalish = hostIsLocal || hostIsTailscaleServe;
   const isLocalClient = isLocalDirectRequest(upgradeReq, trustedProxies);
+
+  // Validate Host header to protect against DNS rebinding attacks.
+  // This check runs even for local clients as an additional defense layer.
+  const hostValidation = validateHostHeader(upgradeReq, resolvedAuth.allowedHosts);
+  if (!hostValidation.valid) {
+    logWsControl.warn(
+      `Rejected connection with invalid Host header: ${hostValidation.host || "(empty)"} ` +
+        `(reason: ${hostValidation.reason}). Possible DNS rebinding attack.`,
+    );
+    close(1008, "invalid host header");
+    return;
+  }
+
   const reportedClientIp =
     isLocalClient || hasUntrustedProxyHeaders
       ? undefined
@@ -515,6 +528,9 @@ export function attachGatewayWsMessageHandler(params: {
             close(1008, "device signature expired");
             return;
           }
+          // Nonce is required for remote clients. Local clients (determined by
+          // isLocalDirectRequest) can skip the nonce for backward compatibility,
+          // but still must pass Host header validation (DNS rebinding protection).
           const nonceRequired = !isLocalClient;
           const providedNonce = typeof device.nonce === "string" ? device.nonce.trim() : "";
           if (nonceRequired && !providedNonce) {
