@@ -11,6 +11,8 @@ export {
   applyMoonshotProviderConfig,
   applyOpenrouterConfig,
   applyOpenrouterProviderConfig,
+  applyQianfanConfig,
+  applyQianfanProviderConfig,
   applySyntheticConfig,
   applySyntheticProviderConfig,
   applyVeniceConfig,
@@ -36,6 +38,7 @@ export {
 } from "./onboard-auth.config-opencode.js";
 export {
   OPENROUTER_DEFAULT_MODEL_REF,
+  QIANFAN_DEFAULT_MODEL_REF,
   setAnthropicApiKey,
   setGeminiApiKey,
   setKimiCodingApiKey,
@@ -43,6 +46,7 @@ export {
   setMoonshotApiKey,
   setOpencodeZenApiKey,
   setOpenrouterApiKey,
+  setQianfanApiKey,
   setSyntheticApiKey,
   setVeniceApiKey,
   setVercelAiGatewayApiKey,
@@ -57,6 +61,7 @@ export {
   buildMinimaxApiModelDefinition,
   buildMinimaxModelDefinition,
   buildMoonshotModelDefinition,
+  buildQianfanModelDefinition,
   DEFAULT_MINIMAX_BASE_URL,
   KIMI_CODING_MODEL_ID,
   KIMI_CODING_MODEL_REF,
@@ -66,4 +71,6 @@ export {
   MOONSHOT_BASE_URL,
   MOONSHOT_DEFAULT_MODEL_ID,
   MOONSHOT_DEFAULT_MODEL_REF,
+  QIANFAN_BASE_URL,
+  QIANFAN_DEFAULT_MODEL_ID,
 } from "./onboard-auth.models.js";

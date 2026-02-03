@@ -1,5 +1,9 @@
 import type { OpenClawConfig } from "../config/config.js";
-import { buildXiaomiProvider, XIAOMI_DEFAULT_MODEL_ID } from "../agents/models-config.providers.js";
+import {
+  buildQianfanProvider,
+  buildXiaomiProvider,
+  XIAOMI_DEFAULT_MODEL_ID,
+} from "../agents/models-config.providers.js";
 import {
   buildSyntheticModelDefinition,
   SYNTHETIC_BASE_URL,
@@ -14,6 +18,7 @@ import {
 } from "../agents/venice-models.js";
 import {
   OPENROUTER_DEFAULT_MODEL_REF,
+  QIANFAN_DEFAULT_MODEL_REF,
   VERCEL_AI_GATEWAY_DEFAULT_MODEL_REF,
   XIAOMI_DEFAULT_MODEL_REF,
   ZAI_DEFAULT_MODEL_REF,
@@ -24,6 +29,8 @@ import {
   MOONSHOT_BASE_URL,
   MOONSHOT_DEFAULT_MODEL_ID,
   MOONSHOT_DEFAULT_MODEL_REF,
+  QIANFAN_BASE_URL,
+  QIANFAN_DEFAULT_MODEL_ID,
 } from "./onboard-auth.models.js";
 
 export function applyZaiConfig(cfg: OpenClawConfig): OpenClawConfig {
@@ -502,6 +509,77 @@ export function applyAuthProfileConfig(
       ...cfg.auth,
       profiles,
       ...(order ? { order } : {}),
+    },
+  };
+}
+
+export function applyQianfanProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
+  const models = { ...cfg.agents?.defaults?.models };
+  models[QIANFAN_DEFAULT_MODEL_REF] = {
+    ...models[QIANFAN_DEFAULT_MODEL_REF],
+    alias: models[QIANFAN_DEFAULT_MODEL_REF]?.alias ?? "ERNIE",
+  };
+
+  const providers = { ...cfg.models?.providers };
+  const existingProvider = providers.qianfan;
+  const defaultProvider = buildQianfanProvider();
+  const existingModels = Array.isArray(existingProvider?.models) ? existingProvider.models : [];
+  const defaultModels = defaultProvider.models ?? [];
+  const hasDefaultModel = existingModels.some((model) => model.id === QIANFAN_DEFAULT_MODEL_ID);
+  const mergedModels =
+    existingModels.length > 0
+      ? hasDefaultModel
+        ? existingModels
+        : [...existingModels, ...defaultModels]
+      : defaultModels;
+  const { apiKey: existingApiKey, ...existingProviderRest } = (existingProvider ?? {}) as Record<
+    string,
+    unknown
+  > as { apiKey?: string };
+  const resolvedApiKey = typeof existingApiKey === "string" ? existingApiKey : undefined;
+  const normalizedApiKey = resolvedApiKey?.trim();
+  providers.qianfan = {
+    ...existingProviderRest,
+    baseUrl: QIANFAN_BASE_URL,
+    api: "openai-completions",
+    ...(normalizedApiKey ? { apiKey: normalizedApiKey } : {}),
+    models: mergedModels.length > 0 ? mergedModels : defaultProvider.models,
+  };
+
+  return {
+    ...cfg,
+    agents: {
+      ...cfg.agents,
+      defaults: {
+        ...cfg.agents?.defaults,
+        models,
+      },
+    },
+    models: {
+      mode: cfg.models?.mode ?? "merge",
+      providers,
+    },
+  };
+}
+
+export function applyQianfanConfig(cfg: OpenClawConfig): OpenClawConfig {
+  const next = applyQianfanProviderConfig(cfg);
+  const existingModel = next.agents?.defaults?.model;
+  return {
+    ...next,
+    agents: {
+      ...next.agents,
+      defaults: {
+        ...next.agents?.defaults,
+        model: {
+          ...(existingModel && "fallbacks" in (existingModel as Record<string, unknown>)
+            ? {
+                fallbacks: (existingModel as { fallbacks?: string[] }).fallbacks,
+              }
+            : undefined),
+          primary: QIANFAN_DEFAULT_MODEL_REF,
+        },
+      },
     },
   };
 }
