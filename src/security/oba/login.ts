@@ -10,6 +10,8 @@ export interface ObaLoginResult {
   error?: string;
 }
 
+const OBA_TOKEN_RE = /^oba_[0-9a-f]{64}$/i;
+
 /**
  * Start a localhost callback server, open the browser to OBA's CLI auth endpoint,
  * and wait for the redirect with the PAT.
@@ -94,6 +96,8 @@ function waitForCallback(
       if (error) {
         res.statusCode = 200;
         res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Cache-Control", "no-store");
+        res.setHeader("Pragma", "no-cache");
         res.end(errorPage(error));
         finish({ ok: false, error });
         return;
@@ -113,8 +117,17 @@ function waitForCallback(
         return;
       }
 
+      if (!OBA_TOKEN_RE.test(token)) {
+        res.statusCode = 400;
+        res.setHeader("Content-Type", "text/plain");
+        res.end("Invalid token format");
+        return;
+      }
+
       res.statusCode = 200;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Pragma", "no-cache");
       res.end(successPage());
       finish({ ok: true, token });
     });
@@ -125,6 +138,9 @@ function waitForCallback(
   });
 }
 
+const CLEAR_URL_SCRIPT =
+  "<script>if(history.replaceState)history.replaceState({},'','/callback')</script>";
+
 function successPage(): string {
   return [
     "<!DOCTYPE html><html><head><meta charset='utf-8'>",
@@ -133,6 +149,7 @@ function successPage(): string {
     "h2{color:#16a34a}</style></head>",
     "<body><h2>Login successful</h2>",
     "<p>You can close this window and return to the terminal.</p>",
+    CLEAR_URL_SCRIPT,
     "</body></html>",
   ].join("");
 }
@@ -145,6 +162,7 @@ function errorPage(error: string): string {
     ".error{color:#dc2626}</style></head>",
     `<body><h2 class="error">Login failed</h2>`,
     `<p>${escapeHtml(error)}</p>`,
+    CLEAR_URL_SCRIPT,
     "</body></html>",
   ].join("");
 }
@@ -160,7 +178,12 @@ function escapeHtml(s: string): string {
 /** Save PAT to ~/.openclaw/oba/token with owner-only permissions. */
 export function saveObaToken(token: string): string {
   const obaDir = path.dirname(getObaKeysDir());
-  fs.mkdirSync(obaDir, { recursive: true });
+  fs.mkdirSync(obaDir, { recursive: true, mode: 0o700 });
+  try {
+    fs.chmodSync(obaDir, 0o700);
+  } catch {
+    // Windows ignores POSIX perms
+  }
   const tokenFile = path.join(obaDir, "token");
   fs.writeFileSync(tokenFile, token, { mode: 0o600 });
   return tokenFile;
