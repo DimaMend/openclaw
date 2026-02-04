@@ -33,11 +33,19 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
+# Allow non-root user to write temp files during runtime/tests.
+RUN chown -R node:node /app
+
 # Security hardening: Run as non-root user
 # The node:22-bookworm image includes a 'node' user (uid 1000)
 # This reduces the attack surface by preventing container escape via root privileges
 USER node
 
-# Default CMD runs the gateway via render-start.sh (creates config, binds to PORT, uses OPENCLAW_* / CLAWDBOT_* env).
-# Render and other providers can override with dockerCommand; if not set, this ensures the gateway starts instead of CLI help.
-CMD ["/bin/sh", "scripts/render-start.sh"]
+# Start gateway server with default config.
+# Binds to loopback (127.0.0.1) by default for security.
+#
+# For container platforms requiring external health checks:
+#   1. Set OPENCLAW_GATEWAY_TOKEN or OPENCLAW_GATEWAY_PASSWORD env var
+#   2. Override CMD: ["node","dist/index.js","gateway","--allow-unconfigured","--bind","lan"]
+# For Render: override CMD with ["/bin/sh", "scripts/render-start.sh"] in dockerCommand.
+CMD ["node", "dist/index.js", "gateway", "--allow-unconfigured"]
