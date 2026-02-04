@@ -161,6 +161,8 @@ export function createOpenClawCodingTools(options?: {
   requireExplicitMessageTarget?: boolean;
   /** If true, omit the message tool from the tool list. */
   disableMessageTool?: boolean;
+  /** Extra tools (e.g. from MCP) to include. */
+  extraTools?: AnyAgentTool[];
 }): AnyAgentTool[] {
   const execToolName = "exec";
   const sandbox = options?.sandbox?.enabled ? options.sandbox : undefined;
@@ -356,6 +358,7 @@ export function createOpenClawCodingTools(options?: {
       disableMessageTool: options?.disableMessageTool,
       requesterAgentIdOverride: agentId,
     }),
+    ...(options?.extraTools ?? []),
   ];
   const coreToolNames = new Set(
     tools
