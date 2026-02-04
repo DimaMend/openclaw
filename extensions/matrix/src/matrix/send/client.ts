@@ -39,25 +39,29 @@ export async function resolveMatrixClient(opts: {
   if (active) {
     return { client: active, stopOnDone: false };
   }
-  // Fall back to any active client for backward compatibility
-  const anyActive = getAnyActiveMatrixClient();
-  if (anyActive) {
-    return { client: anyActive, stopOnDone: false };
+  // Only fall back to any active client when no specific account is requested
+  if (!opts.accountId) {
+    const anyActive = getAnyActiveMatrixClient();
+    if (anyActive) {
+      return { client: anyActive, stopOnDone: false };
+    }
   }
   const shouldShareClient = Boolean(process.env.OPENCLAW_GATEWAY_PORT);
   if (shouldShareClient) {
     const client = await resolveSharedMatrixClient({
       timeoutMs: opts.timeoutMs,
+      accountId: opts.accountId,
     });
     return { client, stopOnDone: false };
   }
-  const auth = await resolveMatrixAuth();
+  const auth = await resolveMatrixAuth({ accountId: opts.accountId });
   const client = await createMatrixClient({
     homeserver: auth.homeserver,
     userId: auth.userId,
     accessToken: auth.accessToken,
     encryption: auth.encryption,
     localTimeoutMs: opts.timeoutMs,
+    accountId: opts.accountId,
   });
   if (auth.encryption && client.crypto) {
     try {
