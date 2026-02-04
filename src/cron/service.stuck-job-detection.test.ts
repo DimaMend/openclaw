@@ -2,9 +2,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CronStoreFile } from "./types.js";
 import { CronService } from "./service.js";
 import { STUCK_RUN_MS } from "./service/jobs.js";
-import type { CronStoreFile } from "./types.js";
 
 const noopLogger = {
   debug: vi.fn(),
