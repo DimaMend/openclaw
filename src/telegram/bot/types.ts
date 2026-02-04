@@ -1,4 +1,4 @@
-import type { Chat, Message, User } from "@grammyjs/types";
+import type { Message } from "@grammyjs/types";
 
 /** App-specific stream mode for Telegram draft streaming. */
 export type TelegramStreamMode = "off" | "partial" | "block";
@@ -13,21 +13,6 @@ export type TelegramContext = {
   me?: { id?: number; username?: string };
   getFile: () => Promise<{ file_path?: string }>;
 };
-
-/**
- * Legacy forward metadata fields (deprecated in Telegram Bot API, removed from Grammy types).
- * Older messages may still carry these at runtime.
- */
-export type TelegramLegacyForwardMetadata = {
-  forward_from?: User;
-  forward_from_chat?: Chat;
-  forward_sender_name?: string;
-  forward_signature?: string;
-  forward_date?: number;
-};
-
-/** Message with both current and legacy forward metadata. */
-export type TelegramMessageWithForwardMetadata = Message & TelegramLegacyForwardMetadata;
 
 /** Telegram sticker metadata for context enrichment and caching. */
 export interface StickerMetadata {
