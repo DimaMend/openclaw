@@ -10,10 +10,7 @@ import type { OpenClawConfig } from "../../config/config.js";
 import type { OutboundSendDeps } from "./deliver.js";
 import type { MessagePollResult, MessageSendResult } from "./message.js";
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
-import {
-  assertMediaNotDataUrl,
-  resolveSandboxedMediaSource,
-} from "../../agents/sandbox-paths.js";
+import { assertMediaNotDataUrl, resolveSandboxedMediaSource } from "../../agents/sandbox-paths.js";
 import {
   readNumberParam,
   readStringArrayParam,
