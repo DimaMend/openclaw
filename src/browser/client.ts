@@ -84,6 +84,50 @@ export type SnapshotResult =
       labelsSkipped?: number;
       imagePath?: string;
       imageType?: "png" | "jpeg";
+    }
+  | {
+      ok: true;
+      format: "enhanced";
+      targetId: string;
+      url: string;
+      snapshot: string;
+      refs: Record<string, { role: string; name?: string; nth?: number }>;
+      stats: {
+        lines: number;
+        chars: number;
+        refs: number;
+        interactive: number;
+      };
+      viewport: {
+        height: number;
+        width: number;
+        offsetLeft: number;
+        offsetTop: number;
+        pageLeft: number;
+        pageTop: number;
+        scale: number;
+        clientWidth: number;
+        clientHeight: number;
+        scrollWidth: number;
+        scrollHeight: number;
+      };
+      visibleText: string;
+      interactiveRegionsCount: number;
+    }
+  | {
+      ok: true;
+      format: "hybrid";
+      targetId: string;
+      url: string;
+      snapshot: string;
+      refs: Record<string, { role: string; name?: string; nth?: number }>;
+      stats: {
+        lines: number;
+        chars: number;
+        refs: number;
+        interactive: number;
+      };
+      enhancedRegionsCount: number;
     };
 
 function buildProfileQuery(profile?: string): string {
