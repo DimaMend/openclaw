@@ -24,12 +24,12 @@ import { normalizeMessageChannel } from "../../utils/message-channel.js";
 import { isReasoningTagProvider } from "../../utils/provider-utils.js";
 import { resolveOpenClawAgentDir } from "../agent-paths.js";
 import { resolveSessionAgentIds } from "../agent-scope.js";
-import { resolveAgentIdentityPrompt } from "../identity-prompt.js";
 import { makeBootstrapWarn, resolveBootstrapContextForRun } from "../bootstrap-files.js";
 import { listChannelSupportedActions, resolveChannelMessageToolHints } from "../channel-tools.js";
 import { formatUserTime, resolveUserTimeFormat, resolveUserTimezone } from "../date-time.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../defaults.js";
 import { resolveOpenClawDocsPath } from "../docs-path.js";
+import { resolveAgentIdentityPrompt } from "../identity-prompt.js";
 import { getApiKeyForModel, resolveModelAuthMode } from "../model-auth.js";
 import { ensureOpenClawModelsJson } from "../models-config.js";
 import {
@@ -43,6 +43,7 @@ import {
 } from "../pi-settings.js";
 import { createOpenClawCodingTools } from "../pi-tools.js";
 import { resolveSandboxContext } from "../sandbox.js";
+import { repairSessionFileIfNeeded } from "../session-file-repair.js";
 import { guardSessionManager } from "../session-tool-result-guard-wrapper.js";
 import { acquireSessionWriteLock } from "../session-write-lock.js";
 import {
@@ -357,6 +358,7 @@ export async function compactEmbeddedPiSessionDirect(
       userTimeFormat,
       identity,
       contextFiles,
+      memoryCitationsMode: params.config?.memory?.citations,
     });
     const systemPromptOverride = createSystemPromptOverride(appendPrompt);
 
@@ -364,6 +366,10 @@ export async function compactEmbeddedPiSessionDirect(
       sessionFile: params.sessionFile,
     });
     try {
+      await repairSessionFileIfNeeded({
+        sessionFile: params.sessionFile,
+        warn: (message) => log.warn(message),
+      });
       await prewarmSessionFile(params.sessionFile);
       const transcriptPolicy = resolveTranscriptPolicy({
         modelApi: model.api,
@@ -407,7 +413,7 @@ export async function compactEmbeddedPiSessionDirect(
         sessionManager,
         settingsManager,
       });
-      applySystemPromptOverrideToSession(session, systemPromptOverride);
+      applySystemPromptOverrideToSession(session, systemPromptOverride());
 
       try {
         const prior = await sanitizeSessionHistory({

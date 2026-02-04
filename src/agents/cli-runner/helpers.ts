@@ -252,6 +252,7 @@ export function buildSystemPrompt(params: {
     userTimeFormat,
     contextFiles: params.contextFiles,
     ttsHint,
+    memoryCitationsMode: params.config?.memory?.citations,
   });
 }
 

@@ -29,9 +29,9 @@ import {
 } from "../../channel-tools.js";
 import { resolveOpenClawDocsPath } from "../../docs-path.js";
 import { isTimeoutError } from "../../failover-error.js";
+import { resolveAgentIdentityPrompt } from "../../identity-prompt.js";
 import { resolveModelAuthMode } from "../../model-auth.js";
 import { resolveDefaultModelForAgent } from "../../model-selection.js";
-import { resolveAgentIdentityPrompt } from "../../identity-prompt.js";
 import {
   isCloudCodeAssistFormatError,
   resolveBootstrapMaxChars,
@@ -47,6 +47,7 @@ import { toClientToolDefinitions } from "../../pi-tool-definition-adapter.js";
 import { createOpenClawCodingTools } from "../../pi-tools.js";
 import { resolveSandboxContext } from "../../sandbox.js";
 import { resolveSandboxRuntimeStatus } from "../../sandbox/runtime-status.js";
+import { repairSessionFileIfNeeded } from "../../session-file-repair.js";
 import { guardSessionManager } from "../../session-tool-result-guard-wrapper.js";
 import { acquireSessionWriteLock } from "../../session-write-lock.js";
 import {
@@ -373,6 +374,7 @@ export async function runEmbeddedAttempt(
       userTimeFormat,
       identity,
       contextFiles,
+      memoryCitationsMode: params.config?.memory?.citations,
     });
     const systemPromptReport = buildSystemPromptReport({
       source: "run",
@@ -406,6 +408,10 @@ export async function runEmbeddedAttempt(
     let sessionManager: ReturnType<typeof guardSessionManager> | undefined;
     let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
     try {
+      await repairSessionFileIfNeeded({
+        sessionFile: params.sessionFile,
+        warn: (message) => log.warn(message),
+      });
       const hadSessionFile = await fs
         .stat(params.sessionFile)
         .then(() => true)
@@ -482,7 +488,7 @@ export async function runEmbeddedAttempt(
         sessionManager,
         settingsManager,
       }));
-      applySystemPromptOverrideToSession(session, systemPromptOverride);
+      applySystemPromptOverrideToSession(session, systemPromptText);
       if (!session) {
         throw new Error("Embedded agent session missing");
       }
