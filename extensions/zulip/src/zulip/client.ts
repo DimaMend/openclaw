@@ -87,24 +87,38 @@ function withAuth(client: ZulipClient, init?: RequestInit): RequestInit {
 export async function parseJsonOrThrow(res: Response): Promise<unknown> {
   const text = await res.text();
 
-  // Zulip API endpoints should return JSON. If we get HTML (common with SSO/Cloudflare Access),
-  // treat it as an auth error so we don't report false positives like "Sent".
+  // Zulip API endpoints should return JSON.
+  // If we get HTML, it's often an auth/SSO/proxy login page (Cloudflare Access, SSO, etc.),
+  // but "non-JSON" can also be an upstream error page (502/503) or a misconfigured base URL.
   const contentType = (res.headers.get("content-type") || "").toLowerCase();
-  const looksLikeHtml = /^\s*<!doctype html/i.test(text) || /^\s*<html/i.test(text);
-  const expectsJson =
-    contentType.includes("application/json") || contentType.includes("application/");
+  const looksLikeHtml =
+    /^\s*<!doctype html/i.test(text) ||
+    /^\s*<html/i.test(text) ||
+    /^\s*<head/i.test(text) ||
+    /^\s*<meta\b/i.test(text);
 
   let payload: Record<string, unknown>;
   try {
     payload = text ? JSON.parse(text) : {};
   } catch {
-    if (looksLikeHtml || !expectsJson) {
-      const hint =
-        "Non-JSON response from Zulip. This usually means a reverse-proxy/SSO (e.g. Cloudflare Access) is blocking /api. " +
-        "Allow bot access to /api/v1/* (service token / bypass policy) or expose an internal API URL.";
-      throw new Error(`Zulip API error: ${hint}`);
+    const snippet = text.trim().slice(0, 240).replace(/\s+/g, " ");
+
+    if (looksLikeHtml) {
+      throw new Error(
+        "Zulip API error: received HTML instead of JSON from /api. " +
+          `HTTP ${res.status} (content-type: ${contentType || "unknown"}). ` +
+          "This typically means an auth/SSO/proxy layer is intercepting API requests. " +
+          "Allow bot access to /api/v1/* (service token / bypass policy) or use an internal API base URL. " +
+          (snippet ? `Snippet: ${snippet}` : ""),
+      );
     }
-    throw new Error(`Zulip API error: invalid JSON response (HTTP ${res.status})`);
+
+    throw new Error(
+      "Zulip API error: received non-JSON response from /api. " +
+        `HTTP ${res.status} (content-type: ${contentType || "unknown"}). ` +
+        "This can be caused by a proxy/load balancer error (502/503), a misconfigured base URL, or an auth layer. " +
+        (snippet ? `Snippet: ${snippet}` : ""),
+    );
   }
 
   const msgField =

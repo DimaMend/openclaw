@@ -13,7 +13,7 @@ describe("parseJsonOrThrow", () => {
       headers: { "content-type": "text/html" },
     });
 
-    await expect(parseJsonOrThrow(res)).rejects.toThrow(/Non-JSON response from Zulip/i);
+    await expect(parseJsonOrThrow(res)).rejects.toThrow(/received HTML instead of JSON/i);
   });
 
   it("throws when payload.result != success", async () => {
