@@ -11,7 +11,7 @@ function clean(value?: string): string {
 
 /**
  * Resolve Matrix config for a specific account, with fallback to top-level config.
- * This supports both multi-account (channels.matrix.accounts.*) and legacy
+ * This supports both multi-account (channels.matrix.accounts.*) and
  * single-account (channels.matrix.*) configurations.
  */
 export function resolveMatrixConfigForAccount(
@@ -53,7 +53,7 @@ export function resolveMatrixConfigForAccount(
 }
 
 /**
- * Legacy function for backward compatibility - resolves default account config.
+ * Single-account function for backward compatibility - resolves default account config.
  */
 export function resolveMatrixConfig(
   cfg: CoreConfig = getMatrixRuntime().config.loadConfig() as CoreConfig,

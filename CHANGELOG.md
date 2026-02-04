@@ -29,6 +29,7 @@ Docs: https://docs.openclaw.ai
 - Cron: reload store data when the store file is recreated or mtime changes.
 - Cron: deliver announce runs directly, honor delivery mode, and respect wakeMode for summaries. (#8540) Thanks @tyler6204.
 - Telegram: include forward_from_chat metadata in forwarded messages and harden cron delivery target checks. (#8392) Thanks @Glucksberg.
+- Matrix: add multi-account support via `channels.matrix.accounts`; use per-account config for dm policy, allowFrom, groups, and other settings; serialize account startup to avoid race condition. (#3165, #3085) Thanks @emonty.
 
 ## 2026.2.2-3
 
@@ -96,7 +97,6 @@ Docs: https://docs.openclaw.ai
 - fix(ui): refresh agent files after external edits.
 - Docs: finish renaming the QMD memory docs to reference the OpenClaw state dir.
 - Tests: stub SSRF DNS pinning in web auto-reply + Gemini video coverage. (#6619) Thanks @joshp123.
-- Matrix: add multi-account support via `channels.matrix.accounts`; use per-account config for dm policy, allowFrom, groups, and other settings; serialize account startup to avoid race condition. (#3165, #3085) Thanks @emonty.
 
 ## 2026.2.1
 
