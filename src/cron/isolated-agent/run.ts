@@ -21,6 +21,12 @@ export type RunCronAgentTurnResult = IsolatedAgentTurnResult;
  *
  * This wrapper extracts the relevant parameters from the CronJob and
  * calls the shared runIsolatedAgentTurn() function.
+ *
+ * Delivery can be configured in two places:
+ * 1. job.payload (for agentTurn kind) - inline delivery options
+ * 2. job.delivery - separate delivery configuration with mode "announce"|"none"
+ *
+ * Payload-level settings take precedence over job.delivery settings.
  */
 export async function runCronIsolatedAgentTurn(params: {
   cfg: OpenClawConfig;
@@ -33,6 +39,17 @@ export async function runCronIsolatedAgentTurn(params: {
 }): Promise<RunCronAgentTurnResult> {
   const { cfg, deps, job, message, sessionKey, agentId, lane } = params;
   const payload = job.payload.kind === "agentTurn" ? job.payload : null;
+  const delivery = job.delivery;
+
+  // Resolve delivery settings: payload takes precedence over job.delivery
+  // job.delivery.mode === "announce" enables delivery in "auto" mode (respects skip logic)
+  // job.delivery.mode === "none" disables delivery entirely
+  const deliverFromJobDelivery =
+    delivery?.mode === "announce" ? undefined : delivery?.mode === "none" ? false : undefined;
+  const deliver = payload?.deliver ?? deliverFromJobDelivery;
+  const channel = payload?.channel ?? delivery?.channel;
+  const to = payload?.to ?? delivery?.to;
+  const bestEffortDeliver = payload?.bestEffortDeliver ?? delivery?.bestEffort;
 
   // Build IsolatedAgentTurnParams from CronJob
   const isolatedParams: IsolatedAgentTurnParams = {
@@ -48,11 +65,11 @@ export async function runCronIsolatedAgentTurn(params: {
     thinking: payload?.thinking,
     timeoutSeconds: payload?.timeoutSeconds,
 
-    // Delivery options from payload
-    deliver: payload?.deliver,
-    channel: payload?.channel,
-    to: payload?.to,
-    bestEffortDeliver: payload?.bestEffortDeliver,
+    // Delivery options (merged from payload and job.delivery)
+    deliver,
+    channel,
+    to,
+    bestEffortDeliver,
 
     // Security
     allowUnsafeExternalContent: payload?.allowUnsafeExternalContent,
