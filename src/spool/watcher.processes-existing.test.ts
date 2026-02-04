@@ -176,13 +176,17 @@ describe("spool watcher - processes existing files on startup", () => {
           payload: { kind: "agentTurn", message: "Event 3" },
         });
 
+        // Write files with small delays to ensure chokidar detects each one
+        // (rapid writes can be coalesced or missed in CI environments)
         await writeSpoolEvent(event1);
+        await new Promise((resolve) => setTimeout(resolve, 100));
         await writeSpoolEvent(event2);
+        await new Promise((resolve) => setTimeout(resolve, 100));
         await writeSpoolEvent(event3);
 
         // Wait for chokidar to pick up the files and process them
-        // CI environments may need more time due to slower file systems
-        await new Promise((resolve) => setTimeout(resolve, 1000 * CI_WAIT_MULTIPLIER));
+        // CI environments may need more time due to slower file systems and awaitWriteFinish
+        await new Promise((resolve) => setTimeout(resolve, 1500 * CI_WAIT_MULTIPLIER));
 
         await stopWatcherSafely(watcher);
 
