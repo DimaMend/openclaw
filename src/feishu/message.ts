@@ -1,10 +1,12 @@
 import type { Client } from "@larksuiteoapi/node-sdk";
 import type { OpenClawConfig } from "../config/config.js";
+import type { MsgContext } from "../auto-reply/templating.js";
 import { dispatchReplyWithBufferedBlockDispatcher } from "../auto-reply/reply/provider-dispatcher.js";
 import { loadConfig } from "../config/config.js";
 import { logVerbose } from "../globals.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { getChildLogger } from "../logging.js";
+import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { isSenderAllowed, normalizeAllowFromWithStore, resolveSenderAllowMatch } from "./access.js";
 import {
   resolveFeishuConfig,
@@ -92,9 +94,14 @@ export async function processFeishuMessage(
   }
   const isGroup = message.chat_type === "group";
   const msgType = message.message_type;
-  const senderId = sender?.sender_id?.open_id || sender?.sender_id?.user_id || "unknown";
+  const senderId = sender?.sender_id?.open_id || sender?.sender_id?.user_id;
   const senderUnionId = sender?.sender_id?.union_id;
   const maxMediaBytes = feishuCfg.mediaMaxMb * 1024 * 1024;
+
+  if (!senderId) {
+    logger.warn("Received message without sender id");
+    return;
+  }
 
   // Check if this is a supported message type
   if (!msgType || !SUPPORTED_MSG_TYPES.has(msgType)) {
@@ -268,7 +275,7 @@ export async function processFeishuMessage(
     return;
   }
 
-  const senderName = sender?.sender_id?.user_id || "unknown";
+  const senderName = sender?.sender_id?.user_id || senderId || "unknown";
 
   // Streaming mode support
   const streamingEnabled = (feishuCfg.streaming ?? true) && Boolean(options.credentials);
@@ -280,7 +287,7 @@ export async function processFeishuMessage(
   let lastPartialText = "";
 
   // Context construction
-  const ctx = {
+  const ctx: MsgContext = {
     Body: bodyText,
     RawBody: text || media?.placeholder || "",
     From: senderId,
@@ -301,6 +308,20 @@ export async function processFeishuMessage(
     MediaUrl: media?.path,
     WasMentioned: isGroup ? wasMentioned : undefined,
   };
+
+  // Build a channel-aware session key so dmScope applies to Feishu DMs.
+  const route = resolveAgentRoute({
+    cfg,
+    channel: "feishu",
+    accountId,
+    peer: isGroup
+      ? { kind: "group", id: chatId }
+      : { kind: "dm", id: senderId },
+  });
+  ctx.SessionKey = route.sessionKey;
+  if (route.mainSessionKey && route.mainSessionKey !== route.sessionKey) {
+    ctx.ParentSessionKey = route.mainSessionKey;
+  }
 
   await dispatchReplyWithBufferedBlockDispatcher({
     ctx,
