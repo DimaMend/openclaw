@@ -36,9 +36,10 @@ export async function callTaskClassifier(
 
   // Check cache
   const cacheKey = `${provider}:${model}:${thinking}:${prompt}`;
-  if (decisionCache.has(cacheKey)) {
+  const cached = decisionCache.get(cacheKey);
+  if (cached !== undefined) {
     logVerbose(`[RouterClassifier] Cache hit for prompt: ${prompt.slice(0, 50)}...`);
-    return decisionCache.get(cacheKey)!;
+    return cached;
   }
 
   const startTime = Date.now();
@@ -51,7 +52,7 @@ export async function callTaskClassifier(
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let modelObj = getModel(provider as any, model);
+  let modelObj: Model<Api> | undefined = getModel(provider as any, model);
   if (!modelObj) {
     // Fallback: If pi-ai doesn't know the provider (e.g. custom-openai), construct it manually
     // This supports custom models defined in openclaw.json that aren't in pi-ai's static registry
@@ -62,7 +63,7 @@ export async function callTaskClassifier(
         provider: "openai", // Alias to openai for pi-ai internal logic
         api: providerApi,
         name: model,
-      } as any;
+      } as unknown as Model<Api>;
       logVerbose(
         `[RouterClassifier] Constructed fallback model object for ${provider}/${model} (api: ${providerApi})`,
       );
