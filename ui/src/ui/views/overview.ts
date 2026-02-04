@@ -4,6 +4,33 @@ import type { UiSettings } from "../storage.ts";
 import { formatAgo, formatDurationMs } from "../format.ts";
 import { formatNextRun } from "../presenter.ts";
 
+/**
+ * Normalize session key input to ensure consistent agent:agentId:sessionKey format
+ * This prevents format inconsistencies and enforces the three-segment structure
+ */
+function normalizeSessionKeyInput(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return trimmed;
+  }
+
+  // If already in agent:x:y format, keep as-is
+  if (trimmed.startsWith("agent:")) {
+    const parts = trimmed.split(":");
+    if (parts.length >= 3) {
+      return trimmed;
+    }
+  }
+
+  // Handle special cases that should remain unchanged
+  if (trimmed === "main" || trimmed === "global" || trimmed === "unknown") {
+    return trimmed;
+  }
+
+  // For any other input, convert to agent:main:input format
+  return `agent:main:${trimmed}`;
+}
+
 export type OverviewProps = {
   connected: boolean;
   hello: GatewayHelloOk | null;
@@ -166,8 +193,11 @@ export function renderOverview(props: OverviewProps) {
               .value=${props.settings.sessionKey}
               @input=${(e: Event) => {
                 const v = (e.target as HTMLInputElement).value;
-                props.onSessionKeyChange(v);
+                const normalized = normalizeSessionKeyInput(v);
+                props.onSessionKeyChange(normalized);
               }}
+              placeholder="e.g., agent:main:xiaohua or just xiaohua"
+              title="Session key format: agent:agentId:sessionName or just sessionName (will auto-format to agent:main:sessionName)"
             />
           </label>
         </div>
