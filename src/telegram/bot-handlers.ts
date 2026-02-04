@@ -130,6 +130,13 @@ export const registerTelegramHandlers = ({
         path: string;
         contentType?: string;
         stickerMetadata?: { emoji?: string; setName?: string; fileId?: string };
+        animationMetadata?: {
+          fileName?: string;
+          fileId?: string;
+          fileUniqueId?: string;
+          mimeType?: string;
+          duration?: number;
+        };
       }> = [];
       for (const { ctx } of entry.messages) {
         const media = await resolveMedia(ctx, mediaMaxBytes, opts.token, opts.proxyFetch);
@@ -138,6 +145,7 @@ export const registerTelegramHandlers = ({
             path: media.path,
             contentType: media.contentType,
             stickerMetadata: media.stickerMetadata,
+            animationMetadata: media.animationMetadata,
           });
         }
       }
@@ -707,6 +715,7 @@ export const registerTelegramHandlers = ({
               path: media.path,
               contentType: media.contentType,
               stickerMetadata: media.stickerMetadata,
+              animationMetadata: media.animationMetadata,
             },
           ]
         : [];

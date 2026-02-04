@@ -64,6 +64,13 @@ type TelegramMediaRef = {
     fileUniqueId?: string;
     cachedDescription?: string;
   };
+  animationMetadata?: {
+    fileName?: string;
+    fileId?: string;
+    fileUniqueId?: string;
+    mimeType?: string;
+    duration?: number;
+  };
 };
 
 type TelegramMessageContextOptions = {
@@ -350,6 +357,10 @@ export const buildTelegramMessageContext = async ({
     placeholder = "<media:video>";
   } else if (msg.audio || msg.voice) {
     placeholder = "<media:audio>";
+  } else if (msg.animation) {
+    // Format animation (GIF) with file name if available
+    const fileName = allMedia[0]?.animationMetadata?.fileName;
+    placeholder = fileName ? `<media:gif "${fileName}">` : "<media:gif>";
   } else if (msg.document) {
     placeholder = "<media:document>";
   } else if (msg.sticker) {
