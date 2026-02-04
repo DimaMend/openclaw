@@ -68,12 +68,20 @@ export async function startTelegramWebhook(opts: {
       logWebhookReceived({ channel: "telegram", updateType: "telegram-post" });
     }
 
-    // Read request body
-    const chunks: Buffer[] = [];
-    for await (const chunk of req) {
-      chunks.push(chunk);
+    // Read request body with error handling
+    let body: string;
+    try {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      body = Buffer.concat(chunks).toString();
+    } catch (err) {
+      runtime.log?.(`Failed to read request body: ${formatErrorMessage(err)}`);
+      res.writeHead(400);
+      res.end("Bad Request");
+      return;
     }
-    const body = Buffer.concat(chunks).toString();
 
     // Parse update
     let update;
@@ -87,12 +95,22 @@ export async function startTelegramWebhook(opts: {
     }
 
     // Check for duplicate (Telegram retries on timeout)
-    const updateId = update.update_id;
-    if (updateId !== undefined && recentUpdates.has(updateId)) {
-      runtime.log?.(`Duplicate update ${updateId}, skipping`);
-      res.writeHead(200);
-      res.end("ok");
-      return;
+    // Ensure update_id is a number for type-safe duplicate detection
+    const updateIdRaw = update.update_id;
+    const updateId =
+      typeof updateIdRaw === "number"
+        ? updateIdRaw
+        : typeof updateIdRaw === "string"
+          ? Number.parseInt(updateIdRaw, 10)
+          : undefined;
+
+    if (updateId !== undefined && !Number.isNaN(updateId)) {
+      if (recentUpdates.has(updateId)) {
+        runtime.log?.(`Duplicate update ${updateId}, skipping`);
+        res.writeHead(200);
+        res.end("ok");
+        return;
+      }
     }
 
     // Validate secret token
@@ -106,7 +124,7 @@ export async function startTelegramWebhook(opts: {
     }
 
     // Add to duplicate cache
-    if (updateId !== undefined) {
+    if (updateId !== undefined && !Number.isNaN(updateId)) {
       recentUpdates.add(updateId);
       setTimeout(() => recentUpdates.delete(updateId), UPDATE_CACHE_TTL);
     }
