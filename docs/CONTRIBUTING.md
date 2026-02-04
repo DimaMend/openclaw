@@ -140,14 +140,9 @@ Do not modify files in the `/zh-CN` directory unless you are specifically contri
 1. Create a branch with a descriptive name (`fix/typo-in-quickstart`, `add/discord-setup-guide`)
 2. Make focused changes — one topic per PR when possible
 3. Write a clear PR description explaining what changed and why
-4. Request review from maintainers
 
-## Getting help
+## Quick Links
 
-- Open an [issue](https://github.com/openclaw/openclaw/issues) for documentation bugs or suggestions
-- Join the [Discord](https://discord.gg/qkhbAGHRBT) for questions
-- Tag documentation-related issues with `docs`
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the project's MIT License.
+- **GitHub:** https://github.com/openclaw/openclaw
+- **Discord:** https://discord.gg/qkhbAGHRBT
+- **X/Twitter:** [@steipete](https://x.com/steipete) / [@openclaw](https://x.com/openclaw)
