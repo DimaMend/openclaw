@@ -66,7 +66,7 @@ export async function applyAuthChoiceAnthropic(
           anthropic: {
             ...nextConfig.models?.providers?.anthropic,
             apiKey: token,
-          },
+          } as any,
         },
       },
     };
@@ -127,7 +127,7 @@ export async function applyAuthChoiceAnthropic(
             anthropic: {
               ...nextConfig.models?.providers?.anthropic,
               apiKey,
-            },
+            } as any,
           },
         },
       };
