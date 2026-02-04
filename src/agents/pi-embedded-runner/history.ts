@@ -1,5 +1,6 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { OpenClawConfig } from "../../config/config.js";
+import { sanitizeToolUseResultPairing } from "../session-transcript-repair.js";
 
 const THREAD_SUFFIX_REGEX = /^(.*)(?::(?:thread|topic):\d+)$/i;
 
@@ -27,7 +28,10 @@ export function limitHistoryTurns(
     if (messages[i].role === "user") {
       userCount++;
       if (userCount > limit) {
-        return messages.slice(lastUserIndex);
+        // Slicing by user turn can orphan tool_result blocks whose matching
+        // tool_use was removed. Re-run pairing repair to drop any orphans.
+        // See: https://github.com/openclaw/openclaw/issues/8778
+        return sanitizeToolUseResultPairing(messages.slice(lastUserIndex));
       }
       lastUserIndex = i;
     }
