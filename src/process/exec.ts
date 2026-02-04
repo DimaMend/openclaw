@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
-
 import { danger, shouldLogVerbose } from "../globals.js";
 import { logDebug, logError, logWarn } from "../logger.js";
 import { formatSpawnError, resolveCommandStdio, spawnWithFallback } from "./spawn-utils.js";
