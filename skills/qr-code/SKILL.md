@@ -17,9 +17,14 @@ Generate QR codes from text/URLs and decode QR codes from images.
 
 ## Requirements
 
-Install Python dependencies:
+### For Generation
 ```bash
-pip install qrcode pillow pyzbar
+pip install qrcode pillow
+```
+
+### For Reading
+```bash
+pip install pillow pyzbar
 ```
 
 On Windows, pyzbar requires Visual C++ Redistributable.

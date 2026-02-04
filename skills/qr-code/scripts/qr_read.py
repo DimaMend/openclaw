@@ -26,7 +26,7 @@ except ImportError:
     sys.exit(1)
 
 
-def read_qr(image_path: str, output_format: str = 'text'):
+def read_qr(image_path: str):
     """Read QR code(s) from an image file."""
     
     try:
@@ -43,7 +43,7 @@ def read_qr(image_path: str, output_format: str = 'text'):
     results = []
     for obj in decoded_objects:
         result = {
-            'data': obj.data.decode('utf-8'),
+            'data': obj.data.decode('utf-8', errors='replace'),
             'type': obj.type,
             'rect': {
                 'left': obj.rect.left,
