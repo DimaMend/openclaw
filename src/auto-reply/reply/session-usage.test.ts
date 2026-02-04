@@ -34,7 +34,6 @@ describe("persistSessionUsageUpdate", () => {
             output: 5,
             cacheRead: 2,
             cacheWrite: 3,
-            totalTokens: 20,
           },
         },
       },
@@ -59,7 +58,8 @@ describe("persistSessionUsageUpdate", () => {
     const updated = loadSessionStore(storePath, { skipCache: true });
     expect(updated[sessionKey]?.inputTokens).toBe(10);
     expect(updated[sessionKey]?.outputTokens).toBe(5);
-    expect(updated[sessionKey]?.totalTokens).toBe(15);
+    const expectedTotal = 10 + 2 + 3;
+    expect(updated[sessionKey]?.totalTokens).toBe(expectedTotal);
   });
 
   it("estimates tokens when transcript usage is unavailable", async () => {

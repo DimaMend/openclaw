@@ -32,6 +32,9 @@ function resolveTranscriptPath(params: {
   const candidates: string[] = [];
   const sessionFile = params.sessionFile?.trim();
   if (sessionFile) {
+    if (fs.existsSync(sessionFile)) {
+      return sessionFile;
+    }
     candidates.push(sessionFile);
   }
 
@@ -83,7 +86,7 @@ function readUsageFromTranscript(params: {
       return undefined;
     }
     const readStart = Math.max(0, stat.size - USAGE_SCAN_BYTES);
-    const readLen = Math.min(stat.size, USAGE_SCAN_BYTES);
+    const readLen = Math.min(stat.size - readStart, USAGE_SCAN_BYTES);
     const buf = Buffer.alloc(readLen);
     fs.readSync(fd, buf, 0, readLen, readStart);
 
@@ -140,7 +143,7 @@ function estimateTokensFromTranscript(params: {
       return undefined;
     }
     const readStart = Math.max(0, stat.size - USAGE_SCAN_BYTES);
-    const readLen = Math.min(stat.size, USAGE_SCAN_BYTES);
+    const readLen = Math.min(stat.size - readStart, USAGE_SCAN_BYTES);
     const buf = Buffer.alloc(readLen);
     fs.readSync(fd, buf, 0, readLen, readStart);
 
