@@ -342,7 +342,35 @@ export async function runWithModelFallback<T>(params: {
               await sleep(decision.waitSeconds * 1000);
               continue; // Retry the same candidate
             }
-            // User chose "switch", fall through to normal fallback behavior
+            // User chose "switch", fall through to handle backupModel
+          }
+
+          // For "switch" action with backupModel, prioritize the backup model
+          if (decision.switchToModel) {
+            const aliasIndex = buildModelAliasIndex({
+              cfg: params.cfg ?? {},
+              defaultProvider: candidate.provider,
+            });
+            const backupRef = resolveModelRefFromString({
+              raw: decision.switchToModel,
+              defaultProvider: candidate.provider,
+              aliasIndex,
+            });
+            if (backupRef) {
+              // Insert backup model as next candidate if not already in the list
+              const backupKey = modelKey(backupRef.ref.provider, backupRef.ref.model);
+              const existingIndex = candidates.findIndex(
+                (c) => modelKey(c.provider, c.model) === backupKey,
+              );
+              if (existingIndex === -1) {
+                // Insert right after current position
+                candidates.splice(i + 1, 0, backupRef.ref);
+              } else if (existingIndex > i + 1) {
+                // Move it to be the next candidate
+                candidates.splice(existingIndex, 1);
+                candidates.splice(i + 1, 0, backupRef.ref);
+              }
+            }
           }
         }
 

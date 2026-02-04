@@ -84,11 +84,33 @@ describe("isRateLimitError", () => {
     expect(isRateLimitError({ status: 402 })).toBe(true);
   });
 
-  it("detects rate limit messages", () => {
+  it("detects high-confidence rate limit messages without status", () => {
+    // These patterns are specific enough to be trusted without status code
     expect(isRateLimitError({ message: "Rate limit exceeded" })).toBe(true);
     expect(isRateLimitError({ message: "Too many requests" })).toBe(true);
     expect(isRateLimitError({ message: "Quota exceeded for this month" })).toBe(true);
+  });
+
+  it("detects billing messages only with relevant status code", () => {
+    // With status code - should detect
+    expect(isRateLimitError({ status: 402, message: "Billing error: insufficient credits" })).toBe(
+      true,
+    );
+    expect(isRateLimitError({ status: 402, message: "Credit exhausted" })).toBe(true);
+
+    // Without status code (SDK errors) - should detect since status is undefined
     expect(isRateLimitError({ message: "Billing error: insufficient credits" })).toBe(true);
+    expect(isRateLimitError({ message: "Credit exhausted" })).toBe(true);
+
+    // With unrelated status code (e.g., 400) - should NOT detect
+    // This prevents misclassifying "billing address validation failed" type errors
+    expect(isRateLimitError({ status: 400, message: "billing address invalid" })).toBe(false);
+    expect(isRateLimitError({ status: 404, message: "credit card not found" })).toBe(false);
+  });
+
+  it("detects billing messages with 5xx status (service error mentioning billing)", () => {
+    expect(isRateLimitError({ status: 500, message: "billing service unavailable" })).toBe(true);
+    expect(isRateLimitError({ status: 503, message: "credit check failed" })).toBe(true);
   });
 
   it("returns false for other errors", () => {
@@ -96,6 +118,12 @@ describe("isRateLimitError", () => {
     expect(isRateLimitError({ message: "Internal server error" })).toBe(false);
     expect(isRateLimitError(null)).toBe(false);
     expect(isRateLimitError("string error")).toBe(false);
+  });
+
+  it("returns false for unrelated errors mentioning billing/credit keywords", () => {
+    // These should NOT be detected as rate limit errors
+    expect(isRateLimitError({ status: 400, message: "Invalid billing address" })).toBe(false);
+    expect(isRateLimitError({ status: 422, message: "Credit card number invalid" })).toBe(false);
   });
 });
 

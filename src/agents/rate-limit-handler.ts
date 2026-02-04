@@ -191,6 +191,11 @@ export function decideRateLimitAction(
 
 /**
  * Check if an error represents a rate limit condition.
+ *
+ * Note: Message-based detection (for "credit", "billing", etc.) is only used
+ * when a relevant HTTP status code (429, 402, or 5xx) is present, or when no
+ * status is available (SDK errors). This prevents misclassifying unrelated
+ * errors that happen to contain these words (e.g., "billing address invalid").
  */
 export function isRateLimitError(err: unknown): boolean {
   if (!err || typeof err !== "object") {
@@ -200,22 +205,42 @@ export function isRateLimitError(err: unknown): boolean {
   // Check status code
   const status =
     (err as { status?: number }).status ?? (err as { statusCode?: number }).statusCode;
+
+  // Direct rate limit or billing status codes
   if (status === 429 || status === 402) {
     return true;
   }
 
-  // Check error message patterns
+  // For message-based detection, only trust it when we have a status code
+  // that could plausibly be a rate limit/billing error (or no status at all
+  // for SDK errors that don't expose status)
+  const hasRelevantStatus =
+    status === undefined || status === 429 || status === 402 || (status >= 500 && status < 600);
+
   const message = (err as { message?: string }).message ?? "";
   const lowerMessage = message.toLowerCase();
+
+  // High-confidence patterns: these are specific to rate limiting
   if (
     lowerMessage.includes("rate limit") ||
     lowerMessage.includes("rate_limit") ||
     lowerMessage.includes("too many requests") ||
-    lowerMessage.includes("quota exceeded") ||
-    lowerMessage.includes("credit") ||
-    lowerMessage.includes("billing")
+    lowerMessage.includes("quota exceeded")
   ) {
     return true;
+  }
+
+  // Lower-confidence patterns: require relevant status code to avoid false positives
+  // (e.g., an error about "billing address validation failed" shouldn't trigger rate limit handling)
+  if (hasRelevantStatus) {
+    if (
+      lowerMessage.includes("credit") ||
+      lowerMessage.includes("billing") ||
+      lowerMessage.includes("insufficient funds") ||
+      lowerMessage.includes("payment required")
+    ) {
+      return true;
+    }
   }
 
   return false;
