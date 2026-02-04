@@ -5,6 +5,8 @@ export {
 export { VENICE_DEFAULT_MODEL_ID, VENICE_DEFAULT_MODEL_REF } from "../agents/venice-models.js";
 export {
   applyAuthProfileConfig,
+  applyErnieConfig,
+  applyErnieProviderConfig,
   applyKimiCodeConfig,
   applyKimiCodeProviderConfig,
   applyMoonshotConfig,
@@ -39,6 +41,7 @@ export {
 export {
   OPENROUTER_DEFAULT_MODEL_REF,
   setAnthropicApiKey,
+  setErnieApiKey,
   setGeminiApiKey,
   setKimiCodingApiKey,
   setMinimaxApiKey,
@@ -56,10 +59,14 @@ export {
   ZAI_DEFAULT_MODEL_REF,
 } from "./onboard-auth.credentials.js";
 export {
+  buildErnieModelDefinition,
   buildMinimaxApiModelDefinition,
   buildMinimaxModelDefinition,
   buildMoonshotModelDefinition,
   DEFAULT_MINIMAX_BASE_URL,
+  ERNIE_BASE_URL,
+  ERNIE_DEFAULT_MODEL_ID,
+  ERNIE_DEFAULT_MODEL_REF,
   MOONSHOT_CN_BASE_URL,
   KIMI_CODING_MODEL_ID,
   KIMI_CODING_MODEL_REF,
