@@ -100,6 +100,7 @@ export const AgentDefaultsSchema = z
           })
           .strict()
           .optional(),
+        summaryInstructions: z.string().optional(),
       })
       .strict()
       .optional(),
