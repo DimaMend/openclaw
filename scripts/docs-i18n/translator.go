@@ -252,10 +252,13 @@ Translate from %s to %s.
 Rules:
 - Output ONLY the translated text. No preamble, no questions, no commentary.
 - Translate all English prose; do not leave English unless it is code, a URL, or a product name.
-- All prose must be in the target language. If any source-language sentence remains outside code/URLs/product names, it is wrong.
-- If the input contains <frontmatter> and <body> tags, keep them exactly and output exactly one of each.
-- Translate only the contents inside those tags.
-- Preserve YAML structure inside <frontmatter>; translate only values.
+
+%s
+
+%s
+
+If the input is empty, output empty.
+If the input contains only placeholders, output it unchanged.`, srcLabel, tgtLabel, glossaryBlock, langRules))
 - Preserve all [[[FM_*]]] markers exactly and translate only the text between each START/END pair.
 - Translate headings/labels like "Exit codes" and "Optional scripts".
 - Preserve Markdown syntax exactly (headings, lists, tables, emphasis).
