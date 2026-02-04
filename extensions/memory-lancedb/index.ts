@@ -888,9 +888,9 @@ const memoryPlugin = {
         args.push("--max-passes", opts.maxPasses);
       }
 
-      console.log(`🧠 Running memory consolidation (sleep cycle)...`);
-      console.log(`   Script: ${script}`);
-      console.log(`   Args: ${args.join(" ") || "(defaults)"}\n`);
+      cliPrint(`🧠 Running memory consolidation (sleep cycle)...`);
+      cliPrint(`   Script: ${script}`);
+      cliPrint(`   Args: ${args.join(" ") || "(defaults)"}\n`);
 
       const child = spawn("node", [script, ...args], {
         stdio: "inherit",
@@ -924,11 +924,12 @@ const memoryPlugin = {
               try {
                 const agentIds = await db.getAgentIds();
                 if (agentIds.length === 0) {
-                  console.log(`Long-Term Memory (LanceDB)\n${"─".repeat(50)}`);
-                  console.log(`  Provider:  memory-lancedb`);
-                  console.log(`  Store:     ${resolvedDbPath}`);
-                  console.log(`  Embedding: ${cfg.embedding.model}`);
-                  console.log(`  Memories:  0 (empty)\n`);
+                  // Use cliPrint to avoid logging to file (privacy)
+                  cliPrint(`Long-Term Memory (LanceDB)\n${"─".repeat(50)}`);
+                  cliPrint(`  Provider:  memory-lancedb`);
+                  cliPrint(`  Store:     ${resolvedDbPath}`);
+                  cliPrint(`  Embedding: ${cfg.embedding.model}`);
+                  cliPrint(`  Memories:  0 (empty)\n`);
                   return;
                 }
                 for (const agentId of agentIds) {
@@ -950,24 +951,25 @@ const memoryPlugin = {
                     ? new Date(sorted[sorted.length - 1].createdAt).toISOString().slice(0, 10)
                     : "n/a";
 
-                  console.log(`Long-Term Memory (LanceDB) — ${agentId}`);
-                  console.log("─".repeat(50));
-                  console.log(`  Provider:    memory-lancedb`);
-                  console.log(`  Store:       ${resolvedDbPath}`);
-                  console.log(`  Embedding:   ${cfg.embedding.model} (${vectorDim}d)`);
-                  console.log(`  Memories:    ${total}`);
-                  console.log(`  Categories:  ${catSummary}`);
-                  console.log(`  Date range:  ${oldest} → ${newest}`);
+                  // Use cliPrint to avoid logging to file (privacy)
+                  cliPrint(`Long-Term Memory (LanceDB) — ${agentId}`);
+                  cliPrint("─".repeat(50));
+                  cliPrint(`  Provider:    memory-lancedb`);
+                  cliPrint(`  Store:       ${resolvedDbPath}`);
+                  cliPrint(`  Embedding:   ${cfg.embedding.model} (${vectorDim}d)`);
+                  cliPrint(`  Memories:    ${total}`);
+                  cliPrint(`  Categories:  ${catSummary}`);
+                  cliPrint(`  Date range:  ${oldest} → ${newest}`);
                   if (cfg.autoRecall) {
-                    console.log(`  Auto-recall: enabled`);
+                    cliPrint(`  Auto-recall: enabled`);
                   }
                   if (cfg.autoCapture) {
-                    console.log(`  Auto-capture: enabled`);
+                    cliPrint(`  Auto-capture: enabled`);
                   }
-                  console.log("");
+                  cliPrint("");
                 }
               } catch (err) {
-                console.log(`Long-Term Memory (LanceDB): error — ${String(err)}\n`);
+                cliPrint(`Long-Term Memory (LanceDB): error — ${String(err)}\n`);
               }
             });
           }
