@@ -26,6 +26,8 @@ export type AgentSummary = {
   routes?: string[];
   providers?: string[];
   isDefault: boolean;
+  /** True only when the agent entry has `default: true` explicitly set in config. */
+  isExplicitDefault: boolean;
 };
 
 type AgentEntry = NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number];
@@ -114,6 +116,9 @@ export function buildAgentSummaries(cfg: OpenClawConfig): AgentSummary[] {
       : configIdentity && (identityName || identityEmoji)
         ? "config"
         : undefined;
+    // Check if this agent has `default: true` explicitly set in config
+    const agentEntry = configuredAgents.find((agent) => normalizeAgentId(agent.id) === id);
+    const isExplicitDefault = agentEntry?.default === true;
     return {
       id,
       name: resolveAgentName(cfg, id),
@@ -125,6 +130,7 @@ export function buildAgentSummaries(cfg: OpenClawConfig): AgentSummary[] {
       model: resolveAgentModel(cfg, id),
       bindings: bindingCounts.get(id) ?? 0,
       isDefault: id === defaultAgentId,
+      isExplicitDefault,
     };
   });
 }

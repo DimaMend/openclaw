@@ -54,6 +54,9 @@ describe("agents helpers", () => {
     expect(work?.agentDir).toBe(path.resolve("/state/agents/work/agent"));
     expect(work?.bindings).toBe(1);
     expect(work?.isDefault).toBe(true);
+    expect(work?.isExplicitDefault).toBe(true);
+    // "main" has no `default: true` in config, so isExplicitDefault should be false
+    expect(main?.isExplicitDefault).toBe(false);
   });
 
   it("applyAgentConfig merges updates", () => {
