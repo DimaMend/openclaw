@@ -26,6 +26,7 @@ import {
   resolveShellEnvFallbackTimeoutMs,
 } from "../infra/shell-env.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";
+import { detectCommandSubstitution } from "../infra/exec-safety.js";
 import { logInfo, logWarn } from "../logger.js";
 import { formatSpawnError, spawnWithFallback } from "../process/spawn-utils.js";
 import { parseAgentSessionKey, resolveAgentIdFromSessionKey } from "../routing/session-key.js";
@@ -182,6 +183,10 @@ export type ExecToolDefaults = {
   messageProvider?: string;
   notifyOnExit?: boolean;
   cwd?: string;
+  /** Warn when commands contain backticks or $() patterns (default: true) */
+  warnCommandSubstitution?: boolean;
+  /** Block commands containing backticks or $() patterns (default: false) */
+  blockCommandSubstitution?: boolean;
 };
 
 export type { BashSandboxConfig } from "./bash-tools.shared.js";
@@ -852,6 +857,34 @@ export function createExecTool(
       const maxOutput = DEFAULT_MAX_OUTPUT;
       const pendingMaxOutput = DEFAULT_PENDING_MAX_OUTPUT;
       const warnings: string[] = [];
+
+      // Detect shell command substitution patterns that may cause unintended execution
+      const substitutionPatterns = detectCommandSubstitution(params.command);
+      if (substitutionPatterns.length > 0) {
+        const warnSubstitution = defaults?.warnCommandSubstitution !== false;
+        const blockSubstitution = defaults?.blockCommandSubstitution === true;
+
+        const patternList = substitutionPatterns
+          .map((p) => `  - ${p.type === "backtick" ? "Backticks" : "$(...)"}: ${p.match}`)
+          .join("\n");
+
+        if (blockSubstitution) {
+          throw new Error(
+            `Command blocked: contains shell substitution patterns that may cause unintended execution.\n` +
+              `${patternList}\n` +
+              `If intentional, set tools.exec.blockCommandSubstitution=false. ` +
+              `Otherwise, escape backticks or pass content via stdin.`,
+          );
+        }
+
+        if (warnSubstitution) {
+          warnings.push(
+            `⚠️ Command contains shell substitution patterns:\n${patternList}\n` +
+              `If unintentional, escape backticks (\\`) or pass content via stdin.`,
+          );
+        }
+      }
+
       const backgroundRequested = params.background === true;
       const yieldRequested = typeof params.yieldMs === "number";
       if (!allowBackground && (backgroundRequested || yieldRequested)) {
