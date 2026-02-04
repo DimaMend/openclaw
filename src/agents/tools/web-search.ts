@@ -121,6 +121,15 @@ function resolveSearchEnabled(params: { search?: WebSearchConfig; sandboxed?: bo
   return true;
 }
 
+function disabledSearchPayload() {
+  return {
+    error: "web_search_disabled",
+    message:
+      "web_search is disabled by configuration. Enable tools.web.search.enabled to use this tool.",
+    docs: "https://docs.openclaw.ai/tools/web",
+  };
+}
+
 function resolveSearchApiKey(search?: WebSearchConfig): string | undefined {
   const fromConfig =
     search && "apiKey" in search && typeof search.apiKey === "string" ? search.apiKey.trim() : "";
@@ -477,6 +486,9 @@ export function createWebSearchTool(options?: {
     parameters: WebSearchSchema,
     execute: async (_toolCallId, args) => {
       const search = resolveSearchConfig(options?.config);
+      if (!resolveSearchEnabled({ search, sandboxed: options?.sandboxed })) {
+        return jsonResult(disabledSearchPayload());
+      }
       const provider = resolveSearchProvider(search);
       const perplexityConfig = resolvePerplexityConfig(search);
       const perplexityAuth =

@@ -19,6 +19,16 @@ describe("web tools defaults", () => {
     const tool = createWebSearchTool({ config: {}, sandboxed: false });
     expect(tool?.name).toBe("web_search");
   });
+
+  it("rejects execution when web_search is disabled after creation", async () => {
+    const config = { tools: { web: { search: { enabled: true } } } };
+    const tool = createWebSearchTool({ config, sandboxed: false });
+    config.tools.web.search.enabled = false;
+
+    const result = await tool?.execute?.(1, { query: "test" });
+
+    expect(result?.details).toMatchObject({ error: "web_search_disabled" });
+  });
 });
 
 describe("web_search country and language parameters", () => {

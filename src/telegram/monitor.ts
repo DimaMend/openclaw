@@ -13,7 +13,6 @@ import { resolveTelegramAllowedUpdates } from "./allowed-updates.js";
 import { createTelegramBot } from "./bot.js";
 import { isRecoverableTelegramNetworkError } from "./network-errors.js";
 import { makeProxyFetch } from "./proxy.js";
-import { resolveTelegramToken } from "./token.js";
 import { readTelegramUpdateOffset, writeTelegramUpdateOffset } from "./update-offset-store.js";
 import { startTelegramWebhook } from "./webhook.js";
 
@@ -111,7 +110,8 @@ export async function monitorTelegramProvider(opts: MonitorTelegramOpts = {}) {
     if (tokenOverride && !accountId) {
       const ids = [DEFAULT_ACCOUNT_ID, ...listTelegramAccountIds(cfg)];
       const match = ids.find(
-        (candidate) => resolveTelegramToken(cfg, { accountId: candidate }).token === tokenOverride,
+        (candidate) =>
+          resolveTelegramAccount({ cfg, accountId: candidate }).token === tokenOverride,
       );
       if (match) {
         accountId = match;
