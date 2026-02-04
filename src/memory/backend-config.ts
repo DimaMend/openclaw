@@ -45,6 +45,8 @@ export type ResolvedQmdSessionConfig = {
   retentionDays?: number;
 };
 
+export type QmdSearchMode = "query" | "search" | "vsearch";
+
 export type ResolvedQmdConfig = {
   command: string;
   collections: ResolvedQmdCollection[];
@@ -53,6 +55,7 @@ export type ResolvedQmdConfig = {
   limits: ResolvedQmdLimitsConfig;
   includeDefaultMemory: boolean;
   scope?: SessionSendPolicyConfig;
+  searchMode: QmdSearchMode;
 };
 
 const DEFAULT_BACKEND: MemoryBackend = "builtin";
@@ -249,6 +252,10 @@ export function resolveMemoryBackendConfig(params: {
   const rawCommand = qmdCfg?.command?.trim() || "qmd";
   const parsedCommand = splitShellArgs(rawCommand);
   const command = parsedCommand?.[0] || rawCommand.split(/\s+/)[0] || "qmd";
+  const rawSearchMode = qmdCfg?.searchMode?.trim().toLowerCase();
+  const searchMode: QmdSearchMode =
+    rawSearchMode === "search" || rawSearchMode === "vsearch" ? rawSearchMode : "query";
+
   const resolved: ResolvedQmdConfig = {
     command,
     collections,
@@ -262,6 +269,7 @@ export function resolveMemoryBackendConfig(params: {
     },
     limits: resolveLimits(qmdCfg?.limits),
     scope: qmdCfg?.scope ?? DEFAULT_QMD_SCOPE,
+    searchMode,
   };
 
   return {
