@@ -1,0 +1,15 @@
+diff --git a/dist/core/skills.js b/dist/core/skills.js
+index 6f6a42e6f6fa3a6cf88e8d92f0f5910cc6e03651..49f430783271fee6428c758328dfb703c11e933e 100644
+--- a/dist/core/skills.js
++++ b/dist/core/skills.js
+@@ -95,6 +95,10 @@ function loadSkillsFromDirInternal(dir, source, includeRootFiles) {
+             if (entry.name === "node_modules") {
+                 continue;
+             }
++            // Skip Python virtual environments and caches to avoid FD leaks
++            if (entry.name === "venv" || entry.name === ".venv" || entry.name === "__pycache__" || entry.name === "site-packages") {
++                continue;
++            }
+             const fullPath = join(dir, entry.name);
+             // For symlinks, check if they point to a directory and follow them
+             let isDirectory = entry.isDirectory();
