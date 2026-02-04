@@ -572,24 +572,44 @@ export class TwilioProvider implements VoiceCallProvider {
         `[voice-call] Starting ElevenLabs streaming TTS for: "${text.slice(0, 80)}..."`,
       );
       await handler.queueTts(streamSid, async (signal) => {
-        const result = await streamTts(
-          text,
-          elConfig,
-          (base64Audio: string) => {
-            if (signal.aborted) return;
-            // Decode base64 to Buffer — already raw ulaw_8000
-            const audioBuffer = Buffer.from(base64Audio, "base64");
-            handler.sendAudio(streamSid, audioBuffer);
-          },
-          signal,
-        );
-
-        if (!signal.aborted) {
-          handler.sendMark(streamSid, `tts-${Date.now()}`);
-          console.debug(
-            `[voice-call] ElevenLabs streaming TTS complete: ${result.chunkCount} chunks, ` +
-              `${result.totalBytes} bytes, TTFB ${result.ttfbMs}ms, total ${result.totalMs}ms`,
+        const doStream = async () => {
+          const result = await streamTts(
+            text,
+            elConfig,
+            (base64Audio: string) => {
+              if (signal.aborted) return;
+              const audioBuffer = Buffer.from(base64Audio, "base64");
+              handler.sendAudio(streamSid, audioBuffer);
+            },
+            signal,
           );
+
+          if (!signal.aborted) {
+            handler.sendMark(streamSid, `tts-${Date.now()}`);
+            console.debug(
+              `[voice-call] ElevenLabs streaming TTS complete: ${result.chunkCount} chunks, ` +
+                `${result.totalBytes} bytes, TTFB ${result.ttfbMs}ms, total ${result.totalMs}ms`,
+            );
+          }
+        };
+
+        try {
+          await doStream();
+        } catch (err: any) {
+          // On timeout/connection errors, retry once with a fresh WebSocket
+          if (
+            !signal.aborted &&
+            (err.message?.includes("input_timeout") ||
+              err.message?.includes("WebSocket") ||
+              err.message?.includes("closed without"))
+          ) {
+            console.debug(
+              `[voice-call] ElevenLabs first attempt failed (${err.message}), retrying with fresh connection...`,
+            );
+            await doStream();
+          } else {
+            throw err;
+          }
         }
       });
       return;

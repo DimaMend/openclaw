@@ -73,7 +73,7 @@ function startCleanup() {
 function buildWsUrl(config: ElevenLabsStreamConfig): string {
   const modelId = config.modelId ?? "eleven_flash_v2_5";
   const baseUrl = config.baseUrl ?? "wss://api.elevenlabs.io";
-  return `${baseUrl}/v1/text-to-speech/${config.voiceId}/stream-input?model_id=${modelId}&output_format=ulaw_8000&auto_mode=true`;
+  return `${baseUrl}/v1/text-to-speech/${encodeURIComponent(config.voiceId)}/stream-input?model_id=${encodeURIComponent(modelId)}&output_format=ulaw_8000&auto_mode=true`;
 }
 
 function getOrCreateWs(
@@ -209,6 +209,13 @@ export function streamTts(
         `[voice-call] ElevenLabs WebSocket ${conn.reused ? "reused" : "opened"} in ${connectMs}ms`,
       );
 
+      // Helper to remove all listeners — prevents leaks on every settlement path
+      const removeAllWsListeners = () => {
+        ws!.removeListener("message", messageHandler);
+        ws!.removeListener("error", errorHandler);
+        ws!.removeListener("close", closeHandler);
+      };
+
       // Set up message handler for THIS request
       const messageHandler = (data: WebSocket.Data) => {
         if (settled) return;
@@ -225,7 +232,8 @@ export function streamTts(
             }
             chunkCount++;
 
-            const rawLen = Math.floor((msg.audio.length * 3) / 4);
+            const padding = msg.audio.endsWith("==") ? 2 : msg.audio.endsWith("=") ? 1 : 0;
+            const rawLen = Math.floor((msg.audio.length * 3) / 4) - padding;
             totalBytes += rawLen;
 
             onAudioChunk(msg.audio);
@@ -237,9 +245,7 @@ export function streamTts(
             const ttfbMs = firstChunkTime ? firstChunkTime - startTime : totalMs;
 
             if (signal) signal.removeEventListener("abort", onAbort);
-            ws!.removeListener("message", messageHandler);
-            ws!.removeListener("error", errorHandler);
-            ws!.removeListener("close", closeHandler);
+            removeAllWsListeners();
 
             // Don't close — return to pool
             releaseWs();
@@ -253,9 +259,7 @@ export function streamTts(
           if (msg.error) {
             settled = true;
             if (signal) signal.removeEventListener("abort", onAbort);
-            ws!.removeListener("message", messageHandler);
-            ws!.removeListener("error", errorHandler);
-            ws!.removeListener("close", closeHandler);
+            removeAllWsListeners();
             destroyWs();
             reject(new Error(`ElevenLabs streaming error: ${msg.error}`));
           }
@@ -268,8 +272,7 @@ export function streamTts(
         if (!settled) {
           settled = true;
           if (signal) signal.removeEventListener("abort", onAbort);
-          ws!.removeListener("message", messageHandler);
-          ws!.removeListener("close", closeHandler);
+          removeAllWsListeners();
           destroyWs();
           reject(new Error(`ElevenLabs WebSocket error: ${err.message}`));
         }
@@ -282,6 +285,7 @@ export function streamTts(
           const ttfbMs = firstChunkTime ? firstChunkTime - startTime : totalMs;
 
           if (signal) signal.removeEventListener("abort", onAbort);
+          removeAllWsListeners();
           pool.delete(wsUrl);
 
           if (chunkCount > 0) {
