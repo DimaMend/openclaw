@@ -1,6 +1,6 @@
 ---
 name: himalaya
-description: "CLI to manage emails via IMAP/SMTP. Use `himalaya` to list, read, write, reply, forward, search, and organize emails from the terminal. Supports multiple accounts and message composition with MML (MIME Meta Language)."
+description: "CLI to manage emails via IMAP/SMTP. Run `himalaya --help` to get started and discover available commands and their correct flags."
 homepage: https://github.com/pimalaya/himalaya
 metadata:
   {
@@ -100,8 +100,34 @@ himalaya envelope list --page 1 --page-size 20
 
 ### Search Emails
 
+Basic search:
+
 ```bash
 himalaya envelope list from john@example.com subject meeting
+```
+
+**Search Query Syntax:**
+
+| Query                 | Description                          |
+| --------------------- | ------------------------------------ |
+| `subject <pattern>`   | Search by subject                    |
+| `from <pattern>`      | Search by sender                     |
+| `to <pattern>`        | Search by recipient                  |
+| `body <pattern>`      | Search in message body               |
+| `flag <flag>`         | Filter by flag (seen, flagged, etc.) |
+| `before <yyyy-mm-dd>` | Messages before date                 |
+| `after <yyyy-mm-dd>`  | Messages after date                  |
+
+**Operators:** `and`, `or`, `not`
+
+Examples:
+
+```bash
+# Find unread emails from a specific sender
+himalaya envelope list from boss@company.com not flag seen
+
+# Find emails about "project" in the last week
+himalaya envelope list subject project after 2025-01-27
 ```
 
 ### Read an Email
@@ -146,10 +172,10 @@ Interactive compose (opens $EDITOR):
 himalaya message write
 ```
 
-Send directly using template:
+**For non-interactive/programmatic sending, use `template send`:**
 
 ```bash
-cat << 'EOF' | himalaya template send
+himalaya template send <<EOF
 From: you@example.com
 To: recipient@example.com
 Subject: Test Message
@@ -158,11 +184,7 @@ Hello from Himalaya!
 EOF
 ```
 
-Or with headers flag:
-
-```bash
-himalaya message write -H "To:recipient@example.com" -H "Subject:Test" "Message body here"
-```
+> ⚠️ **Note:** `himalaya message write` always opens an interactive editor. Use `himalaya template send` with a heredoc or piped input for automated/scripted email sending.
 
 ### Move/Copy Emails
 
@@ -186,17 +208,21 @@ himalaya message delete 42
 
 ### Manage Flags
 
-Add flag:
+Add flag (flags are positional arguments, not options):
 
 ```bash
-himalaya flag add 42 --flag seen
+himalaya flag add 42 seen
+himalaya flag add 42 flagged
 ```
 
 Remove flag:
 
 ```bash
-himalaya flag remove 42 --flag seen
+himalaya flag remove 42 seen
+himalaya flag remove 42 flagged
 ```
+
+Common flags: `seen`, `answered`, `flagged`, `deleted`, `draft`
 
 ## Multiple Accounts
 
@@ -214,16 +240,10 @@ himalaya --account work envelope list
 
 ## Attachments
 
-Save attachments from a message:
+Save attachments from a message (downloads to system downloads directory):
 
 ```bash
 himalaya attachment download 42
-```
-
-Save to specific directory:
-
-```bash
-himalaya attachment download 42 --dir ~/Downloads
 ```
 
 ## Output Formats
@@ -249,9 +269,37 @@ Full trace with backtrace:
 RUST_LOG=trace RUST_BACKTRACE=1 himalaya envelope list
 ```
 
+## Common Short Flags
+
+| Short | Long          | Description                 |
+| ----- | ------------- | --------------------------- |
+| `-s`  | `--page-size` | Number of results per page  |
+| `-p`  | `--page`      | Page number                 |
+| `-f`  | `--folder`    | Target folder               |
+| `-a`  | `--account`   | Account to use              |
+| `-o`  | `--output`    | Output format (json, plain) |
+
+Example using short flags:
+
+```bash
+himalaya envelope list -f Sent -s 10 -o json
+```
+
+## ⚠️ Common Mistakes (DO NOT USE)
+
+These flags/options do NOT exist:
+
+| ❌ Wrong                    | ✅ Correct                                        |
+| --------------------------- | ------------------------------------------------- |
+| `--limit 10`                | `--page-size 10` or `-s 10`                       |
+| `--flag seen`               | `seen` (positional argument)                      |
+| `attachment download --dir` | `attachment download` (no dir option)             |
+| `message write "body"`      | `template send <<EOF...EOF` (for non-interactive) |
+
 ## Tips
 
 - Use `himalaya --help` or `himalaya <command> --help` for detailed usage.
 - Message IDs are relative to the current folder; re-list after folder changes.
 - For composing rich emails with attachments, use MML syntax (see `references/message-composition.md`).
 - Store passwords securely using `pass`, system keyring, or a command that outputs the password.
+- **For scripted/automated email sending, always use `template send` with heredoc input, not `message write`.**
