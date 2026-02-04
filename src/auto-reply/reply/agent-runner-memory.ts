@@ -3,7 +3,7 @@ import type { OpenClawConfig } from "../../config/config.js";
 import type { TemplateContext } from "../templating.js";
 import type { VerboseLevel } from "../thinking.js";
 import type { GetReplyOptions } from "../types.js";
-import type { MemoryFlushSettings } from "./memory-flush.js";
+import type { MemoryFlushCheckpoint, MemoryFlushSettings } from "./memory-flush.js";
 import type { FollowupRun } from "./queue.js";
 import { resolveAgentModelFallbacksOverride } from "../../agents/agent-scope.js";
 import { runWithModelFallback } from "../../agents/model-fallback.js";
@@ -42,7 +42,7 @@ async function runCheckpointFlush(params: {
   storePath?: string;
   isHeartbeat: boolean;
   memoryFlushSettings: MemoryFlushSettings;
-  checkpointResult: { shouldRun: boolean; checkpoint?: any; percent?: number };
+  checkpointResult: { shouldRun: boolean; checkpoint?: MemoryFlushCheckpoint; percent?: number };
   contextWindowTokens: number;
 }): Promise<SessionEntry | undefined> {
   const { checkpoint, percent } = params.checkpointResult;

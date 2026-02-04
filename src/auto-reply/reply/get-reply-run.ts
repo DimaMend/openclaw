@@ -97,6 +97,7 @@ type RunPreparedReplyParams = {
   isNewSession: boolean;
   resetTriggered: boolean;
   systemSent: boolean;
+  previousSessionEntry?: SessionEntry;
   sessionEntry?: SessionEntry;
   sessionStore?: Record<string, SessionEntry>;
   sessionKey: string;
@@ -141,6 +142,7 @@ export async function runPreparedReply(
     isNewSession,
     resetTriggered,
     systemSent,
+    previousSessionEntry,
     sessionKey,
     sessionId,
     storePath,
@@ -415,6 +417,7 @@ export async function runPreparedReply(
     isStreaming,
     opts,
     typing,
+    previousSessionEntry,
     sessionEntry,
     sessionStore,
     sessionKey,
