@@ -24,9 +24,9 @@ describe("resolveGatewayConnection", () => {
   it("throws when url override is missing explicit credentials", () => {
     loadConfig.mockReturnValue({ gateway: { mode: "local" } });
 
-    expect(() =>
-      resolveGatewayConnection({ url: "wss://override.example/ws" }),
-    ).toThrow("explicit credentials");
+    expect(() => resolveGatewayConnection({ url: "wss://override.example/ws" })).toThrow(
+      "explicit credentials",
+    );
   });
 
   it("uses explicit token when url override is set", () => {
