@@ -121,6 +121,30 @@ describe("enableConsoleCapture", () => {
     console.log(payload);
     expect(log).toHaveBeenCalledWith(payload);
   });
+
+  it("truncates large payloads for file log but preserves full stdout output", async () => {
+    const logFile = tempLogPath();
+    setLoggerOverride({ level: "info", file: logFile });
+    const log = vi.fn();
+    console.log = log;
+    enableConsoleCapture();
+
+    // Create a large payload (like a shell completion script)
+    const largePayload = "x".repeat(5000);
+    console.log(largePayload);
+
+    // Full payload should still be written to stdout
+    expect(log).toHaveBeenCalledWith(largePayload);
+
+    // Give the file logger time to flush
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    // Check file log is truncated
+    const fs = await import("node:fs/promises");
+    const content = await fs.readFile(logFile, "utf-8");
+    expect(content.length).toBeLessThan(largePayload.length);
+    expect(content).toContain("[truncated");
+  });
 });
 
 function tempLogPath() {
