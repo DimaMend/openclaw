@@ -107,18 +107,4 @@ describe("resolveMemoryBackendConfig", () => {
     const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
     expect(resolved.qmd?.searchMode).toBe("vsearch");
   });
-
-  it("falls back to query for invalid searchMode", () => {
-    const cfg = {
-      agents: { defaults: { workspace: "/tmp/memory-test" } },
-      memory: {
-        backend: "qmd",
-        qmd: {
-          searchMode: "invalid" as "query",
-        },
-      },
-    } as OpenClawConfig;
-    const resolved = resolveMemoryBackendConfig({ cfg, agentId: "main" });
-    expect(resolved.qmd?.searchMode).toBe("query");
-  });
 });

@@ -6,6 +6,7 @@ import type {
   MemoryCitationsMode,
   MemoryQmdConfig,
   MemoryQmdIndexPath,
+  QmdSearchMode,
 } from "../config/types.memory.js";
 import { resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 import { parseDurationMs } from "../cli/parse-duration.js";
@@ -44,8 +45,6 @@ export type ResolvedQmdSessionConfig = {
   exportDir?: string;
   retentionDays?: number;
 };
-
-export type QmdSearchMode = "query" | "search" | "vsearch";
 
 export type ResolvedQmdConfig = {
   command: string;
