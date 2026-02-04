@@ -53,7 +53,6 @@ import {
 } from "./controllers/skills.ts";
 import { icons } from "./icons.ts";
 import { normalizeBasePath, TAB_GROUPS, subtitleForTab, titleForTab } from "./navigation.ts";
-import { ConfigUiHints } from "./types.ts";
 import { renderAgents } from "./views/agents.ts";
 import { renderChannels } from "./views/channels.ts";
 import { renderChat } from "./views/chat.ts";
@@ -268,7 +267,7 @@ export function renderApp(state: AppViewState) {
                 configSchema: state.configSchema,
                 configSchemaLoading: state.configSchemaLoading,
                 configForm: state.configForm,
-                configUiHints: state.configUiHints as ConfigUiHints,
+                configUiHints: state.configUiHints,
                 configSaving: state.configSaving,
                 configFormDirty: state.configFormDirty,
                 nostrProfileFormState: state.nostrProfileFormState,
@@ -1007,7 +1006,7 @@ export function renderApp(state: AppViewState) {
                 connected: state.connected,
                 schema: state.configSchema,
                 schemaLoading: state.configSchemaLoading,
-                uiHints: state.configUiHints as ConfigUiHints,
+                uiHints: state.configUiHints,
                 formMode: state.configFormMode,
                 formValue: state.configForm,
                 originalValue: state.configFormOriginal,
@@ -1026,12 +1025,11 @@ export function renderApp(state: AppViewState) {
                   (state as unknown as OpenClawApp).configActiveSection = section;
                   (state as unknown as OpenClawApp).configActiveSubsection = null;
                 },
-                onSubsectionChange: (section) =>
-                  ((state as unknown as OpenClawApp).configActiveSubsection = section),
-                onReload: () => loadConfig(state as unknown as OpenClawApp),
-                onSave: () => saveConfig(state as unknown as OpenClawApp),
-                onApply: () => applyConfig(state as unknown as OpenClawApp),
-                onUpdate: () => runUpdate(state as unknown as OpenClawApp),
+                onSubsectionChange: (section) => (state.configActiveSubsection = section),
+                onReload: () => loadConfig(state, { resetDirty: true }),
+                onSave: () => saveConfig(state),
+                onApply: () => applyConfig(state),
+                onUpdate: () => runUpdate(state),
               })
             : nothing
         }
