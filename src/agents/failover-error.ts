@@ -149,6 +149,7 @@ export function isTimeoutError(err: unknown): boolean {
  * - 500: Internal Server Error (generic server failure)
  * - 502: Bad Gateway (upstream server error)
  * - 503: Service Unavailable (server overloaded or down)
+ * - 504: Gateway Timeout (handled separately as "timeout" reason)
  * - 529: Site Overloaded (Cloudflare/custom rate limiting)
  */
 const FAILOVER_WORTHY_5XX_CODES = new Set([500, 502, 503, 504, 529]);
@@ -169,6 +170,10 @@ export function resolveFailoverReasonFromError(err: unknown): FailoverReason | n
     return "auth";
   }
   if (status === 408) {
+    return "timeout";
+  }
+  // 504 Gateway Timeout is semantically a timeout, not a generic server error
+  if (status === 504) {
     return "timeout";
   }
   // Handle server errors (5xx) as failover-worthy

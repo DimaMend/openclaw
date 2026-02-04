@@ -20,9 +20,12 @@ describe("failover-error", () => {
     expect(resolveFailoverReasonFromError({ status: 529 })).toBe("server_error");
   });
 
+  it("treats 504 Gateway Timeout as timeout (not server_error)", () => {
+    // 504 Gateway Timeout is semantically a timeout
+    expect(resolveFailoverReasonFromError({ status: 504 })).toBe("timeout");
+  });
+
   it("does not treat other 5xx codes as failover-worthy", () => {
-    // 504 Gateway Timeout - common during provider outages
-    expect(resolveFailoverReasonFromError({ status: 504 })).toBe("server_error");
     expect(resolveFailoverReasonFromError({ status: 501 })).toBe(null);
   });
 
