@@ -510,8 +510,8 @@ export function createWebSearchTool(options?: {
 
   const description =
     provider === "perplexity"
-      ? "Search the web using Perplexity Sonar... [rest of description]"
-      : "Search the web using Brave Search API... [rest of description]";
+      ? "Search the web using Perplexity Sonar. Returns an AI-generated answer with supporting citations from live web sources."
+      : "Search the web using the Brave Search API. Returns a list of relevant web results with titles, URLs, descriptions, and metadata.";
 
   return {
     label: "Web Search",
