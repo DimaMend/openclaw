@@ -105,21 +105,22 @@ export async function statusCommand(
         async () => await loadProviderUsageSummary({ timeoutMs: opts.timeoutMs }),
       )
     : undefined;
-  const health: HealthSummary | undefined = opts.deep
-    ? await withProgress(
-        {
-          label: "Checking gateway health…",
-          indeterminate: true,
-          enabled: opts.json !== true,
-        },
-        async () =>
-          await callGateway<HealthSummary>({
-            method: "health",
-            params: { probe: true },
-            timeoutMs: opts.timeoutMs,
-          }),
-      )
-    : undefined;
+  const health: HealthSummary | undefined =
+    opts.deep && gatewayReachable
+      ? await withProgress(
+          {
+            label: "Checking gateway health…",
+            indeterminate: true,
+            enabled: opts.json !== true,
+          },
+          async () =>
+            await callGateway<HealthSummary>({
+              method: "health",
+              params: { probe: true },
+              timeoutMs: opts.timeoutMs,
+            }).catch(() => undefined),
+        )
+      : undefined;
 
   const configChannel = normalizeUpdateChannel(cfg.update?.channel);
   const channelInfo = resolveEffectiveUpdateChannel({
