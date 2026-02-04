@@ -1,6 +1,6 @@
 import { lookup as dnsLookupCb, type LookupAddress } from "node:dns";
 import { lookup as dnsLookup } from "node:dns/promises";
-import { Agent, type Dispatcher } from "undici";
+import { Agent, ProxyAgent, type Dispatcher } from "undici";
 
 type LookupCallback = (
   err: NodeJS.ErrnoException | null,
@@ -275,6 +275,10 @@ export async function resolvePinnedHostname(
 }
 
 export function createPinnedDispatcher(pinned: PinnedHostname): Dispatcher {
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY;
+  if (proxyUrl) {
+    return new ProxyAgent(proxyUrl);
+  }
   return new Agent({
     connect: {
       lookup: pinned.lookup,
