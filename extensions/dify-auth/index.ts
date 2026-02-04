@@ -321,8 +321,6 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
-  console.log("[dify-auth] Proxying request to", baseUrl);
-
   const messages = body.messages || [];
   const lastMessageEntry = messages[messages.length - 1];
   const lastMessage = lastMessageEntry?.content ?? "";
@@ -351,7 +349,6 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
   const isReset =
     typeof lastMessage === "string" && lastMessage.includes("A new session was started");
   if (isReset) {
-    console.log(`[dify-auth] Resetting session for user ${userId}`);
     conversationId = "";
     conversationMap.delete(sessionKey);
   }
@@ -417,11 +414,8 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
   }
 
   if (!conversationId && systemMessage && typeof difyPayload.query === "string") {
-    console.log("[dify-auth] Injecting System Prompt into new session");
     difyPayload.query = `${systemMessage}\n\n${difyPayload.query}`;
   }
-
-  console.log("[dify-auth] Request payload:", JSON.stringify(difyPayload, null, 2));
 
   try {
     const endpoint = "/chat-messages";
@@ -479,9 +473,6 @@ async function handleProxyRequest(req: IncomingMessage, res: ServerResponse) {
 
             if (data.conversation_id && !conversationMap.has(sessionKey)) {
               setConversationId(sessionKey, data.conversation_id, Date.now());
-              console.log(
-                `[dify-auth] New session started: ${data.conversation_id} for user ${userId}`,
-              );
             } else if (
               data.conversation_id &&
               conversationMap.get(sessionKey)?.id !== data.conversation_id
