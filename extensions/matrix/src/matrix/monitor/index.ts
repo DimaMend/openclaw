@@ -9,7 +9,7 @@ import {
   isBunRuntime,
   resolveMatrixAuth,
   resolveSharedMatrixClient,
-  stopSharedClient,
+  stopSharedClientForAccount,
 } from "../client.js";
 import { normalizeMatrixUserId } from "./allowlist.js";
 import { registerMatrixAutoJoin } from "./auto-join.js";
@@ -329,7 +329,7 @@ export async function monitorMatrixProvider(opts: MonitorMatrixOpts = {}): Promi
     const onAbort = () => {
       try {
         logVerboseMessage("matrix: stopping client");
-        stopSharedClient();
+        stopSharedClientForAccount(auth, opts.accountId);
       } finally {
         setActiveMatrixClient(null, opts.accountId);
         resolve();

@@ -441,10 +441,15 @@ export const matrixPlugin: ChannelPlugin<ResolvedMatrixAccount> = {
       await previousLock;
 
       // Lazy import: the monitor pulls the reply pipeline; avoid ESM init cycles.
-      const { monitorMatrixProvider } = await import("./matrix/index.js");
-
-      // Release lock after import completes
-      releaseLock();
+      // Wrap in try/finally to ensure lock is released even if import fails.
+      let monitorMatrixProvider: typeof import("./matrix/index.js").monitorMatrixProvider;
+      try {
+        const module = await import("./matrix/index.js");
+        monitorMatrixProvider = module.monitorMatrixProvider;
+      } finally {
+        // Release lock after import completes or fails
+        releaseLock();
+      }
 
       return monitorMatrixProvider({
         runtime: ctx.runtime,

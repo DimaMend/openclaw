@@ -183,3 +183,13 @@ export function stopSharedClient(key?: string): void {
     sharedClientStates.clear();
   }
 }
+
+/**
+ * Stop the shared client for a specific account.
+ * Use this instead of stopSharedClient() when shutting down a single account
+ * to avoid stopping all accounts.
+ */
+export function stopSharedClientForAccount(auth: MatrixAuth, accountId?: string | null): void {
+  const key = buildSharedClientKey(auth, accountId);
+  stopSharedClient(key);
+}
