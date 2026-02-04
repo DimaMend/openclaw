@@ -415,6 +415,24 @@ describe("statusCommand", () => {
     expect(logs.join("\n")).toMatch(/WARN/);
   });
 
+  it("does not crash with --deep when gateway is unreachable", async () => {
+    // Simulate callGateway rejecting (gateway auth failure / connection refused)
+    mocks.callGateway.mockRejectedValueOnce(
+      new Error("gateway closed (1008): unauthorized: gateway token missing"),
+    );
+    (runtime.log as vi.Mock).mockClear();
+
+    // Should not throw — the deep health probe must be guarded
+    await expect(statusCommand({ deep: true }, runtime as never)).resolves.not.toThrow();
+
+    const logs = (runtime.log as vi.Mock).mock.calls.map((c) => String(c[0]));
+    // Should still render the full status table
+    expect(logs.some((l) => l.includes("OpenClaw status"))).toBe(true);
+    expect(logs.some((l) => l.includes("Overview"))).toBe(true);
+    // Health section should not appear (gateway was unreachable)
+    expect(logs.some((l) => l.includes("Health"))).toBe(false);
+  });
+
   it("includes sessions across agents in JSON output", async () => {
     const originalAgents = mocks.listAgentsForGateway.getMockImplementation();
     const originalResolveStorePath = mocks.resolveStorePath.getMockImplementation();
