@@ -60,6 +60,7 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     lastReasoningSent: undefined,
     compactionInFlight: false,
     pendingCompactionRetry: 0,
+    compactionRetryExhausted: false,
     compactionRetryResolve: undefined,
     compactionRetryPromise: null,
     messagingToolSentTexts: [],
@@ -537,6 +538,7 @@ export function subscribeEmbeddedPiSession(params: SubscribeEmbeddedPiSessionPar
     toolMetas,
     unsubscribe,
     isCompacting: () => state.compactionInFlight || state.pendingCompactionRetry > 0,
+    isCompactionRetryExhausted: () => state.compactionRetryExhausted,
     getMessagingToolSentTexts: () => messagingToolSentTexts.slice(),
     getMessagingToolSentTargets: () => messagingToolSentTargets.slice(),
     // Returns true if any messaging tool successfully sent a message.
