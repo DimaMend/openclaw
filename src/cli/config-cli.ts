@@ -342,4 +342,33 @@ export function registerConfigCli(program: Command) {
         defaultRuntime.exit(1);
       }
     });
+
+  cmd
+    .command("generate-template")
+    .description("Generate a configuration template JSON file to fill in")
+    .option("-o, --output <path>", "Output file path", "openclaw-config-template.json")
+    .action(async (opts) => {
+      try {
+        const { generateTemplateCommand } = await import("../commands/config-template.js");
+        await generateTemplateCommand(opts, defaultRuntime);
+      } catch (err) {
+        defaultRuntime.error(danger(String(err)));
+        defaultRuntime.exit(1);
+      }
+    });
+
+  cmd
+    .command("import-template")
+    .description("Import a filled configuration template")
+    .argument("<file>", "Path to filled template JSON file")
+    .option("--dry-run", "Show what would be imported without applying", false)
+    .action(async (file: string, opts) => {
+      try {
+        const { importTemplateCommand } = await import("../commands/config-template.js");
+        await importTemplateCommand({ file, dryRun: opts.dryRun }, defaultRuntime);
+      } catch (err) {
+        defaultRuntime.error(danger(String(err)));
+        defaultRuntime.exit(1);
+      }
+    });
 }
