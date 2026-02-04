@@ -222,7 +222,7 @@ export async function isSystemdSystemServiceAvailable(): Promise<boolean> {
   // Check if we can run systemctl (may require sudo)
   // Note: we don't use useSudo: true here to avoid permission-denied false positives
   const res = await execSystemctl(["status"]);
-  // If it doesn't error with "command not found", systemd is available
+  // If it doesn't error with \"command not found\", systemd is available
   const detail = `${res.stderr} ${res.stdout}`.toLowerCase();
   if (detail.includes("not found")) {
     return false;
@@ -453,6 +453,7 @@ export async function readSystemdServiceRuntime(
       lastExitStatus: parsed.execMainStatus,
       lastExitReason: parsed.execMainCode,
       lastRunResult: parsed.execMainCode,
+      isSystemService: true,
     };
   }
 
