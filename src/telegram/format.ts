@@ -64,15 +64,42 @@ export function markdownToTelegramHtml(
   return renderTelegramHtml(ir);
 }
 
+/**
+ * Wraps standalone .md file references in backticks within HTML text nodes.
+ * This runs AFTER markdown→HTML conversion to avoid modifying HTML attributes.
+ */
+function wrapMdFileReferencesInHtml(html: string): string {
+  // Match .md file references in text content (not inside tags)
+  // Pattern: word chars/dashes/dots/slashes ending in .md
+  // Must be preceded by > (end of tag) or whitespace, and followed by whitespace or <
+  const mdFilePattern = /(^|>|[\s])([a-zA-Z0-9_.\-./]+\.md)(?=$|[\s<])/g;
+
+  return html.replace(mdFilePattern, (match, prefix, filename) => {
+    // Don't wrap if filename starts with // (URL scheme)
+    if (filename.startsWith("//")) {
+      return match;
+    }
+    // Don't wrap if it's part of a URL (check if prefix contains http)
+    if (/https?:\/\/$/i.test(prefix)) {
+      return match;
+    }
+    return `${prefix}<code>${filename}</code>`;
+  });
+}
+
 export function renderTelegramHtmlText(
   text: string,
   options: { textMode?: "markdown" | "html"; tableMode?: MarkdownTableMode } = {},
 ): string {
   const textMode = options.textMode ?? "markdown";
   if (textMode === "html") {
-    return text;
+    // For HTML mode, still wrap .md references in the HTML
+    return wrapMdFileReferencesInHtml(text);
   }
-  return markdownToTelegramHtml(text, { tableMode: options.tableMode });
+  const html = markdownToTelegramHtml(text, { tableMode: options.tableMode });
+  // Wrap .md references after markdown→HTML conversion
+  // This ensures we only transform text nodes, not HTML attributes
+  return wrapMdFileReferencesInHtml(html);
 }
 
 export function markdownToTelegramChunks(
