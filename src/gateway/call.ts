@@ -51,6 +51,43 @@ export type GatewayConnectionDetails = {
   message: string;
 };
 
+export type ExplicitGatewayAuth = {
+  token?: string;
+  password?: string;
+};
+
+export function resolveExplicitGatewayAuth(opts?: ExplicitGatewayAuth): ExplicitGatewayAuth {
+  const token =
+    typeof opts?.token === "string" && opts.token.trim().length > 0 ? opts.token.trim() : undefined;
+  const password =
+    typeof opts?.password === "string" && opts.password.trim().length > 0
+      ? opts.password.trim()
+      : undefined;
+  return { token, password };
+}
+
+export function ensureExplicitGatewayAuth(params: {
+  urlOverride?: string;
+  auth: ExplicitGatewayAuth;
+  errorHint: string;
+  configPath?: string;
+}): void {
+  if (!params.urlOverride) {
+    return;
+  }
+  if (params.auth.token || params.auth.password) {
+    return;
+  }
+  const message = [
+    "gateway url override requires explicit credentials",
+    params.errorHint,
+    params.configPath ? `Config: ${params.configPath}` : undefined,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  throw new Error(message);
+}
+
 export function buildGatewayConnectionDetails(
   options: { config?: OpenClawConfig; url?: string; configPath?: string } = {},
 ): GatewayConnectionDetails {
@@ -118,23 +155,13 @@ export async function callGateway<T = Record<string, unknown>>(
   const remote = isRemoteMode ? config.gateway?.remote : undefined;
   const urlOverride =
     typeof opts.url === "string" && opts.url.trim().length > 0 ? opts.url.trim() : undefined;
-  const explicitToken =
-    typeof opts.token === "string" && opts.token.trim().length > 0 ? opts.token.trim() : undefined;
-  const explicitPassword =
-    typeof opts.password === "string" && opts.password.trim().length > 0
-      ? opts.password.trim()
-      : undefined;
-  if (urlOverride && !explicitToken && !explicitPassword) {
-    const configPath =
-      opts.configPath ?? resolveConfigPath(process.env, resolveStateDir(process.env));
-    throw new Error(
-      [
-        "gateway url override requires explicit credentials",
-        "Fix: pass --token or --password (or gatewayToken in tools).",
-        `Config: ${configPath}`,
-      ].join("\n"),
-    );
-  }
+  const explicitAuth = resolveExplicitGatewayAuth({ token: opts.token, password: opts.password });
+  ensureExplicitGatewayAuth({
+    urlOverride,
+    auth: explicitAuth,
+    errorHint: "Fix: pass --token or --password (or gatewayToken in tools).",
+    configPath: opts.configPath ?? resolveConfigPath(process.env, resolveStateDir(process.env)),
+  });
   const remoteUrl =
     typeof remote?.url === "string" && remote.url.trim().length > 0 ? remote.url.trim() : undefined;
   if (isRemoteMode && !urlOverride && !remoteUrl) {
@@ -170,7 +197,7 @@ export async function callGateway<T = Record<string, unknown>>(
     remoteTlsFingerprint ||
     (tlsRuntime?.enabled ? tlsRuntime.fingerprintSha256 : undefined);
   const token =
-    explicitToken ||
+    explicitAuth.token ||
     (!urlOverride
       ? isRemoteMode
         ? typeof remote?.token === "string" && remote.token.trim().length > 0
@@ -183,7 +210,7 @@ export async function callGateway<T = Record<string, unknown>>(
             : undefined)
       : undefined);
   const password =
-    explicitPassword ||
+    explicitAuth.password ||
     (!urlOverride
       ? process.env.OPENCLAW_GATEWAY_PASSWORD?.trim() ||
         process.env.CLAWDBOT_GATEWAY_PASSWORD?.trim() ||

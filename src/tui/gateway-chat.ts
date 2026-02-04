@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { loadConfig, resolveGatewayPort } from "../config/config.js";
+import { ensureExplicitGatewayAuth, resolveExplicitGatewayAuth } from "../gateway/call.js";
 import { GatewayClient } from "../gateway/client.js";
 import { GATEWAY_CLIENT_CAPS } from "../gateway/protocol/client-info.js";
 import {
@@ -226,20 +227,12 @@ export function resolveGatewayConnection(opts: GatewayConnectionOptions) {
   const localPort = resolveGatewayPort(config);
   const urlOverride =
     typeof opts.url === "string" && opts.url.trim().length > 0 ? opts.url.trim() : undefined;
-  const explicitToken =
-    typeof opts.token === "string" && opts.token.trim().length > 0 ? opts.token.trim() : undefined;
-  const explicitPassword =
-    typeof opts.password === "string" && opts.password.trim().length > 0
-      ? opts.password.trim()
-      : undefined;
-  if (urlOverride && !explicitToken && !explicitPassword) {
-    throw new Error(
-      [
-        "gateway url override requires explicit credentials",
-        "Fix: pass --token or --password when using --url.",
-      ].join("\n"),
-    );
-  }
+  const explicitAuth = resolveExplicitGatewayAuth({ token: opts.token, password: opts.password });
+  ensureExplicitGatewayAuth({
+    urlOverride,
+    auth: explicitAuth,
+    errorHint: "Fix: pass --token or --password when using --url.",
+  });
   const url =
     urlOverride ||
     (typeof remote?.url === "string" && remote.url.trim().length > 0
@@ -248,7 +241,7 @@ export function resolveGatewayConnection(opts: GatewayConnectionOptions) {
     `ws://127.0.0.1:${localPort}`;
 
   const token =
-    explicitToken ||
+    explicitAuth.token ||
     (!urlOverride
       ? isRemoteMode
         ? typeof remote?.token === "string" && remote.token.trim().length > 0
@@ -261,7 +254,7 @@ export function resolveGatewayConnection(opts: GatewayConnectionOptions) {
       : undefined);
 
   const password =
-    explicitPassword ||
+    explicitAuth.password ||
     (!urlOverride
       ? process.env.OPENCLAW_GATEWAY_PASSWORD?.trim() ||
         (typeof remote?.password === "string" && remote.password.trim().length > 0
