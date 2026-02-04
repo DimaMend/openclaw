@@ -405,6 +405,8 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
     opts.statusSink?.({ lastInboundAt: Date.now() });
   };
 
+  let consecutivePollFailures = 0;
+
   while (!opts.abortSignal?.aborted) {
     try {
       const response = await zulipGetEvents(client, {
@@ -412,6 +414,7 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
         lastEventId,
         timeoutSeconds: 30,
       });
+      consecutivePollFailures = 0;
       const events = response.events ?? [];
       for (const event of events) {
         lastEventId = Math.max(lastEventId, event.id);
@@ -421,15 +424,35 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
         await handleMessage(event.message);
       }
     } catch (err) {
+      consecutivePollFailures++;
       const message = err instanceof Error ? err.message : String(err);
+      const looksLikeBadQueue = /BAD_EVENT_QUEUE_ID|Bad event queue/i.test(message);
+      const statusMatch = message.match(/HTTP\s+(\d{3})/i);
+      const httpStatus = statusMatch ? Number(statusMatch[1]) : null;
+      const isServerError = httpStatus != null && httpStatus >= 500;
+
       runtime.error?.(`zulip events error: ${message}`);
       opts.statusSink?.({
         lastError: message,
         connected: false,
-        lastDisconnect: { at: Date.now(), status: 0, error: message },
+        lastDisconnect: { at: Date.now(), status: httpStatus ?? 0, error: message },
       });
-      // Re-register after errors.
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Poll errors are often transient (Cloudflare/proxy/origin hiccups). Prefer retrying the
+      // existing queue rather than immediately re-registering.
+      const delayMs = Math.min(30000, 2000 + Math.max(0, consecutivePollFailures - 1) * 2000);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+      // Only re-register when the queue is invalid, or after repeated server errors.
+      const shouldReRegister =
+        looksLikeBadQueue ||
+        (isServerError && consecutivePollFailures >= 3) ||
+        (!isServerError && consecutivePollFailures >= 5);
+
+      if (!shouldReRegister) {
+        continue;
+      }
+
       try {
         const reg = await zulipRegister(client, {
           eventTypes: ["message"],
@@ -437,6 +460,7 @@ export async function monitorZulipProvider(opts: MonitorZulipOpts = {}): Promise
         });
         queueId = reg.queue_id;
         lastEventId = reg.last_event_id;
+        consecutivePollFailures = 0;
         opts.statusSink?.({ connected: true, lastConnectedAt: Date.now(), lastError: null });
       } catch (regErr) {
         runtime.error?.(`zulip register retry failed: ${String(regErr)}`);
