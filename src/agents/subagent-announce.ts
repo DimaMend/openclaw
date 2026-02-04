@@ -376,8 +376,10 @@ export async function runSubagentAnnounceFlow(params: {
   let didAnnounce = false;
   try {
     // Check if announcements are suppressed (per-spawn or global config).
+    // Return true (not false) so callers treat suppression as success for cleanup bookkeeping —
+    // returning false would cause finalizeSubagentCleanup to retry on every wake/restart.
     if (shouldSuppressAnnounce({ silent: params.silent })) {
-      return false;
+      return true;
     }
     const requesterOrigin = normalizeDeliveryContext(params.requesterOrigin);
     let reply = params.roundOneReply;
