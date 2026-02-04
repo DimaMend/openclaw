@@ -1,0 +1,36 @@
+{
+  "id": "e2b-executor",
+  "name": "E2B Remote Executor",
+  "description": "Execute code remotely in E2B sandboxed environments to avoid local disk usage",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "apiKey": {
+        "type": "string",
+        "description": "E2B API key (get from https://e2b.dev)"
+      },
+      "enabled": {
+        "type": "boolean",
+        "description": "Enable remote execution",
+        "default": false
+      },
+      "autoTriggerThreshold": {
+        "type": "string",
+        "description": "Automatically use E2B for operations exceeding this size (e.g. '100MB')",
+        "default": "100MB"
+      },
+      "timeoutMs": {
+        "type": "number",
+        "description": "Timeout for sandbox operations in milliseconds",
+        "default": 300000
+      },
+      "template": {
+        "type": "string",
+        "description": "E2B template to use (default: base with Node/Python)",
+        "default": "base"
+      }
+    },
+    "required": ["apiKey"]
+  }
+}

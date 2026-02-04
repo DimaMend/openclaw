@@ -94,34 +94,34 @@ if [ "$AGGRESSIVE" = true ]; then
   SNAPSHOT_KEEP=3
 fi
 
-# Clean old OpenClaw session logs
-echo "Cleaning old OpenClaw session logs (>${AGE_THRESHOLD} days)..."
-find ~/.openclaw/agents/*/sessions -name "*.jsonl" -mtime +${AGE_THRESHOLD} -delete 2>/dev/null || true
-echo "  ✓ Old session logs cleaned"
+# # Clean old OpenClaw session logs
+# echo "Cleaning old OpenClaw session logs (>${AGE_THRESHOLD} days)..."
+# find ~/.openclaw/agents/*/sessions -name "*.jsonl" -mtime +${AGE_THRESHOLD} -delete 2>/dev/null || true
+# echo "  ✓ Old session logs cleaned"
 
-# Clean OpenClaw memory snapshots
-if [ -d ~/.openclaw/memory ]; then
-  echo "Cleaning old OpenClaw memory snapshots (keep last ${SNAPSHOT_KEEP})..."
-  cd ~/.openclaw/memory
-  ls -t snapshot-*.json 2>/dev/null | tail -n +$((SNAPSHOT_KEEP + 1)) | xargs rm -f || true
-  echo "  ✓ Old memory snapshots cleaned"
-fi
+# # Clean OpenClaw memory snapshots
+# if [ -d ~/.openclaw/memory ]; then
+#   echo "Cleaning old OpenClaw memory snapshots (keep last ${SNAPSHOT_KEEP})..."
+#   cd ~/.openclaw/memory
+#   ls -t snapshot-*.json 2>/dev/null | tail -n +$((SNAPSHOT_KEEP + 1)) | xargs rm -f || true
+#   echo "  ✓ Old memory snapshots cleaned"
+# fi
 
 # Clean /data volume (Render-specific persistent disk)
-if [ -d /data/.openclaw ]; then
-  echo "Cleaning /data/.openclaw (Render persistent volume)..."
+# if [ -d /data/.openclaw ]; then
+#   echo "Cleaning /data/.openclaw (Render persistent volume)..."
 
-  # Clean old session logs from /data
-  find /data/.openclaw/agents/*/sessions -name "*.jsonl" -mtime +${AGE_THRESHOLD} -delete 2>/dev/null || true
+  # # Clean old session logs from /data
+  # find /data/.openclaw/agents/*/sessions -name "*.jsonl" -mtime +${AGE_THRESHOLD} -delete 2>/dev/null || true
 
-  # Clean browser cache from /data
-  rm -rf /data/.openclaw/browser/* 2>/dev/null || true
+  # # Clean browser cache from /data
+  # rm -rf /data/.openclaw/browser/* 2>/dev/null || true
 
-  # Clean old memory snapshots from /data
-  if [ -d /data/.openclaw/memory ]; then
-    cd /data/.openclaw/memory
-    ls -t snapshot-*.json 2>/dev/null | tail -n +$((SNAPSHOT_KEEP + 1)) | xargs rm -f || true
-  fi
+  # # Clean old memory snapshots from /data
+  # if [ -d /data/.openclaw/memory ]; then
+  #   cd /data/.openclaw/memory
+  #   ls -t snapshot-*.json 2>/dev/null | tail -n +$((SNAPSHOT_KEEP + 1)) | xargs rm -f || true
+  # fi
 
   # Clean node_modules (biggest space hog)
   if [ -d /data/workspace ]; then
