@@ -400,7 +400,8 @@ export async function compactEmbeddedPiSessionDirect(
         sessionManager,
         settingsManager,
       });
-      applySystemPromptOverrideToSession(session, systemPromptOverride);
+      // 🟢 修正代码
+      applySystemPromptOverrideToSession(session, systemPromptOverride());
 
       try {
         const prior = await sanitizeSessionHistory({

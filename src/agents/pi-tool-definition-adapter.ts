@@ -40,9 +40,9 @@ export function toToolDefinitions(tools: AnyAgentTool[]): ToolDefinition[] {
       execute: async (
         toolCallId,
         params,
-        onUpdate: AgentToolUpdateCallback<unknown> | undefined,
-        _ctx,
         signal,
+        onUpdate,
+        _ctx,
       ): Promise<AgentToolResult<unknown>> => {
         try {
           return await tool.execute(toolCallId, params, signal, onUpdate);
@@ -91,9 +91,9 @@ export function toClientToolDefinitions(
       execute: async (
         toolCallId,
         params,
-        _onUpdate: AgentToolUpdateCallback<unknown> | undefined,
-        _ctx,
         _signal,
+        _onUpdate,
+        _ctx,
       ): Promise<AgentToolResult<unknown>> => {
         const outcome = await runBeforeToolCallHook({
           toolName: func.name,
