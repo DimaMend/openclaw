@@ -21,6 +21,7 @@ import {
 import { readFeishuAllowFromStore, upsertFeishuPairingRequest } from "./pairing-store.js";
 import { sendMessageFeishu } from "./send.js";
 import { FeishuStreamingSession } from "./streaming-card.js";
+import { getFeishuUserDisplayName } from "./user.js";
 
 const logger = getChildLogger({ module: "feishu-message" });
 
@@ -345,7 +346,9 @@ export async function processFeishuMessage(
     return;
   }
 
-  const senderName = sender?.sender_id?.user_id || "unknown";
+  // Get sender display name (try to fetch from contact API, fallback to user_id)
+  const fallbackName = sender?.sender_id?.user_id || "unknown";
+  const senderName = await getFeishuUserDisplayName(client, senderId, fallbackName);
 
   // Streaming mode support
   const streamingEnabled = (feishuCfg.streaming ?? true) && Boolean(options.credentials);
