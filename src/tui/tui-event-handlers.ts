@@ -11,10 +11,25 @@ type EventHandlerContext = {
   state: TuiStateAccess;
   setActivityStatus: (text: string) => void;
   refreshSessionInfo?: () => Promise<void>;
+  getAgentDisplayName?: (agentId: string) => string;
 };
 
 export function createEventHandlers(context: EventHandlerContext) {
-  const { chatLog, tui, state, setActivityStatus, refreshSessionInfo } = context;
+  const { chatLog, tui, state, setActivityStatus, refreshSessionInfo, getAgentDisplayName } =
+    context;
+
+  // Helper to get current agent's display name
+  const getCurrentAgentName = () => {
+    if (getAgentDisplayName) {
+      return getAgentDisplayName(state.currentAgentId);
+    }
+    // Fallback: capitalize first letter of agentId
+    const id = state.currentAgentId;
+    if (id === "main") {
+      return "Aria";
+    }
+    return id.charAt(0).toUpperCase() + id.slice(1);
+  };
   const finalizedRuns = new Map<string, number>();
   const sessionRuns = new Map<string, number>();
   let streamAssembler = new TuiStreamAssembler();
@@ -118,7 +133,7 @@ export function createEventHandlers(context: EventHandlerContext) {
       const finalText = streamAssembler.finalize(evt.runId, evt.message, state.showThinking);
       // Filter out NO_REPLY silent responses from display
       if (!isSilentReplyText(finalText, SILENT_REPLY_TOKEN)) {
-        chatLog.finalizeAssistant(finalText, evt.runId);
+        chatLog.finalizeAssistant(finalText, evt.runId, getCurrentAgentName());
       }
       noteFinalizedRun(evt.runId);
       state.activeChatRunId = null;
