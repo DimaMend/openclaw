@@ -3,7 +3,7 @@
  * Prompts user to configure smart model routing settings.
  */
 
-import type { VersoConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { RouterConfig } from "../config/types.router.js";
 import { confirm, text } from "./configure.shared.js";
 import { guardCancel } from "./onboard-helpers.js";
@@ -25,10 +25,10 @@ const TASK_TYPE_OPTIONS = [
 /**
  * Prompt user for router configuration.
  */
-export async function promptRouterConfig(
-  cfg: VersoConfig,
+export async function configureRouter(
+  cfg: OpenClawConfig,
   runtime: RuntimeEnv = defaultRuntime,
-): Promise<VersoConfig> {
+): Promise<OpenClawConfig> {
   const existingRouter = cfg.agents?.defaults?.router;
 
   note(

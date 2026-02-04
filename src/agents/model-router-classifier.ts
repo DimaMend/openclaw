@@ -4,7 +4,7 @@
  */
 
 import { completeSimple, getModel, type Api, type Model } from "@mariozechner/pi-ai";
-import type { VersoConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveApiKeyForProvider } from "./model-auth.js";
 import { logVerbose } from "../globals.js";
 import { stripThinkingTagsFromText } from "./pi-embedded-utils.js";
@@ -26,7 +26,7 @@ export type ClassifierCallParams = {
  */
 export async function callTaskClassifier(
   params: ClassifierCallParams,
-  cfg?: VersoConfig,
+  cfg?: OpenClawConfig,
   agentDir?: string,
 ): Promise<string> {
   const { provider, model, prompt, timeoutMs, thinking } = params;
@@ -142,7 +142,7 @@ export async function callTaskClassifier(
  * This is used to inject the classifier into resolveRouterModel.
  */
 export function createClassifierFn(
-  cfg: VersoConfig,
+  cfg: OpenClawConfig,
   agentDir?: string,
 ): (params: ClassifierCallParams) => Promise<string> {
   const routerThinking = cfg.agents?.defaults?.router?.thinking ?? false;

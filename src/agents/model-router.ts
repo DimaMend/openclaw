@@ -3,7 +3,7 @@
  * Analyzes user input and selects appropriate model from available candidates.
  */
 
-import type { VersoConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { RouterConfig } from "../config/types.router.js";
 import { parseModelRef, type ModelRef } from "./model-selection.js";
 import { logVerbose } from "../globals.js";
@@ -55,9 +55,9 @@ export function buildSelectionPrompt(params: { input: string; models: string[] }
 }
 
 /**
- * Resolve router configuration from VersoConfig.
+ * Resolve router configuration from OpenClawConfig.
  */
-export function resolveRouterConfig(cfg: VersoConfig): RouterConfig | null {
+export function resolveRouterConfig(cfg: OpenClawConfig): RouterConfig | null {
   const routerConfig = cfg.agents?.defaults?.router;
   if (!routerConfig?.enabled) {
     return null;
@@ -177,7 +177,7 @@ export async function selectDynamicModel(params: SelectDynamicModelParams): Prom
 /**
  * Resolve all available models from config.
  */
-function resolveAvailableModels(cfg: VersoConfig): string[] {
+function resolveAvailableModels(cfg: OpenClawConfig): string[] {
   const set = new Set<string>();
   const defaults = cfg.agents?.defaults;
 
@@ -209,7 +209,7 @@ function resolveAvailableModels(cfg: VersoConfig): string[] {
  */
 export async function resolveRouterModel(params: {
   input: string;
-  cfg: VersoConfig;
+  cfg: OpenClawConfig;
   defaultProvider: string;
   callClassifier: (params: {
     provider: string;

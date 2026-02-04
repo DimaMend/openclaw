@@ -10,7 +10,7 @@ import {
 import { resolveDefaultAgentWorkspaceDir } from "../../agents/workspace.js";
 import { parseDurationMs } from "../../cli/parse-duration.js";
 import { formatCliCommand } from "../../cli/command-format.js";
-import { readConfigFileSnapshot, type VersoConfig } from "../../config/config.js";
+import { readConfigFileSnapshot, type OpenClawConfig } from "../../config/config.js";
 import { logConfigUpdated } from "../../config/logging.js";
 import type { RuntimeEnv } from "../../runtime.js";
 import { stylePromptHint, stylePromptMessage } from "../../terminal/prompt-style.js";
@@ -172,12 +172,12 @@ export async function modelsAuthAddCommand(_opts: Record<string, never>, runtime
     options: [
       ...(providerId === "anthropic"
         ? [
-            {
-              value: "setup-token",
-              label: "setup-token (claude)",
-              hint: "Paste a setup-token from `claude setup-token`",
-            },
-          ]
+          {
+            value: "setup-token",
+            label: "setup-token (claude)",
+            hint: "Paste a setup-token from `claude setup-token`",
+          },
+        ]
         : []),
       { value: "paste", label: "paste token" },
     ],
@@ -203,19 +203,19 @@ export async function modelsAuthAddCommand(_opts: Record<string, never>, runtime
   });
   const expiresIn = wantsExpiry
     ? String(
-        await text({
-          message: "Expires in (duration)",
-          initialValue: "365d",
-          validate: (value) => {
-            try {
-              parseDurationMs(String(value ?? ""), { defaultUnit: "d" });
-              return undefined;
-            } catch {
-              return "Invalid duration (e.g. 365d, 12h, 30m)";
-            }
-          },
-        }),
-      ).trim()
+      await text({
+        message: "Expires in (duration)",
+        initialValue: "365d",
+        validate: (value) => {
+          try {
+            parseDurationMs(String(value ?? ""), { defaultUnit: "d" });
+            return undefined;
+          } catch {
+            return "Invalid duration (e.g. 365d, 12h, 30m)";
+          }
+        },
+      }),
+    ).trim()
     : undefined;
 
   await modelsAuthPasteTokenCommand({ provider: providerId, profileId, expiresIn }, runtime);
@@ -276,7 +276,7 @@ function mergeConfigPatch<T>(base: T, patch: unknown): T {
   return next as T;
 }
 
-function applyDefaultModel(cfg: VersoConfig, model: string): VersoConfig {
+function applyDefaultModel(cfg: OpenClawConfig, model: string): OpenClawConfig {
   const models = { ...cfg.agents?.defaults?.models };
   models[model] = models[model] ?? {};
 
@@ -352,15 +352,15 @@ export async function modelsAuthLoginCommand(opts: LoginOptions, runtime: Runtim
     (selectedProvider.auth.length === 1
       ? selectedProvider.auth[0]
       : await prompter
-          .select({
-            message: `Auth method for ${selectedProvider.label}`,
-            options: selectedProvider.auth.map((method) => ({
-              value: method.id,
-              label: method.label,
-              hint: method.hint,
-            })),
-          })
-          .then((id) => selectedProvider.auth.find((method) => method.id === String(id))));
+        .select({
+          message: `Auth method for ${selectedProvider.label}`,
+          options: selectedProvider.auth.map((method) => ({
+            value: method.id,
+            label: method.label,
+            hint: method.hint,
+          })),
+        })
+        .then((id) => selectedProvider.auth.find((method) => method.id === String(id))));
 
   if (!chosenMethod) {
     throw new Error("Unknown auth method. Use --method <id> to select one.");
