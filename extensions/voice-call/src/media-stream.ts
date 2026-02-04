@@ -104,7 +104,6 @@ export class MediaStreamHandler {
    */
   private async handleConnection(ws: WebSocket, _request: IncomingMessage): Promise<void> {
     let session: StreamSession | null = null;
-    const streamToken = this.getStreamToken(_request);
 
     ws.on("message", async (data: Buffer) => {
       try {
@@ -115,9 +114,12 @@ export class MediaStreamHandler {
             console.log("[MediaStream] Twilio connected");
             break;
 
-          case "start":
-            session = await this.handleStart(ws, message, streamToken);
+          case "start": {
+            // Token is passed via TwiML <Parameter> elements (Twilio strips query params from WebSocket URLs)
+            const token = message.start?.customParameters?.token;
+            session = await this.handleStart(ws, message, token);
             break;
+          }
 
           case "media":
             if (session && message.media?.payload) {
@@ -238,18 +240,6 @@ export class MediaStreamHandler {
     session.sttSession.close();
     this.sessions.delete(session.streamSid);
     this.config.onDisconnect?.(session.callId);
-  }
-
-  private getStreamToken(request: IncomingMessage): string | undefined {
-    if (!request.url || !request.headers.host) {
-      return undefined;
-    }
-    try {
-      const url = new URL(request.url, `http://${request.headers.host}`);
-      return url.searchParams.get("token") ?? undefined;
-    } catch {
-      return undefined;
-    }
   }
 
   /**
@@ -429,6 +419,8 @@ interface TwilioMediaMessage {
       sampleRate: number;
       channels: number;
     };
+    /** Custom parameters passed via TwiML <Parameter> elements */
+    customParameters?: Record<string, string>;
   };
   media?: {
     track?: string;

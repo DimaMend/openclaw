@@ -143,6 +143,9 @@ export class TwilioProvider implements VoiceCallProvider {
 
   isValidStreamToken(callSid: string, token?: string): boolean {
     const expected = this.streamAuthTokens.get(callSid);
+    console.log(
+      `[Twilio] Token check: callSid=${callSid}, expected=${expected ? "set" : "missing"}, received=${token ? "set" : "missing"}`,
+    );
     if (!expected || !token) {
       return false;
     }
@@ -349,8 +352,10 @@ export class TwilioProvider implements VoiceCallProvider {
 
       // Conversation mode: return streaming TwiML immediately for outbound calls.
       if (isOutbound) {
-        const streamUrl = callSid ? this.getStreamUrlForCall(callSid) : null;
-        return streamUrl ? this.getStreamConnectXml(streamUrl) : TwilioProvider.PAUSE_TWIML;
+        const stream = callSid ? this.getStreamUrlAndToken(callSid) : null;
+        return stream
+          ? this.getStreamConnectXml(stream.url, stream.token)
+          : TwilioProvider.PAUSE_TWIML;
       }
     }
 
@@ -362,8 +367,10 @@ export class TwilioProvider implements VoiceCallProvider {
     // Handle subsequent webhook requests (status callbacks, etc.)
     // For inbound calls, answer immediately with stream
     if (direction === "inbound") {
-      const streamUrl = callSid ? this.getStreamUrlForCall(callSid) : null;
-      return streamUrl ? this.getStreamConnectXml(streamUrl) : TwilioProvider.PAUSE_TWIML;
+      const stream = callSid ? this.getStreamUrlAndToken(callSid) : null;
+      return stream
+        ? this.getStreamConnectXml(stream.url, stream.token)
+        : TwilioProvider.PAUSE_TWIML;
     }
 
     // For outbound calls, only connect to stream when call is in-progress
@@ -371,8 +378,8 @@ export class TwilioProvider implements VoiceCallProvider {
       return TwilioProvider.EMPTY_TWIML;
     }
 
-    const streamUrl = callSid ? this.getStreamUrlForCall(callSid) : null;
-    return streamUrl ? this.getStreamConnectXml(streamUrl) : TwilioProvider.PAUSE_TWIML;
+    const stream = callSid ? this.getStreamUrlAndToken(callSid) : null;
+    return stream ? this.getStreamConnectXml(stream.url, stream.token) : TwilioProvider.PAUSE_TWIML;
   }
 
   /**
@@ -402,35 +409,41 @@ export class TwilioProvider implements VoiceCallProvider {
   private getStreamAuthToken(callSid: string): string {
     const existing = this.streamAuthTokens.get(callSid);
     if (existing) {
+      console.log(`[Twilio] Token reused for callSid=${callSid}`);
       return existing;
     }
     const token = crypto.randomBytes(16).toString("base64url");
     this.streamAuthTokens.set(callSid, token);
+    console.log(`[Twilio] Token generated for callSid=${callSid}`);
     return token;
   }
 
-  private getStreamUrlForCall(callSid: string): string | null {
+  private getStreamUrlAndToken(callSid: string): { url: string; token: string } | null {
     const baseUrl = this.getStreamUrl();
     if (!baseUrl) {
       return null;
     }
     const token = this.getStreamAuthToken(callSid);
-    const url = new URL(baseUrl);
-    url.searchParams.set("token", token);
-    return url.toString();
+    console.log(`[Twilio] Stream URL for ${callSid}: ${baseUrl} (token via Parameter)`);
+    return { url: baseUrl, token };
   }
 
   /**
    * Generate TwiML to connect a call to a WebSocket media stream.
    * This enables bidirectional audio streaming for real-time STT/TTS.
    *
+   * Token is passed via Parameter element since Twilio strips query params from WebSocket URLs.
+   *
    * @param streamUrl - WebSocket URL (wss://...) for the media stream
+   * @param token - Authentication token for the stream
    */
-  getStreamConnectXml(streamUrl: string): string {
+  getStreamConnectXml(streamUrl: string, token: string): string {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
-    <Stream url="${escapeXml(streamUrl)}" />
+    <Stream url="${escapeXml(streamUrl)}">
+      <Parameter name="token" value="${escapeXml(token)}" />
+    </Stream>
   </Connect>
 </Response>`;
   }
