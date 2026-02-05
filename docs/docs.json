@@ -894,6 +894,7 @@
                   "tools/skills-config",
                   "tools/clawhub",
                   "plugin",
+                  "plugins/memory-redis",
                   "plugins/voice-call",
                   "plugins/zalouser"
                 ]
