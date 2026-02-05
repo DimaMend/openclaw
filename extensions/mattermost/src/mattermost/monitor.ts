@@ -710,6 +710,8 @@ export async function monitorMattermostProvider(opts: MonitorMattermostOpts = {}
       SenderId: senderId,
       Provider: "mattermost" as const,
       Surface: "mattermost" as const,
+      OriginatingChannel: "mattermost" as const,
+      OriginatingTo: to,
       MessageSid: post.id ?? undefined,
       MessageSids: allMessageIds.length > 1 ? allMessageIds : undefined,
       MessageSidFirst: allMessageIds.length > 1 ? allMessageIds[0] : undefined,
@@ -720,8 +722,6 @@ export async function monitorMattermostProvider(opts: MonitorMattermostOpts = {}
       Timestamp: typeof post.create_at === "number" ? post.create_at : undefined,
       WasMentioned: kind !== "dm" ? effectiveWasMentioned : undefined,
       CommandAuthorized: commandAuthorized,
-      OriginatingChannel: "mattermost" as const,
-      OriginatingTo: to,
       ...mediaPayload,
     });
 
