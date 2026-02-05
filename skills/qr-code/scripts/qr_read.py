@@ -43,6 +43,7 @@ def read_qr(image_path: str):
     results = []
     for obj in decoded_objects:
         result = {
+            # FIX: Use errors='replace' to prevent crashes on non-UTF8 payloads
             'data': obj.data.decode('utf-8', errors='replace'),
             'type': obj.type,
             'rect': {

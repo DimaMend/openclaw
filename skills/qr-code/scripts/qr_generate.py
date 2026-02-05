@@ -27,6 +27,7 @@ ERROR_LEVELS = {
 def generate_qr(data: str, output_path: str, box_size: int = 10, border: int = 4, error_level: str = 'M'):
     """Generate a QR code and save it to a file."""
     
+    # FIX: Use version=None to allow automatic sizing for large data
     qr = qrcode.QRCode(
         version=None,
         error_correction=ERROR_LEVELS.get(error_level.upper(), ERROR_CORRECT_M),

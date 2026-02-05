@@ -17,12 +17,16 @@ Generate QR codes from text/URLs and decode QR codes from images.
 
 ## Requirements
 
+Install Python dependencies:
+
 ### For Generation
+
 ```bash
 pip install qrcode pillow
 ```
 
 ### For Reading
+
 ```bash
 pip install pillow pyzbar
 ```
@@ -38,11 +42,13 @@ python scripts/qr_generate.py "https://example.com" output.png
 ```
 
 Options:
+
 - `--size`: Box size in pixels (default: 10)
 - `--border`: Border size in boxes (default: 4)
 - `--error`: Error correction level L/M/Q/H (default: M)
 
 Example with options:
+
 ```bash
 python scripts/qr_generate.py "Hello World" hello.png --size 15 --border 2
 ```
@@ -58,6 +64,7 @@ Returns the decoded text/URL from the QR code.
 ## Quick Examples
 
 Generate QR for a URL:
+
 ```python
 import qrcode
 img = qrcode.make("https://openclaw.ai")
@@ -65,6 +72,7 @@ img.save("openclaw.png")
 ```
 
 Read QR from image:
+
 ```python
 from pyzbar.pyzbar import decode
 from PIL import Image
