@@ -18,6 +18,7 @@ import {
   applyMoonshotConfigCn,
   applyOpencodeZenConfig,
   applyOpenrouterConfig,
+  applyOrqConfig,
   applySyntheticConfig,
   applyVeniceConfig,
   applyVercelAiGatewayConfig,
@@ -31,6 +32,7 @@ import {
   setMoonshotApiKey,
   setOpencodeZenApiKey,
   setOpenrouterApiKey,
+  setOrqApiKey,
   setSyntheticApiKey,
   setVeniceApiKey,
   setVercelAiGatewayApiKey,
@@ -258,6 +260,29 @@ export async function applyNonInteractiveAuthChoice(params: {
       mode: "api_key",
     });
     return applyOpenrouterConfig(nextConfig);
+  }
+
+  if (authChoice === "orq-api-key") {
+    const resolved = await resolveNonInteractiveApiKey({
+      provider: "orq",
+      cfg: baseConfig,
+      flagValue: opts.orqApiKey,
+      flagName: "--orq-api-key",
+      envVar: "ORQ_API_KEY",
+      runtime,
+    });
+    if (!resolved) {
+      return null;
+    }
+    if (resolved.source !== "profile") {
+      await setOrqApiKey(resolved.key);
+    }
+    nextConfig = applyAuthProfileConfig(nextConfig, {
+      profileId: "orq:default",
+      provider: "orq",
+      mode: "api_key",
+    });
+    return applyOrqConfig(nextConfig);
   }
 
   if (authChoice === "ai-gateway-api-key") {
