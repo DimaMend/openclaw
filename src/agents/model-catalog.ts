@@ -92,13 +92,40 @@ export async function loadModelCatalog(params?: {
             : undefined;
         const reasoning = typeof entry?.reasoning === "boolean" ? entry.reasoning : undefined;
         const input = Array.isArray(entry?.input) ? entry.input : undefined;
-        models.push({ id, name, provider, contextWindow, reasoning, input });
+        const catalogEntry: ModelCatalogEntry = { id, name, provider };
+        if (contextWindow !== undefined) {
+          catalogEntry.contextWindow = contextWindow;
+        }
+        if (reasoning !== undefined) {
+          catalogEntry.reasoning = reasoning;
+        }
+        if (input !== undefined) {
+          catalogEntry.input = input;
+        }
+        models.push(catalogEntry);
       }
 
-      if (models.length === 0) {
+      const discoveredCount = models.length;
+      if (discoveredCount === 0) {
         // If we found nothing, don't cache this result so we can try again.
         modelCatalogPromise = null;
       }
+
+      // Inject Dify models
+      models.push({
+        id: "chat-flow",
+        name: "Dify ChatFlow",
+        provider: "dify",
+        contextWindow: 4096,
+        input: ["text", "image"],
+      });
+      models.push({
+        id: "agent",
+        name: "Dify Agent",
+        provider: "dify",
+        contextWindow: 4096,
+        input: ["text", "image"],
+      });
 
       return sortModels(models);
     } catch (error) {
