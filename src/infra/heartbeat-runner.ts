@@ -53,7 +53,7 @@ import {
   resolveHeartbeatDeliveryTarget,
   resolveHeartbeatSenderContext,
 } from "./outbound/targets.js";
-import { peekSystemEvents } from "./system-events.js";
+import { hasSystemEvents, peekSystemEvents } from "./system-events.js";
 
 type HeartbeatDeps = OutboundSendDeps &
   ChannelHeartbeatDeps & {
@@ -95,6 +95,15 @@ const EXEC_EVENT_PROMPT =
   "An async command you ran earlier has completed. The result is shown in the system messages above. " +
   "Please relay the command output to the user in a helpful way. If the command succeeded, share the relevant output. " +
   "If it failed, explain what went wrong.";
+
+// Prompt used when there are pending system events (cron triggers, reminders, etc.) that don't
+// include exec completion. Instructs the model to handle these events instead of doing standard
+// heartbeat behavior.
+const SYSTEM_EVENT_PROMPT =
+  "You have pending system events (shown in the system messages above). " +
+  "Please handle them appropriately - this may include relaying reminders to the user, " +
+  "processing scheduled tasks, or responding to notifications. " +
+  "Do not reply HEARTBEAT_OK; respond based on the event content.";
 
 function resolveActiveHoursTimezone(cfg: OpenClawConfig, raw?: string): string {
   const trimmed = raw?.trim();
@@ -510,15 +519,25 @@ export async function runHeartbeatOnce(opts: {
     return { status: "skipped", reason: "requests-in-flight" };
   }
 
+  // Resolve session early so we can check for pending system events.
+  const { entry, sessionKey, storePath } = resolveHeartbeatSession(cfg, agentId, heartbeat);
+
   // Skip heartbeat if HEARTBEAT.md exists but has no actionable content.
   // This saves API calls/costs when the file is effectively empty (only comments/headers).
-  // EXCEPTION: Don't skip for exec events - they have pending system events to process.
+  // EXCEPTIONS:
+  // - Don't skip for exec events - they have pending system events to process.
+  // - Don't skip if there are pending system events (e.g., cron-triggered events).
   const isExecEventReason = opts.reason === "exec-event";
+  const hasPendingEvents = sessionKey ? hasSystemEvents(sessionKey) : false;
   const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
   const heartbeatFilePath = path.join(workspaceDir, DEFAULT_HEARTBEAT_FILENAME);
   try {
     const heartbeatFileContent = await fs.readFile(heartbeatFilePath, "utf-8");
-    if (isHeartbeatContentEffectivelyEmpty(heartbeatFileContent) && !isExecEventReason) {
+    if (
+      isHeartbeatContentEffectivelyEmpty(heartbeatFileContent) &&
+      !isExecEventReason &&
+      !hasPendingEvents
+    ) {
       emitHeartbeatEvent({
         status: "skipped",
         reason: "empty-heartbeat-file",
@@ -530,8 +549,6 @@ export async function runHeartbeatOnce(opts: {
     // File doesn't exist or can't be read - proceed with heartbeat.
     // The LLM prompt says "if it exists" so this is expected behavior.
   }
-
-  const { entry, sessionKey, storePath } = resolveHeartbeatSession(cfg, agentId, heartbeat);
   const previousUpdatedAt = entry?.updatedAt;
   const delivery = resolveHeartbeatDeliveryTarget({ cfg, entry, heartbeat });
   const heartbeatAccountId = heartbeat?.accountId?.trim();
@@ -561,19 +578,32 @@ export async function runHeartbeatOnce(opts: {
     accountId: delivery.accountId,
   }).responsePrefix;
 
-  // Check if this is an exec event with pending exec completion system events.
+  // Check if there are pending system events (exec completion, cron triggers, etc).
   // If so, use a specialized prompt that instructs the model to relay the result
   // instead of the standard heartbeat prompt with "reply HEARTBEAT_OK".
-  const isExecEvent = opts.reason === "exec-event";
-  const pendingEvents = isExecEvent ? peekSystemEvents(sessionKey) : [];
+  const pendingEvents = hasPendingEvents ? peekSystemEvents(sessionKey) : [];
   const hasExecCompletion = pendingEvents.some((evt) => evt.includes("Exec finished"));
+  const hasPendingSystemEvents = pendingEvents.length > 0;
 
-  const prompt = hasExecCompletion ? EXEC_EVENT_PROMPT : resolveHeartbeatPrompt(cfg, heartbeat);
+  // Prompt selection priority:
+  // 1. Exec completion events → EXEC_EVENT_PROMPT (specific to command output relay)
+  // 2. Other system events (cron, reminders) → SYSTEM_EVENT_PROMPT (handle events)
+  // 3. No events → standard heartbeat prompt (check HEARTBEAT.md, reply HEARTBEAT_OK)
+  const prompt = hasExecCompletion
+    ? EXEC_EVENT_PROMPT
+    : hasPendingSystemEvents
+      ? SYSTEM_EVENT_PROMPT
+      : resolveHeartbeatPrompt(cfg, heartbeat);
+  const eventProvider = hasExecCompletion
+    ? "exec-event"
+    : hasPendingSystemEvents
+      ? "system-event"
+      : "heartbeat";
   const ctx = {
     Body: prompt,
     From: sender,
     To: sender,
-    Provider: hasExecCompletion ? "exec-event" : "heartbeat",
+    Provider: eventProvider,
     SessionKey: sessionKey,
   };
   if (!visibility.showAlerts && !visibility.showOk && !visibility.useIndicator) {
@@ -661,7 +691,11 @@ export async function runHeartbeatOnce(opts: {
       normalized.text = execFallbackText;
       normalized.shouldSkip = false;
     }
-    const shouldSkipMain = normalized.shouldSkip && !normalized.hasMedia && !hasExecCompletion;
+    const shouldSkipMain =
+      normalized.shouldSkip &&
+      !normalized.hasMedia &&
+      !hasExecCompletion &&
+      !hasPendingSystemEvents;
     if (shouldSkipMain && reasoningPayloads.length === 0) {
       await restoreHeartbeatUpdatedAt({
         storePath,
