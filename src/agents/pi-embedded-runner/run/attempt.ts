@@ -838,8 +838,8 @@ export async function runEmbeddedAttempt(
         });
         anthropicPayloadLogger?.recordUsage(messagesSnapshot, promptError);
 
-        // Run agent_end hooks to allow plugins to analyze the conversation
-        // This is fire-and-forget, so we don't await
+        // Run agent_end hooks to allow plugins to analyze the conversation.
+        // This is fire-and-forget, so we don't await.
         if (hookRunner?.hasHooks("agent_end")) {
           hookRunner
             .runAgentEnd(
@@ -848,6 +848,7 @@ export async function runEmbeddedAttempt(
                 success: !aborted && !promptError,
                 error: promptError ? describeUnknownError(promptError) : undefined,
                 durationMs: Date.now() - promptStartedAt,
+                systemPrompt: systemPromptText,
               },
               {
                 agentId: params.sessionKey?.split(":")[0] ?? "main",
