@@ -237,6 +237,11 @@ export async function initSessionState(params: {
     isNewSession = true;
     systemSent = false;
     abortedLastRun = false;
+
+    // Note: For user-initiated resets, command:new/reset hooks fire immediately.
+    // session:start will fire later in agent-runner.ts (if sessionKey exists).
+    // session:end/reset are NOT emitted for user-initiated resets; they only fire
+    // in agent-runner.ts for auto-recovery resets (compaction failure, role-ordering conflict).
   }
 
   const baseEntry = !isNewSession && freshEntry ? entry : undefined;
