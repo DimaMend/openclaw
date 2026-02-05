@@ -1096,3 +1096,18 @@ export async function getCoreMemories(): Promise<CoreMemories> {
   }
   return instance;
 }
+
+// Session Continuation exports
+export {
+  SessionContinuation,
+  SessionContinuationConfig,
+  ContinuationResult,
+  getSessionContinuationMessage,
+} from "./session-continuation.js";
+
+export {
+  initSessionContinuation,
+  onSessionStart,
+  heartbeatSessionCheck,
+  getSmartReminderContext,
+} from "./session-continuation-integration.js";
