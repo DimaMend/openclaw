@@ -404,6 +404,7 @@ export async function runEmbeddedAttempt(
 
     let sessionManager: ReturnType<typeof guardSessionManager> | undefined;
     let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
+    let queueHandle: EmbeddedPiQueueHandle | undefined;
     try {
       await repairSessionFileIfNeeded({
         sessionFile: params.sessionFile,
@@ -650,7 +651,7 @@ export async function runEmbeddedAttempt(
         getLastToolError,
       } = subscription;
 
-      const queueHandle: EmbeddedPiQueueHandle = {
+      queueHandle = {
         queueMessage: async (text: string) => {
           await activeSession.steer(text);
         },
@@ -866,7 +867,9 @@ export async function runEmbeddedAttempt(
           clearTimeout(abortWarnTimer);
         }
         unsubscribe();
-        clearActiveEmbeddedRun(params.sessionId, queueHandle);
+        // Note: clearActiveEmbeddedRun moved to outer finally block, AFTER
+        // flushPendingToolResults, to avoid signaling "run ended" before tool
+        // results are written (prevents message ordering conflicts).
         params.abortSignal?.removeEventListener?.("abort", onAbort);
       }
 
@@ -906,6 +909,10 @@ export async function runEmbeddedAttempt(
       // Always tear down the session (and release the lock) before we leave this attempt.
       sessionManager?.flushPendingToolResults?.();
       session?.dispose();
+      // Signal run ended AFTER tool results are flushed, so followup runs see complete transcripts.
+      if (queueHandle) {
+        clearActiveEmbeddedRun(params.sessionId, queueHandle);
+      }
       await sessionLock.release();
     }
   } finally {
