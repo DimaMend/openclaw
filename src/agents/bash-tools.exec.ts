@@ -52,7 +52,9 @@ import {
   truncateMiddle,
 } from "./bash-tools.shared.js";
 import { buildCursorPositionResponse, stripDsrRequests } from "./pty-dsr.js";
+import { loadConfig } from "../config/config.js";
 import { getShellConfig, sanitizeBinaryOutput } from "./shell-utils.js";
+import { resolveSkillEnvForAgent } from "./skills.js";
 import { callGatewayTool } from "./tools/gateway.js";
 import { listNodes, resolveNodeIdFromList } from "./tools/nodes-utils.js";
 
@@ -1035,7 +1037,14 @@ export function createExecTool(
         }
         const argv = buildNodeShellCommand(params.command, nodeInfo?.platform);
 
-        const nodeEnv = params.env ? { ...params.env } : undefined;
+        // Resolve skill environment variables for the agent
+        const cfg = loadConfig();
+        const skillEnv = agentId ? resolveSkillEnvForAgent({ agentId, config: cfg }) : {};
+
+        // Merge skill env vars with user-provided env vars (user env takes precedence)
+        const nodeEnv = params.env || Object.keys(skillEnv).length > 0
+          ? { ...skillEnv, ...params.env }
+          : undefined;
 
         if (nodeEnv) {
           applyPathPrepend(nodeEnv, defaultPathPrepend, { requireExisting: true });
