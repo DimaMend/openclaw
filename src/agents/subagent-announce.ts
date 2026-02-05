@@ -345,6 +345,16 @@ export type SubagentRunOutcome = {
   error?: string;
 };
 
+function shouldSuppressAnnounce(params: { silent?: boolean }): boolean {
+  // Per-spawn override takes precedence.
+  if (typeof params.silent === "boolean") {
+    return params.silent;
+  }
+  // Fall back to global config.
+  const cfg = loadConfig();
+  return cfg.agents?.defaults?.subagents?.suppressAnnounce === true;
+}
+
 export async function runSubagentAnnounceFlow(params: {
   childSessionKey: string;
   childRunId: string;
@@ -360,9 +370,17 @@ export async function runSubagentAnnounceFlow(params: {
   endedAt?: number;
   label?: string;
   outcome?: SubagentRunOutcome;
+  /** Per-spawn override: when true, skip the announcement entirely. */
+  silent?: boolean;
 }): Promise<boolean> {
   let didAnnounce = false;
   try {
+    // Check if announcements are suppressed (per-spawn or global config).
+    // Return true (not false) so callers treat suppression as success for cleanup bookkeeping —
+    // returning false would cause finalizeSubagentCleanup to retry on every wake/restart.
+    if (shouldSuppressAnnounce({ silent: params.silent })) {
+      return true;
+    }
     const requesterOrigin = normalizeDeliveryContext(params.requesterOrigin);
     let reply = params.roundOneReply;
     let outcome: SubagentRunOutcome | undefined = params.outcome;
