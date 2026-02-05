@@ -159,4 +159,27 @@ describe("limitHistoryTurns", () => {
     expect(limited[0].content).toEqual([{ type: "text", text: "second" }]);
     expect(limited[1].content).toEqual([{ type: "text", text: "response" }]);
   });
+
+  // Regression test for https://github.com/openclaw/openclaw/issues/8778
+  it("removes orphaned tool_result blocks after slicing", () => {
+    const messages: AgentMessage[] = [
+      { role: "user", content: [{ type: "text", text: "first" }] },
+      {
+        role: "assistant",
+        content: [{ type: "toolCall", id: "tool-1", name: "exec", input: {} }],
+      },
+      { role: "toolResult", toolCallId: "tool-1", content: [{ type: "text", text: "result" }] },
+      { role: "user", content: [{ type: "text", text: "second" }] },
+      { role: "assistant", content: [{ type: "text", text: "response" }] },
+    ];
+    // With limit=1, we would slice starting at the second user message.
+    // Without the fix, this would leave an orphaned tool_result at index 0.
+    const limited = limitHistoryTurns(messages, 1);
+    // After fix: orphaned tool_result should be removed
+    expect(limited.length).toBe(2);
+    expect(limited[0].role).toBe("user");
+    expect(limited[1].role).toBe("assistant");
+    // Ensure no toolResult is present
+    expect(limited.find((m) => m.role === "toolResult")).toBeUndefined();
+  });
 });
