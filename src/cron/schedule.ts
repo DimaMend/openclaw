@@ -8,7 +8,8 @@ export function computeNextRunAtMs(schedule: CronSchedule, nowMs: number): numbe
     if (atMs === null) {
       return undefined;
     }
-    return atMs > nowMs ? atMs : undefined;
+    // Return atMs even when past so callers treat the job as due until it runs.
+    return atMs;
   }
 
   if (schedule.kind === "every") {

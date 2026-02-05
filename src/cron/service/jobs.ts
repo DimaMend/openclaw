@@ -84,16 +84,33 @@ export function recomputeNextRuns(state: CronServiceState) {
   }
 }
 
+/**
+ * Effective next run time: schedule-derived value when state.nextRunAtMs is missing.
+ * Ensures "at" jobs with empty or stale state (e.g. loaded without start()) are still
+ * considered due and wake the timer when their timestamp has passed.
+ */
+export function getEffectiveNextRunAtMs(job: CronJob, nowMs: number): number | undefined {
+  if (typeof job.state.nextRunAtMs === "number") {
+    return job.state.nextRunAtMs;
+  }
+  return computeJobNextRunAtMs(job, nowMs);
+}
+
 export function nextWakeAtMs(state: CronServiceState) {
   const jobs = state.store?.jobs ?? [];
-  const enabled = jobs.filter((j) => j.enabled && typeof j.state.nextRunAtMs === "number");
-  if (enabled.length === 0) {
-    return undefined;
+  const now = state.deps.nowMs();
+  let min: number | undefined;
+  for (const j of jobs) {
+    if (!j.enabled) {
+      continue;
+    }
+    const next = getEffectiveNextRunAtMs(j, now);
+    if (typeof next !== "number") {
+      continue;
+    }
+    min = min === undefined ? next : Math.min(min, next);
   }
-  return enabled.reduce(
-    (min, j) => Math.min(min, j.state.nextRunAtMs as number),
-    enabled[0].state.nextRunAtMs as number,
-  );
+  return min;
 }
 
 export function createJob(state: CronServiceState, input: CronJobCreate): CronJob {
@@ -326,7 +343,8 @@ export function isJobDue(job: CronJob, nowMs: number, opts: { forced: boolean })
   if (opts.forced) {
     return true;
   }
-  return job.enabled && typeof job.state.nextRunAtMs === "number" && nowMs >= job.state.nextRunAtMs;
+  const next = getEffectiveNextRunAtMs(job, nowMs);
+  return job.enabled && typeof next === "number" && nowMs >= next;
 }
 
 export function resolveJobPayloadTextForMain(job: CronJob): string | undefined {
