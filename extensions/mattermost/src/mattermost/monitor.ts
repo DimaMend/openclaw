@@ -687,99 +687,105 @@ export async function monitorMattermostProvider(opts: MonitorMattermostOpts = {}
 
     const to = kind === "dm" ? `user:${senderId}` : `channel:${channelId}`;
     const mediaPayload = buildMattermostMediaPayload(mediaList);
-    const ctxPayload = core.channel.reply.finalizeInboundContext({
-      Body: combinedBody,
-      RawBody: bodyText,
-      CommandBody: bodyText,
-      From:
-        kind === "dm"
-          ? `mattermost:${senderId}`
-          : kind === "group"
-            ? `mattermost:group:${channelId}`
-            : `mattermost:channel:${channelId}`,
-      To: to,
-      SessionKey: sessionKey,
-      ParentSessionKey: threadKeys.parentSessionKey,
-      AccountId: route.accountId,
-      ChatType: chatType,
-      ConversationLabel: fromLabel,
-      GroupSubject: kind !== "dm" ? channelDisplay || roomLabel : undefined,
-      GroupChannel: channelName ? `#${channelName}` : undefined,
-      GroupSpace: teamId,
-      SenderName: senderName,
-      SenderId: senderId,
-      Provider: "mattermost" as const,
-      Surface: "mattermost" as const,
-      MessageSid: post.id ?? undefined,
-      MessageSids: allMessageIds.length > 1 ? allMessageIds : undefined,
-      MessageSidFirst: allMessageIds.length > 1 ? allMessageIds[0] : undefined,
-      MessageSidLast:
-        allMessageIds.length > 1 ? allMessageIds[allMessageIds.length - 1] : undefined,
-      ReplyToId: threadRootId,
-      MessageThreadId: threadRootId,
-      Timestamp: typeof post.create_at === "number" ? post.create_at : undefined,
-      WasMentioned: kind !== "dm" ? effectiveWasMentioned : undefined,
-      CommandAuthorized: commandAuthorized,
-      OriginatingChannel: "mattermost" as const,
-      OriginatingTo: to,
-      ...mediaPayload,
-    });
 
-    if (kind === "dm") {
-      const sessionCfg = cfg.session;
-      const storePath = core.channel.session.resolveStorePath(sessionCfg?.store, {
-        agentId: route.agentId,
+    let markDispatchIdle: (() => void) | undefined;
+    try {
+      const ctxPayload = core.channel.reply.finalizeInboundContext({
+        Body: combinedBody,
+        RawBody: bodyText,
+        CommandBody: bodyText,
+        From:
+          kind === "dm"
+            ? `mattermost:${senderId}`
+            : kind === "group"
+              ? `mattermost:group:${channelId}`
+              : `mattermost:channel:${channelId}`,
+        To: to,
+        SessionKey: sessionKey,
+        ParentSessionKey: threadKeys.parentSessionKey,
+        AccountId: route.accountId,
+        ChatType: chatType,
+        ConversationLabel: fromLabel,
+        GroupSubject: kind !== "dm" ? channelDisplay || roomLabel : undefined,
+        GroupChannel: channelName ? `#${channelName}` : undefined,
+        GroupSpace: teamId,
+        SenderName: senderName,
+        SenderId: senderId,
+        Provider: "mattermost" as const,
+        Surface: "mattermost" as const,
+        MessageSid: post.id ?? undefined,
+        MessageSids: allMessageIds.length > 1 ? allMessageIds : undefined,
+        MessageSidFirst: allMessageIds.length > 1 ? allMessageIds[0] : undefined,
+        MessageSidLast:
+          allMessageIds.length > 1 ? allMessageIds[allMessageIds.length - 1] : undefined,
+        ReplyToId: threadRootId,
+        MessageThreadId: threadRootId,
+        Timestamp: typeof post.create_at === "number" ? post.create_at : undefined,
+        WasMentioned: kind !== "dm" ? effectiveWasMentioned : undefined,
+        CommandAuthorized: commandAuthorized,
+        OriginatingChannel: "mattermost" as const,
+        OriginatingTo: to,
+        ...mediaPayload,
       });
-      await core.channel.session.updateLastRoute({
-        storePath,
-        sessionKey: route.mainSessionKey,
-        deliveryContext: {
-          channel: "mattermost",
-          to,
-          accountId: route.accountId,
+
+      if (kind === "dm") {
+        const sessionCfg = cfg.session;
+        const storePath = core.channel.session.resolveStorePath(sessionCfg?.store, {
+          agentId: route.agentId,
+        });
+        await core.channel.session.updateLastRoute({
+          storePath,
+          sessionKey: route.mainSessionKey,
+          deliveryContext: {
+            channel: "mattermost",
+            to,
+            accountId: route.accountId,
+          },
+        });
+      }
+
+      const previewLine = bodyText.slice(0, 200).replace(/\n/g, "\\n");
+      logVerboseMessage(
+        `mattermost inbound: from=${ctxPayload.From} len=${bodyText.length} preview="${previewLine}"`,
+      );
+
+      const textLimit = core.channel.text.resolveTextChunkLimit(
+        cfg,
+        "mattermost",
+        account.accountId,
+        {
+          fallbackLimit: account.textChunkLimit ?? 4000,
+        },
+      );
+      const tableMode = core.channel.text.resolveMarkdownTableMode({
+        cfg,
+        channel: "mattermost",
+        accountId: account.accountId,
+      });
+
+      const { onModelSelected, ...prefixOptions } = createReplyPrefixOptions({
+        cfg,
+        agentId: route.agentId,
+        channel: "mattermost",
+        accountId: account.accountId,
+      });
+
+      const typingCallbacks = createTypingCallbacks({
+        start: () => sendTypingIndicator(channelId, threadRootId),
+        onStartError: (err) => {
+          logTypingFailure({
+            log: (message) => logger.debug?.(message),
+            channel: "mattermost",
+            target: channelId,
+            error: err,
+          });
         },
       });
-    }
-
-    const previewLine = bodyText.slice(0, 200).replace(/\n/g, "\\n");
-    logVerboseMessage(
-      `mattermost inbound: from=${ctxPayload.From} len=${bodyText.length} preview="${previewLine}"`,
-    );
-
-    const textLimit = core.channel.text.resolveTextChunkLimit(
-      cfg,
-      "mattermost",
-      account.accountId,
-      {
-        fallbackLimit: account.textChunkLimit ?? 4000,
-      },
-    );
-    const tableMode = core.channel.text.resolveMarkdownTableMode({
-      cfg,
-      channel: "mattermost",
-      accountId: account.accountId,
-    });
-
-    const { onModelSelected, ...prefixOptions } = createReplyPrefixOptions({
-      cfg,
-      agentId: route.agentId,
-      channel: "mattermost",
-      accountId: account.accountId,
-    });
-
-    const typingCallbacks = createTypingCallbacks({
-      start: () => sendTypingIndicator(channelId, threadRootId),
-      onStartError: (err) => {
-        logTypingFailure({
-          log: (message) => logger.debug?.(message),
-          channel: "mattermost",
-          target: channelId,
-          error: err,
-        });
-      },
-    });
-    const { dispatcher, replyOptions, markDispatchIdle } =
-      core.channel.reply.createReplyDispatcherWithTyping({
+      const {
+        dispatcher,
+        replyOptions,
+        markDispatchIdle: markIdle,
+      } = core.channel.reply.createReplyDispatcherWithTyping({
         ...prefixOptions,
         humanDelay: core.channel.reply.resolveHumanDelayConfig(cfg, route.agentId),
         deliver: async (payload: ReplyPayload) => {
@@ -821,24 +827,39 @@ export async function monitorMattermostProvider(opts: MonitorMattermostOpts = {}
         onReplyStart: typingCallbacks.onReplyStart,
       });
 
-    await core.channel.reply.dispatchReplyFromConfig({
-      ctx: ctxPayload,
-      cfg,
-      dispatcher,
-      replyOptions: {
-        ...replyOptions,
-        disableBlockStreaming:
-          typeof account.blockStreaming === "boolean" ? !account.blockStreaming : undefined,
-        onModelSelected,
-      },
-    });
-    markDispatchIdle();
-    if (historyKey) {
-      clearHistoryEntriesIfEnabled({
-        historyMap: channelHistories,
-        historyKey,
-        limit: historyLimit,
+      await core.channel.reply.dispatchReplyFromConfig({
+        ctx: ctxPayload,
+        cfg,
+        dispatcher,
+        replyOptions: {
+          ...replyOptions,
+          disableBlockStreaming:
+            typeof account.blockStreaming === "boolean" ? !account.blockStreaming : undefined,
+          onModelSelected,
+        },
       });
+      markDispatchIdle = markIdle;
+      if (historyKey) {
+        clearHistoryEntriesIfEnabled({
+          historyMap: channelHistories,
+          historyKey,
+          limit: historyLimit,
+        });
+      }
+    } catch (err) {
+      runtime.error?.(
+        `mattermost message processing failed (channel: ${channelId}): ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      logger.debug?.(
+        `mattermost error details: ${err instanceof Error && err.stack ? err.stack : String(err)}`,
+      );
+      // Skip malformed message gracefully to keep monitor running
+      return;
+    } finally {
+      // Always mark dispatcher idle to prevent stuck typing indicators
+      markDispatchIdle?.();
     }
   };
 
