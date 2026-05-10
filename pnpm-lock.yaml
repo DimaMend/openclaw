@@ -52,8 +52,8 @@ importers:
         specifier: 0.51.3
         version: 0.51.3(ws@8.19.0)(zod@4.3.6)
       '@mariozechner/pi-ai':
-        specifier: 0.51.3
-        version: 0.51.3(ws@8.19.0)(zod@4.3.6)
+        specifier: 0.51.4
+        version: 0.51.4(ws@8.19.0)(zod@4.3.6)
       '@mariozechner/pi-coding-agent':
         specifier: 0.51.3
         version: 0.51.3(ws@8.19.0)(zod@4.3.6)
@@ -694,6 +694,7 @@ packages:
   '@aws-sdk/middleware-websocket@3.972.3':
     resolution: {integrity: sha512-/BjMbtOM9lsgdNgRZWUL5oCV6Ocfx1vcK/C5xO5/t/gCk6IwR9JFWMilbk6K6Buq5F84/lkngqcCKU2SRkAmOg==}
     engines: {node: '>= 14.0.0'}
+    deprecated: Please update your @aws-sdk client to a more recent version, such as https://github.com/aws/aws-sdk-js-v3/releases/tag/v3.982.0, if using browser-based WebSocket bidirectional streaming.
 
   '@aws-sdk/nested-clients@3.980.0':
     resolution: {integrity: sha512-/dONY5xc5/CCKzOqHZCTidtAR4lJXWkGefXvTRKdSKMGaYbbKsxDckisd6GfnvPSLxWtvQzwgRGRutMRoYUApQ==}
@@ -1460,20 +1461,24 @@ packages:
   '@mariozechner/pi-agent-core@0.51.3':
     resolution: {integrity: sha512-pO5ScRuf7F5GCqS02vuB3gIV/MHR2cskEEUnbVbkSf0RHJb3vTICy/ACQyeI+UYk7yjFmdvQgbSUtVrYJ3q8Ag==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-agent-core instead going forward
 
-  '@mariozechner/pi-ai@0.51.3':
-    resolution: {integrity: sha512-NocfuwUPCGeNhWyfzSGKbsTqUvFmP+VihU8+xtzX9FoHvQQVJHQ49Sz8sfLK04BbEWYI9s/gZ7a9xnJ0O4cz8g==}
+  '@mariozechner/pi-ai@0.51.4':
+    resolution: {integrity: sha512-Scji9XgJ4LeZU7csuwHg7ljw01wt28Ln7NDhHkaivZ9+RHBiXsak8Ue9U+T/iFd/Kb7bFwnidsix6vjWhUmQaA==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-ai instead going forward
     hasBin: true
 
   '@mariozechner/pi-coding-agent@0.51.3':
     resolution: {integrity: sha512-pu/4IxeMZMapYiSO3LWvNRztOXXKLlLNL+drjMvtgWbp9MJ8azP+5Zwsp3/vzrPvM54wCkaSa0voUEThm4Ba/Q==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-coding-agent instead going forward
     hasBin: true
 
   '@mariozechner/pi-tui@0.51.3':
     resolution: {integrity: sha512-1B9C3oVsAcBSO0rvk4qC3Iq655LveLQDSnlseypCo/KiR5eY39Hw1XRtvq5N05mtxNuo3mRw8FMcYCwIl1BbDg==}
     engines: {node: '>=20.0.0'}
+    deprecated: please use @earendil-works/pi-tui instead going forward
 
   '@matrix-org/matrix-sdk-crypto-nodejs@0.4.0':
     resolution: {integrity: sha512-+qqgpn39XFSbsD0dFjssGO9vHEP7sTyfs8yTpt8vuqWpUpF20QMwpCZi0jpYw7GxjErNTsMshopuo8677DfGEA==}
@@ -3152,6 +3157,7 @@ packages:
   basic-ftp@5.1.0:
     resolution: {integrity: sha512-RkaJzeJKDbaDWTIPiJwubyljaEPwpVWkm9Rt5h9Nd6h7tEXTJ3VB4qxdZBioV7JO5yLUaOKwz7vDOzlncUsegw==}
     engines: {node: '>=10.0.0'}
+    deprecated: Security vulnerability fixed in 5.2.1, please upgrade
 
   bcrypt-pbkdf@1.0.2:
     resolution: {integrity: sha512-qeFIXtP4MSoi6NLqO12WfqARWWuCKi2Rn/9hJLEmtB5yTNr9DqFWkJRCf2qShWzPeAMRnOgCrq0sg/KLv5ES9w==}
@@ -3761,6 +3767,7 @@ packages:
 
   glob@10.5.0:
     resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@11.1.0:
@@ -5213,6 +5220,7 @@ packages:
   tar@7.5.7:
     resolution: {integrity: sha512-fov56fJiRuThVFXD6o6/Q354S7pnWMJIVlDBYijsTNx6jKSE4pvrDTs6lUnmGvNyfJwFQQwWy3owKz1ucIhveQ==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   thenify-all@1.6.0:
     resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
@@ -5414,11 +5422,12 @@ packages:
 
   uuid@3.4.0:
     resolution: {integrity: sha512-HjSDRw6gZE5JMggctHBcjVak08+KEVhSIiDzFnT9S9aegmp85S/bReBVTb4QTFaRNptJ9kuYaNhnbNEOkbKb/A==}
-    deprecated: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   validate-npm-package-name@6.0.2:
@@ -6786,7 +6795,7 @@ snapshots:
 
   '@mariozechner/pi-agent-core@0.51.3(ws@8.19.0)(zod@4.3.6)':
     dependencies:
-      '@mariozechner/pi-ai': 0.51.3(ws@8.19.0)(zod@4.3.6)
+      '@mariozechner/pi-ai': 0.51.4(ws@8.19.0)(zod@4.3.6)
     transitivePeerDependencies:
       - '@modelcontextprotocol/sdk'
       - aws-crt
@@ -6796,7 +6805,7 @@ snapshots:
       - ws
       - zod
 
-  '@mariozechner/pi-ai@0.51.3(ws@8.19.0)(zod@4.3.6)':
+  '@mariozechner/pi-ai@0.51.4(ws@8.19.0)(zod@4.3.6)':
     dependencies:
       '@anthropic-ai/sdk': 0.71.2(zod@4.3.6)
       '@aws-sdk/client-bedrock-runtime': 3.981.0
@@ -6824,7 +6833,7 @@ snapshots:
     dependencies:
       '@mariozechner/jiti': 2.6.5
       '@mariozechner/pi-agent-core': 0.51.3(ws@8.19.0)(zod@4.3.6)
-      '@mariozechner/pi-ai': 0.51.3(ws@8.19.0)(zod@4.3.6)
+      '@mariozechner/pi-ai': 0.51.4(ws@8.19.0)(zod@4.3.6)
       '@mariozechner/pi-tui': 0.51.3
       '@silvia-odwyer/photon-node': 0.3.4
       chalk: 5.6.2
