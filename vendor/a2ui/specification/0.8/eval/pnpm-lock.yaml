@@ -1,17 +1,3 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 lockfileVersion: '9.0'
 
 settings:
@@ -30,7 +16,7 @@ importers:
         version: 1.24.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))
       '@genkit-ai/vertexai':
         specifier: ^1.19.3
-        version: 1.24.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))(zod@3.25.76)
+        version: 1.25.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))(zod@3.25.76)
       genkit:
         specifier: ^1.19.2
         version: 1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0)
@@ -298,10 +284,10 @@ packages:
     peerDependencies:
       genkit: ^1.24.0
 
-  '@genkit-ai/vertexai@1.24.0':
-    resolution: {integrity: sha512-gQWgLLEv47ARWGMY2e3tgvOCNag00hxj/iAvR6FPEAtLsNB/k38sCXxxCgOB1irs7ZDkieKsd4HUahanf8+yQA==}
+  '@genkit-ai/vertexai@1.25.0':
+    resolution: {integrity: sha512-8Th4cMwVM35Nze6oDN5bMUWVn3N+h8CEm83yPehNg9heofuu7m7starLLTPkMB0uhns1Joc/CSagt3bFJL8avQ==}
     peerDependencies:
-      genkit: ^1.24.0
+      genkit: ^1.25.0
 
   '@google-cloud/aiplatform@3.35.0':
     resolution: {integrity: sha512-Eo+ckr1KbTxAOew9P+MeeR0aQXeW5PeOzrSM1JyGny/SGKejwX/RcGWSFpeapnlegTfI9N9xJeUeo3M+XBOeFg==}
@@ -2055,10 +2041,12 @@ packages:
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vary@1.1.2:
@@ -2379,7 +2367,7 @@ snapshots:
       '@opentelemetry/sdk-trace-base': 1.25.1(@opentelemetry/api@1.9.0)
       '@types/json-schema': 7.0.15
       ajv: 8.17.1
-      ajv-formats: 3.0.1(ajv@8.17.1)
+      ajv-formats: 3.0.1
       async-mutex: 0.5.0
       body-parser: 1.20.3
       cors: 2.8.5
@@ -2443,7 +2431,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@genkit-ai/vertexai@1.24.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))(zod@3.25.76)':
+  '@genkit-ai/vertexai@1.25.0(genkit@1.24.0(@google-cloud/firestore@7.11.6)(firebase-admin@13.6.0))(zod@3.25.76)':
     dependencies:
       '@anthropic-ai/sdk': 0.24.3
       '@anthropic-ai/vertex-sdk': 0.4.3
@@ -3559,8 +3547,8 @@ snapshots:
     dependencies:
       humanize-ms: 1.2.1
 
-  ajv-formats@3.0.1(ajv@8.17.1):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.17.1
 
   ajv@8.17.1:
